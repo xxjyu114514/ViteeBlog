@@ -1,6 +1,8 @@
 <template>
-  <nav :class="['navbar-fixed', { 'is-immersive': isImmersiveMode }]">
-    
+  <nav 
+    :class="['navbar-fixed', { 'is-immersive': isImmersiveMode }]"
+    :style="navStyle"
+  >
     <div v-if="isImmersiveMode" class="glass-gradient-bg"></div>
     
     <div class="nav-container">
@@ -9,12 +11,7 @@
       </div>
       
       <div class="menu-links">
-        <router-link 
-          v-for="item in menuItems" 
-          :key="item.path" 
-          :to="item.path" 
-          class="nav-item"
-        >
+        <router-link v-for="item in menuItems" :key="item.path" :to="item.path" class="nav-item">
           {{ item.name }}
         </router-link>
       </div>
@@ -32,17 +29,20 @@ import { useRoute } from 'vue-router'
 
 const route = useRoute()
 
+// 模拟动态主题色逻辑
+const navStyle = computed(() => {
+  if (route.path === '/') return { '--nav-mask-color': '10, 12, 16' } // 首页：深冷色调
+  if (route.path === '/login') return { '--nav-mask-color': '20, 15, 30' } // 登录：暗紫色调
+  return {}
+})
+
+const isImmersiveMode = computed(() => ['/', '/login'].includes(route.path))
 const menuItems = [
   { name: '首页', path: '/' },
   { name: '文章', path: '/posts' },
   { name: '关于', path: '/about' },
   { name: '留言', path: '/message' }
 ]
-
-// 核心：首页和登录页都触发沉浸式样式
-const isImmersiveMode = computed(() => {
-  return ['/', '/login'].includes(route.path)
-})
 </script>
 
 <style lang="scss" scoped>
@@ -54,24 +54,24 @@ const isImmersiveMode = computed(() => {
   z-index: 9999;
   display: flex;
   align-items: center;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 
-  // --- 【常规页面模式】（默认） ---
+  // 默认：白底黑字
   background: #ffffff;
   color: #000000;
-  border-bottom: 2px solid #000000; 
+  border-bottom: 2px solid #000000;
 
-  // --- 【沉浸模式：首页 & 登录页】 ---
   &.is-immersive {
     color: #ffffff;
-    border-bottom: none !important; 
+    border-bottom: none !important;
     
-    // 沉浸式的渐变遮罩背景
+    // 【关键】使用变量控制渐变色。rgb内填入变量，让遮罩带上色彩倾向
+    // 这里用了 0.85 到 0 的过度，保证顶部文字清晰
     background: linear-gradient(
-      to bottom, 
-      rgba(0, 0, 0, 0.8) 0%, 
-      rgba(0, 0, 0, 0.4) 60%,
-      rgba(0, 0, 0, 0) 100%
+      to bottom,
+      rgba(var(--nav-mask-color, 0, 0, 0), 0.85) 0%,
+      rgba(var(--nav-mask-color, 0, 0, 0), 0.4) 50%,
+      rgba(var(--nav-mask-color, 0, 0, 0), 0) 100%
     ) !important;
   }
 }
@@ -80,17 +80,18 @@ const isImmersiveMode = computed(() => {
   position: absolute;
   top: 0; left: 0;
   width: 100%;
-  height: 120px; 
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  height: 140px; // 稍微加深范围
+  // 【关键】毛玻璃不仅模糊，还通过滤镜强化背景的主题色感
+  backdrop-filter: blur(25px) saturate(150%) brightness(0.9);
+  -webkit-backdrop-filter: blur(25px) saturate(150%) brightness(0.9);
   pointer-events: none;
   z-index: -1;
   
-  mask-image: linear-gradient(to bottom, black 0%, black 60%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 60%, transparent 100%);
+  // 渐变蒙版，让毛玻璃边缘消失得极其柔和
+  mask-image: linear-gradient(to bottom, black 0%, black 40%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 40%, transparent 100%);
 }
 
-// ... 剩下的 nav-container, nav-item 样式保持你原来的即可 ...
 .nav-container {
   width: 100%;
   max-width: 1300px;
