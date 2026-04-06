@@ -1,0 +1,23 @@
+// 基础变量
+$primary-color: #3b82f6;
+$text-main: #1f2937;
+$text-light: #6b7280;
+$bg-gray: #f9fafb;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  color: $text-main;
+  background-color: #fff;
+  line-height: 1.6;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
