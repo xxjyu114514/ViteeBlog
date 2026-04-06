@@ -1,31 +1,26 @@
 <template>
-  <nav :class="[
-    'navbar', 
-    { 
-      'is-dark-style': isDarkStyle, 
-      'animating': isAnimating 
-    }
-  ]">
+  <nav :class="['navbar-fixed', { 'is-immersive': isImmersiveMode }]">
+    
+    <div v-if="isImmersiveMode" class="glass-gradient-bg"></div>
+    
     <div class="nav-container">
       <div class="logo-section">
-        <span class="logo-text">观测笔记</span>
-        <span class="logo-dot">.</span>
+        <span class="logo-text">OBSERVATION</span>
       </div>
       
       <div class="menu-links">
-        <router-link to="/" class="nav-item">首页</router-link>
-        <router-link to="/posts" class="nav-item">文章</router-link>
-        <router-link to="/about" class="nav-item">关于</router-link>
-        <router-link to="/message" class="nav-item">留言板</router-link>
+        <router-link 
+          v-for="item in menuItems" 
+          :key="item.path" 
+          :to="item.path" 
+          class="nav-item"
+        >
+          {{ item.name }}
+        </router-link>
       </div>
 
       <div class="nav-right">
-        <router-link 
-          to="/login" 
-          :class="['login-link-btn', { 'is-hidden': isLoginPage }]"
-        >
-          登录
-        </router-link>
+        <router-link to="/login" class="login-btn">LOGIN</router-link>
       </div>
     </div>
   </nav>
@@ -34,90 +29,122 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { usePageTransition } from '@/composables/usePageTransition'
 
 const route = useRoute()
-const { isAnimating } = usePageTransition()
 
-// 判断逻辑：仅在首页和登录页使用“深色背景”适配样式（白色文字+高级毛玻璃）
-const isHomePage = computed(() => route.name === 'home')
-const isLoginPage = computed(() => route.name === 'login')
-const isDarkStyle = computed(() => isHomePage.value || isLoginPage.value)
+const menuItems = [
+  { name: '首页', path: '/' },
+  { name: '文章', path: '/posts' },
+  { name: '关于', path: '/about' },
+  { name: '留言', path: '/message' }
+]
+
+// 核心：首页和登录页都触发沉浸式样式
+const isImmersiveMode = computed(() => {
+  return ['/', '/login'].includes(route.path)
+})
 </script>
 
 <style lang="scss" scoped>
-.navbar {
+.navbar-fixed {
   position: fixed;
   top: 0; left: 0;
-  width: 100%; height: 70px;
-  z-index: 10000;
+  width: 100%;
+  height: 90px;
+  z-index: 9999;
   display: flex;
   align-items: center;
-  transition: all 0.5s cubic-bezier(0.645, 0.045, 0.355, 1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+  // --- 【常规页面模式】（默认） ---
+  background: #ffffff;
+  color: #000000;
+  border-bottom: 2px solid #000000; 
+
+  // --- 【沉浸模式：首页 & 登录页】 ---
+  &.is-immersive {
+    color: #ffffff;
+    border-bottom: none !important; 
+    
+    // 沉浸式的渐变遮罩背景
+    background: linear-gradient(
+      to bottom, 
+      rgba(0, 0, 0, 0.8) 0%, 
+      rgba(0, 0, 0, 0.4) 60%,
+      rgba(0, 0, 0, 0) 100%
+    ) !important;
+  }
+}
+
+.glass-gradient-bg {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 120px; 
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  pointer-events: none;
+  z-index: -1;
   
-  // 默认：白天模式（白底黑字）
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  color: #1d1d1f;
-
-  // 核心：统一的液体玻璃质感（首页和登录页共享）
-  &.is-dark-style {
-    background: rgba(255, 255, 255, 0.08) !important;
-    backdrop-filter: blur(15px) saturate(160%) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-    color: #ffffff !important;
-  }
-
-  &.animating {
-    pointer-events: none;
-    opacity: 0.6;
-  }
+  mask-image: linear-gradient(to bottom, black 0%, black 60%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 60%, transparent 100%);
 }
 
+// ... 剩下的 nav-container, nav-item 样式保持你原来的即可 ...
 .nav-container {
-  width: 100%; max-width: 1200px;
-  margin: 0 auto; padding: 0 40px;
-  display: flex; justify-content: space-between; align-items: center;
+  width: 100%;
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 0 50px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.logo-section {
-  font-size: 1.25rem; font-weight: 700;
-  .logo-dot { color: #3b82f6; }
+.logo-section .logo-text {
+  font-weight: 900;
+  letter-spacing: 3px;
+  font-size: 1.25rem;
 }
 
 .menu-links {
-  display: flex; gap: 8px;
+  display: flex;
+  gap: 50px;
+  
   .nav-item {
-    text-decoration: none; color: inherit;
-    padding: 8px 18px; border-radius: 12px;
-    transition: all 0.3s ease;
+    text-decoration: none;
+    color: inherit;
+    font-size: 1rem;
+    font-weight: 800;
     position: relative;
+    padding: 10px 0;
     
-    &:hover { background: rgba(120, 120, 120, 0.1); }
-    &.router-link-active::after {
-      content: ''; position: absolute; bottom: 4px; left: 50%;
-      transform: translateX(-50%); width: 4px; height: 4px;
-      border-radius: 50%; background: currentColor;
+    background: none !important;
+    border: none !important;
+
+    &:hover { opacity: 0.7; }
+    
+    &.router-link-active {
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: -5px; 
+        left: 50%;
+        transform: translateX(-50%);
+        width: 6px; height: 6px;
+        background: currentColor;
+        border-radius: 50%;
+      }
     }
   }
 }
 
-.nav-right .login-link-btn {
-  text-decoration: none; padding: 8px 22px; border-radius: 20px;
-  font-size: 0.9rem; font-weight: 600;
-  background: #1d1d1f; color: #fff;
-  transition: all 0.4s ease;
-
-  .is-dark-style & {
-    background: #ffffff; color: #1d1d1f;
-    &:hover { background: #3b82f6; color: #fff; }
-  }
-
-  &.is-hidden {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-  }
+.login-btn {
+  text-decoration: none;
+  color: inherit;
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 2px;
+  border: none !important;
 }
 </style>
