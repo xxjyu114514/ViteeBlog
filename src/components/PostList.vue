@@ -1,5 +1,5 @@
 <template>
-  <div class="post-list-wrapper">
+  <div class="post-list-wrapper container-narrow">
     <div class="tab-header">
       <button 
         :class="{ active: currentTab === 'latest' }" 
@@ -30,7 +30,7 @@ const currentTab = ref('latest')
 
 const articles = ref([
   { id: 1, title: '如何使用 Vite 快速构建项目', summary: 'Vite 是下一代前端工具链，能够显著提升前端开发体验。', date: '2026-04-01', views: 120, type: 'latest' },
-{ id: 2, title: 'Vue3 组合式 API 实战', summary: 'Setup 语法糖让你的代码更简洁，逻辑更易于复用和维护。', date: '2026-03-28', views: 540, type: 'hot' },
+{ id: 2, title: 'Vue3 组合式 API 实战', summary: 'Setup 语法糖让你的代码更简洁，逻辑更易于复用 and 维护。', date: '2026-03-28', views: 540, type: 'hot' },
 { id: 3, title: 'CSS 现代布局指南', summary: '从 Flexbox 到 Grid，掌握现代 Web 布局的核心技术。', date: '2026-03-15', views: 320, type: 'latest' },
 { id: 4, title: 'TypeScript 泛型深入理解', summary: '泛型是 TypeScript 最强大的特性之一，掌握它能写出更灵活的代码。', date: '2026-03-10', views: 280, type: 'latest' },
 { id: 5, title: 'Pinia 状态管理最佳实践', summary: 'Pinia 是 Vue 官方推荐的状态管理库，轻量且强大。', date: '2026-03-05', views: 890, type: 'hot' },
@@ -38,7 +38,7 @@ const articles = ref([
 { id: 7, title: 'Nuxt3 服务端渲染入门', summary: '使用 Nuxt3 轻松构建 SEO 友好的 Vue 应用。', date: '2026-02-20', views: 210, type: 'latest' },
 { id: 8, title: 'TailwindCSS 实用技巧', summary: '原子化 CSS 框架的最佳实践，让你写样式更高效。', date: '2026-02-15', views: 430, type: 'latest' },
 { id: 9, title: 'Vue Router 4 源码解析', summary: '深入理解 Vue Router 的实现原理，掌握路由核心机制。', date: '2026-02-10', views: 670, type: 'hot' },
-{ id: 10, title: '前端自动化测试入门', summary: '使用 Vitest 和 Vue Test Utils 为应用保驾护航。', date: '2026-02-01', views: 180, type: 'latest' },
+{ id: 10, title: '前端自动化测试入门', summary: '使用 Vitest 和 Vue Test Utils 为应用保航。', date: '2026-02-01', views: 180, type: 'latest' },
 { id: 11, title: 'Webpack vs Vite 对比分析', summary: '从构建原理到开发体验，全面对比两大构建工具。', date: '2026-01-25', views: 3200, type: 'hot' },
 { id: 12, title: 'JavaScript 设计模式实战', summary: '单例、工厂、观察者...经典设计模式在前端中的应用。', date: '2026-01-20', views: 950, type: 'hot' },
 { id: 13, title: 'Node.js 后端开发入门', summary: '使用 Express + MongoDB 快速搭建 RESTful API。', date: '2026-01-15', views: 340, type: 'latest' },
@@ -65,10 +65,7 @@ const filteredArticles = computed(() => {
 
 <style lang="scss" scoped>
 .post-list-wrapper {
-  max-width: 860px; // 稍微放宽，适合阅读
-  margin: 0 auto;
   padding: 60px 24px; // 增加顶部高度，避开固定导航栏
-  background-color: whitesmoke;
 }
 
 .tab-header {
@@ -82,17 +79,17 @@ const filteredArticles = computed(() => {
     background: none;
     border: none;
     font-size: 1.05rem;
-    color: #86868b; // iOS 辅助色
+    color: var(--text-secondary);
     cursor: pointer;
     position: relative;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     
     &:hover {
-      color: #1d1d1f; // 悬停加深
+      color: var(--text-main);
     }
 
     &.active {
-      color: #3b82f6; // 保持你的蓝色
+      color: var(--primary-color);
       font-weight: 600;
       
       &::after {
@@ -102,7 +99,7 @@ const filteredArticles = computed(() => {
         left: 0;
         width: 100%;
         height: 2.5px;
-        background: #3b82f6;
+        background: var(--primary-color);
         border-radius: 4px 4px 0 0; // 顶部微圆角
       }
     }

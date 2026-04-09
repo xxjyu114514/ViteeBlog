@@ -6,7 +6,7 @@
       <component 
         :is="Component" 
         :key="route.path" 
-        :class="['page-wrapper', { 'padding-page': !isImmersivePage }]" 
+        :class="['page-wrapper-base', { 'padding-page': !isImmersivePage }]" 
       />
     </transition>
   </router-view>
@@ -29,15 +29,6 @@ const isImmersivePage = computed(() => {
 </script>
 
 <style lang="scss">
-.page-wrapper {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100vw; height: 100vh;
-  z-index: 1;
-  overflow-y: auto;
-  background: white; // 默认底色
-}
-
 // 非沉浸页面（如文章列表、关于等）自动顶开导航栏高度
 .padding-page {
   padding-top: 90px; 

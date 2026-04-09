@@ -1,12 +1,12 @@
 <template>
   <div 
-    class="post-page-wrapper" 
+    class="post-page-wrapper page-wrapper-base"
     ref="scrollContainer"
     @wheel="handleWheel"
   >
     <div class="nav-placeholder"></div>
 
-    <div class="content-scroller">
+    <div class="content-scroller container">
       <PostList />
     </div>
     
@@ -48,8 +48,6 @@ const handleWheel = (e) => {
       router.push('/')
       touchTopState.value = 0
     }
-  } else {
-    touchTopState.value = 0
   }
 }
 
@@ -60,19 +58,10 @@ onUnmounted(() => {
 
 <style lang="scss" scoped>
 .post-page-wrapper {
-  width: 100%;
-  height: 100vh; 
   overflow-y: auto; // 滚动条在这里
-  background: #ffffff;
+  background: var(--bg-white);
   scroll-behavior: smooth;
   position: relative;
-}
-
-// 站位块高度同步 Navbar (90px)
-.nav-placeholder {
-  width: 100%;
-  height: 90px;
-  background: transparent;
 }
 
 .content-scroller {

@@ -2,7 +2,7 @@
   <nav :class="['navbar-fixed', { 'is-immersive': isImmersiveMode }]">
     <div v-if="isImmersiveMode" class="dynamic-blur-layer"></div>
     
-    <div class="nav-container">
+    <div class="nav-container container flex-between">
       <div class="logo-section">
         <span class="logo-text">OBSERVATION</span>
       </div>
@@ -56,14 +56,14 @@ const isImmersiveMode = computed(() => {
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 
   // --- 默认：常规页面（白底黑线） ---
-  background: #ffffff;
-  color: #000000;
-  border-bottom: 1px solid #000000;
+  background: var(--bg-white);
+  color: var(--text-main);
+  border-bottom: 1px solid var(--text-main);
 
   // --- 沉浸模式：首页 & 登录页 ---
   &.is-immersive {
-    background: transparent; // 必须透明，否则看不到背景
-    color: #ffffff;
+    background: transparent; 
+    color: var(--bg-white);
     border-bottom: none !important;
   }
 }
@@ -98,13 +98,7 @@ const isImmersiveMode = computed(() => {
 }
 
 .nav-container {
-  width: 100%;
-  max-width: 1300px;
-  margin: 0 auto;
   padding: 0 50px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 
 .logo-section .logo-text {

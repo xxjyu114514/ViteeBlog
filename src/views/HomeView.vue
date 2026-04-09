@@ -1,6 +1,6 @@
 <template>
-  <div class="home-view-wrapper" @wheel="handleWheel">
-    <section class="hero-static">
+  <div class="home-view-wrapper page-wrapper-base" @wheel="handleWheel">
+    <section class="hero-static flex-center">
       <div class="hero-content">
         <div class="avatar-box">
           <img src="../assets/avatar.png" class="avatar" alt="头像" />
@@ -29,14 +29,14 @@ const handleWheel = (e) => {
 
 <style lang="scss" scoped>
 .home-view-wrapper {
-  width: 100%; height: 100vh;
-  overflow: hidden; background: #111;
+  overflow: hidden;
+  background: #111;
 }
 
 .hero-static {
   width: 100%; height: 100%;
   background: #111 url('../assets/hero-bg.jpg') center/cover no-repeat;
-  display: flex; justify-content: center; align-items: center; color: white;
+  color: white;
 }
 
 .hero-content {
