@@ -39,7 +39,7 @@ app = create_app()
 if __name__ == "__main__":
     # 严谨配置：使用 uvicorn 启动
     uvicorn.run(
-        "main.py:app", 
+        "main:app",
         host="127.0.0.1", 
         port=8000, 
         reload=True  # 开发模式自动重载
