@@ -3,6 +3,9 @@ import { createRouter, createWebHistory } from 'vue-router'
 // 1. 静态导入核心页面
 import HomeView from '../views/HomeView.vue'
 import PostListView from '../views/PostListView.vue'
+import PostsImmersiveView from '../views/PostsImmersiveView.vue'
+import AboutImmersiveView from '../views/AboutImmersiveView.vue'
+import MessageImmersiveView from '../views/MessageImmersiveView.vue'
 
 // 2. 懒加载其他功能页面（提高加载性能）
 const AboutView = () => import('../views/AboutView.vue')
@@ -17,22 +20,40 @@ const routes = [
     meta: { index: 0, title: '首页' } // [cite: 5]
   },
   {
+    path: '/posts-immersive',
+    name: 'posts-immersive',
+    component: PostsImmersiveView,
+    meta: { index: 1, title: '文章列表' }
+  },
+  {
     path: '/posts',
     name: 'posts',
     component: PostListView,
-    meta: { index: 1, title: '文章列表' } // [cite: 8]
+    meta: { index: 10, title: '文章列表' } // [cite: 8]
+  },
+  {
+    path: '/about-immersive',
+    name: 'about-immersive',
+    component: AboutImmersiveView,
+    meta: { index: 2, title: '关于我' }
   },
   {
     path: '/about',
     name: 'about',
     component: AboutView,
-    meta: { index: 2, title: '关于我' } // [cite: 16]
+    meta: { index: 20, title: '关于我' } // [cite: 16]
+  },
+  {
+    path: '/message-immersive',
+    name: 'message-immersive',
+    component: MessageImmersiveView,
+    meta: { index: 3, title: '留言板' }
   },
   {
     path: '/message',
     name: 'message',
     component: MessageView,
-    meta: { index: 3, title: '留言板' } // [cite: 17]
+    meta: { index: 30, title: '留言板' } // [cite: 17]
   },
   {
     path: '/login',

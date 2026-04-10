@@ -33,15 +33,16 @@ const route = useRoute()
 
 const menuItems = [
   { name: '首页', path: '/' },
-  { name: '文章', path: '/posts' },
-  { name: '关于', path: '/about' },
-  { name: '留言', path: '/message' }
+  { name: '文章', path: '/posts-immersive' },
+  { name: '关于', path: '/about-immersive' },
+  { name: '留言', path: '/message-immersive' }
 ]
 
 // 统一判定沉浸模式
 const isImmersiveMode = computed(() => {
-  return ['/', '/login'].includes(route.path)
+  return ['/', '/posts-immersive', '/about-immersive', '/message-immersive', '/login'].includes(route.path)
 })
+
 </script>
 
 <style lang="scss" scoped>

@@ -13,18 +13,9 @@
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
-import { usePageTransition } from '@/composables/usePageTransition'
+import { usePrimaryPageWheel } from '@/composables/usePrimaryPageWheel'
 
-const router = useRouter()
-const { isAnimating } = usePageTransition()
-
-const handleWheel = (e) => {
-  if (isAnimating.value) return
-  if (e.deltaY > 0) {
-    router.push('/posts')
-  }
-}
+const { handleWheel } = usePrimaryPageWheel('home')
 </script>
 
 <style lang="scss" scoped>

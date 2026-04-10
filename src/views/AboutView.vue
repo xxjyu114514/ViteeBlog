@@ -1,5 +1,9 @@
 <template>
   <div class="about-container">
+    <div class="back-button" @click="handleBack">
+      ← 返回
+    </div>
+    
     <section class="about-hero">
       <h1 class="glass-text">About Me</h1>
     </section>
@@ -17,7 +21,38 @@
   </div>
 </template>
 
+<script setup>
+import { useRouter } from 'vue-router'
+import { usePageTransition } from '@/composables/usePageTransition'
+
+const router = useRouter()
+const { isAnimating } = usePageTransition()
+
+const handleBack = () => {
+  if (isAnimating.value) return
+  router.push('/about-immersive')
+}
+</script>
+
 <style lang="scss" scoped>
+.back-button {
+  position: fixed;
+  top: 100px;
+  left: 20px;
+  z-index: 1000;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.3s;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.9);
+  }
+}
+
 .about-container {
   width: 100%;
   background: #f0f2f5;
