@@ -19,7 +19,7 @@ class AuthRepository:
         # 1. 查询用户
         result = await db.execute(select(User).where(User.username == username))
         user = result.scalars().first()
-
+        #ououo
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
