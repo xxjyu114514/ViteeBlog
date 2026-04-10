@@ -20,7 +20,7 @@ import { usePageTransition } from './composables/usePageTransition'
 
 const route = useRoute()
 const { onEnter, onLeave } = usePageTransition()
-
+// jjjj
 // 定义哪些页面需要“首页样式”（沉浸式、无占位）
 const isImmersivePage = computed(() => {
   const immersivePaths = ['/', '/posts-immersive', '/about-immersive', '/message-immersive', '/login']
