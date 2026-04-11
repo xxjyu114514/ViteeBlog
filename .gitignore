@@ -1,0 +1,64 @@
+# ==========================================
+# 后端 (FastAPI / Python) 过滤规则
+# ==========================================
+
+# 忽略依赖库 (最重要：取消对虚拟环境的跟踪)
+venv/
+.venv/
+env/
+ENV/
+bin/
+lib/
+# 如果你使用 poetry
+.venv
+dist/
+
+# Python 字节码与缓存
+**/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 环境变量配置文件 (包含密钥，绝对不能上传)
+.env
+.env.local
+.env.*.local
+
+# ==========================================
+# 前端 (Vue.js / Node) 过滤规则
+# ==========================================
+
+# 忽略依赖库 (最重要：取消对 node_modules 的跟踪)
+node_modules/
+jspm_packages/
+
+# 编译产物
+dist/
+dist-ssr/
+*.local
+
+# 日志文件
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==========================================
+# 编辑器与系统文件
+# ==========================================
+
+# IDEs
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# 系统文件
+.DS_Store
+Thumbs.db
