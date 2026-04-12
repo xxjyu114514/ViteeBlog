@@ -91,3 +91,12 @@
   justify-content: center;
   align-items: center;
 }
+/* src/assets/main.scss */
+@font-face {
+  font-family: 'PingFangCustom';
+  /* 使用相对路径指向你的字体文件 */
+  src: url('@/assets/Font/PingFang SC Heavy.ttf') format('truetype'); 
+  font-weight: 900;
+  font-style: normal;
+}
+
