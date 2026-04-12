@@ -17,6 +17,9 @@ email-validator==2.3.0
 
 # JWT 和认证
 python-multipart==0.0.22
+bcrypt==3.2.2
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.5.0
 
 # 环境变量
 python-dotenv==1.2.2
@@ -27,3 +30,5 @@ httpx==0.28.1
 
 #执行安装命令的代码：
 #pip install -r requirements.txt
+
+
