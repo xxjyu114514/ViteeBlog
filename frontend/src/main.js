@@ -1,9 +1,14 @@
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import './style.css'
-import './assets/main.scss' // 存放全局基础样式 
 
 const app = createApp(App)
-app.use(router) // 必须 use 才能识别 router-view
+const pinia = createPinia()
+
+// 关键：先安装 Pinia，再安装 Router
+app.use(pinia)
+app.use(router)
+
 app.mount('#app')
