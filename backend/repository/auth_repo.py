@@ -110,3 +110,58 @@ class AuthRepository:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="注册失败，请稍后再试"
             )
+
+    @staticmethod
+    async def save_email_code(db: AsyncSession, email: str, code: str):
+        """
+        严谨存储验证码：
+        1. 检查距离上次发送是否超过 60 秒
+        2. 强制 commit 确保存入磁盘
+        """
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalars().first()
+
+        if not user:
+            return False
+
+        # --- 逻辑漏洞修复：防止重复/频繁发送 ---
+        if user.last_fail_time:  # 借用原字段或单独字段，这里为了严谨建议用过期时间倒推
+            # 如果 code_expires_at 存在，且距离过期还有 9 分钟以上（说明刚发过）
+            if user.code_expires_at and (user.code_expires_at - datetime.now()).total_seconds() > 540:
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="发送太频繁，请 60 秒后再试"
+                )
+
+        # 更新验证码信息
+        user.email_code = code
+        user.code_expires_at = datetime.now() + timedelta(minutes=10)
+
+        # --- 关键修复：必须强制 commit 才能保存到数据库 ---
+        try:
+            db.add(user)  # 确保对象在 session 中
+            await db.commit()  # 提交事务
+            await db.refresh(user)  # 刷新状态
+            return True
+        except Exception as e:
+            await db.rollback()
+            print(f"数据库保存失败: {e}")
+            return False
+
+    @staticmethod
+    async def verify_email_code(db: AsyncSession, email: str, code: str):
+        """校验并销毁验证码"""
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalars().first()
+
+        if not user or user.email_code != code:
+            return False
+
+        if datetime.now() > user.code_expires_at:
+            return False
+
+        # 验证通过，立即失效（防止二次使用）
+        user.email_code = None
+        user.code_expires_at = None
+        await db.commit()
+        return True

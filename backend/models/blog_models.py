@@ -48,6 +48,10 @@ class User(Base):
 
     articles: Mapped[List["Article"]] = relationship(back_populates="author")
 
+    email_code: Mapped[Optional[str]] = mapped_column(String(10), nullable=True, comment="验证码")
+    code_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, comment="验证码过期时间")
+    is_verified: Mapped[bool] = mapped_column(Boolean, server_default="0", comment="邮箱是否验证")
+
 
 class Category(Base):
     """分类表：支持两级嵌套"""

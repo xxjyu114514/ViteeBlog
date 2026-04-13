@@ -3,6 +3,8 @@ from typing import Any, Union
 from jose import jwt
 from passlib.context import CryptContext
 from core.config import settings
+import secrets
+import string
 
 # 1. 密码加密上下文：使用 bcrypt 算法
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -34,3 +36,8 @@ def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None
     # 使用 .env 中定义的密钥和算法签名
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
+
+
+def generate_verification_code() -> str:
+    """生成 6 位安全数字验证码"""
+    return ''.join(secrets.choice(string.digits) for _ in range(6))

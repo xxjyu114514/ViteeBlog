@@ -18,8 +18,8 @@ POST http://127.0.0.1:8000/api/v1/auth/register
 Content-Type: application/json
 
 {
-  "username": "testuser",
-  "email": "test@example.com",
+  "username": "BaoZi",
+  "email": "293529819@qq.com",
   "password": "123456"
 }
 
@@ -30,7 +30,7 @@ POST http://127.0.0.1:8000/api/v1/auth/login
 Content-Type: application/json
 
 {
-  "username": "testuser",
+  "username": "BaoZi",
   "password": "123456"
 }
 
@@ -70,3 +70,43 @@ Content-Type: application/json
 }
 
 ###
+
+# 6. 发送邮箱验证码（需要先注册一个用户）
+POST http://127.0.0.1:8000/api/v1/auth/send-code
+Content-Type: application/json
+
+{
+  "email": "293529819@qq.com"
+}
+
+###
+
+# 7. 校验邮箱验证码（将 YOUR_CODE 替换为实际收到的6位验证码）
+POST http://127.0.0.1:8000/api/v1/auth/verify-code
+Content-Type: application/json
+
+{
+  "email": "293529819@qq.com",
+  "code": "851688"
+}
+
+###
+
+# 8. 发送验证码到未注册的邮箱（测试404错误场景）
+POST http://127.0.0.1:8000/api/v1/auth/send-code
+Content-Type: application/json
+
+{
+  "email": "nonexistent@example.com"
+}
+
+###
+
+# 9. 校验错误的验证码（测试400错误场景）
+POST http://127.0.0.1:8000/api/v1/auth/verify-code
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "code": "000000"
+}

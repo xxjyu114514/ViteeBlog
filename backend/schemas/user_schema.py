@@ -43,3 +43,12 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     user_id: Optional[str] = None
     role: Optional[str] = None
+
+# 验证码发送请求
+class EmailCodeRequest(BaseModel):
+    email: EmailStr
+
+# 验证码校验请求
+class VerifyCodeRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(..., min_length=6, max_length=6)
