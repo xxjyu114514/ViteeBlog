@@ -1,18 +1,27 @@
 <template>
   <div class="home-view-wrapper page-wrapper-base" @wheel="handleWheel">
-    <section class="hero-static">
+    <!-- 未登录状态：显示沉浸式封面 -->
+    <section v-if="!userStore.isAuthenticated" class="hero-static">
       <div class="hero-content">
         <h1 class="glass-text">观测笔记</h1>
         <p class="intro-text">Observational Notes / 2026</p>
       </div>
     </section>
+    
+    <!-- 已登录状态：显示个人中心 -->
+    <PersonalCenterView v-else />
   </div>
 </template>
 
 <script setup>
 import { usePrimaryPageWheel } from '@/composables/usePrimaryPageWheel'
+import { useUserStore } from '@/stores/user'
+import PersonalCenterView from './PersonalCenterView.vue'
 
-// 维持项目原有的滚轮导航逻辑
+// 获取用户状态
+const userStore = useUserStore()
+
+// 维持项目原有的滚轮导航逻辑，但只在未登录时启用
 const { handleWheel } = usePrimaryPageWheel('home')
 </script>
 
