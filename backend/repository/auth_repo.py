@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
-from sqlalchemy import select, update
+from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
-from models.blog_models import User, UserRole
+from models.blog_models import User, VerificationCode, UserRole
 from core.security import verify_password, get_password_hash, create_access_token
 
 
@@ -19,7 +19,7 @@ class AuthRepository:
         # 1. 查询用户
         result = await db.execute(select(User).where(User.username == username))
         user = result.scalars().first()
-        #ououo
+
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -36,7 +36,7 @@ class AuthRepository:
                     detail=f"账号已锁定，请在 {remaining_time} 分钟后再试"
                 )
             else:
-                # 锁定时间已过，重置尝试次数（严谨性：在验证密码前先看是否解除锁定）
+                # 锁定时间已过，重置尝试次数
                 user.login_attempts = 0
                 await db.commit()
 
@@ -65,11 +65,10 @@ class AuthRepository:
         access_token = create_access_token(
             data={"sub": str(user.id), "role": user.role.value}
         )
-        # --- 严谨修复：返回完整的 user 对象以符合 UserOut schema 要求 ---
         return {
             "access_token": access_token,
             "token_type": "bearer",
-            "user": user  # 直接返回 user 实例，Pydantic 会自动根据 UserOut 进行过滤和转换
+            "user": user
         }
 
     @staticmethod
@@ -96,7 +95,7 @@ class AuthRepository:
             username=user_data['username'],
             email=user_data['email'],
             password=get_password_hash(user_data['password']),
-            role=UserRole.COMMON  # 默认注册为普通用户
+            role=UserRole.COMMON
         )
 
         db.add(new_user)
@@ -112,56 +111,82 @@ class AuthRepository:
             )
 
     @staticmethod
-    async def save_email_code(db: AsyncSession, email: str, code: str):
-        """
-        严谨存储验证码：
-        1. 检查距离上次发送是否超过 60 秒
-        2. 强制 commit 确保存入磁盘
-        """
-        result = await db.execute(select(User).where(User.email == email))
-        user = result.scalars().first()
+    async def save_register_code(db: AsyncSession, email: str, code: str):
+        """企业级预注册逻辑"""
+        # 1. 检查是否已注册
+        user_exists = await db.execute(select(User).where(User.email == email))
+        if user_exists.scalars().first():
+            raise HTTPException(status_code=400, detail="该邮箱已注册，请直接登录")
 
-        if not user:
-            return False
+        # 2. 频率限制（只检查未过期的验证码）
+        last_code = await db.execute(
+            select(VerificationCode)
+            .where(
+                VerificationCode.email == email,
+                VerificationCode.expires_at > datetime.now(),
+                VerificationCode.deleted_at.is_(None)  # 只检查未删除的记录
+            )
+            .order_by(VerificationCode.created_at.desc())
+        )
+        last_rec = last_code.scalars().first()
+        if last_rec:
+            delta = (datetime.now() - last_rec.created_at).total_seconds()
+            if delta < 60:
+                raise HTTPException(status_code=429, detail=f"请在 {int(60 - delta)}秒后重试")
 
-        # --- 逻辑漏洞修复：防止重复/频繁发送 ---
-        if user.last_fail_time:  # 借用原字段或单独字段，这里为了严谨建议用过期时间倒推
-            # 如果 code_expires_at 存在，且距离过期还有 9 分钟以上（说明刚发过）
-            if user.code_expires_at and (user.code_expires_at - datetime.now()).total_seconds() > 540:
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="发送太频繁，请 60 秒后再试"
-                )
+        # 3. 软删除该邮箱之前的旧码（而不是物理删除）
+        await db.execute(
+            update(VerificationCode)
+            .where(
+                VerificationCode.email == email,
+                VerificationCode.deleted_at.is_(None)
+            )
+            .values(deleted_at=datetime.now())
+        )
 
-        # 更新验证码信息
-        user.email_code = code
-        user.code_expires_at = datetime.now() + timedelta(minutes=10)
-
-        # --- 关键修复：必须强制 commit 才能保存到数据库 ---
-        try:
-            db.add(user)  # 确保对象在 session 中
-            await db.commit()  # 提交事务
-            await db.refresh(user)  # 刷新状态
-            return True
-        except Exception as e:
-            await db.rollback()
-            print(f"数据库保存失败: {e}")
-            return False
-
-    @staticmethod
-    async def verify_email_code(db: AsyncSession, email: str, code: str):
-        """校验并销毁验证码"""
-        result = await db.execute(select(User).where(User.email == email))
-        user = result.scalars().first()
-
-        if not user or user.email_code != code:
-            return False
-
-        if datetime.now() > user.code_expires_at:
-            return False
-
-        # 验证通过，立即失效（防止二次使用）
-        user.email_code = None
-        user.code_expires_at = None
+        # 4. 存入新码（created_at 由数据库自动生成）
+        new_code = VerificationCode(
+            email=email,
+            code=code,
+            expires_at=datetime.now() + timedelta(minutes=10)
+        )
+        db.add(new_code)
         await db.commit()
         return True
+
+    @staticmethod
+    async def verify_and_consume_code(db: AsyncSession, email: str, code: str):
+        """校验并立即销毁验证码（防止重放攻击）"""
+        result = await db.execute(
+            select(VerificationCode)
+            .where(
+                VerificationCode.email == email,
+                VerificationCode.code == code,
+                VerificationCode.deleted_at.is_(None)  # 只查询未删除的
+            )
+        )
+        record = result.scalars().first()
+
+        if not record:
+            return False
+
+        # 检查是否过期
+        if datetime.now() > record.expires_at:
+            # 软删除过期验证码
+            await db.execute(
+                update(VerificationCode)
+                .where(VerificationCode.id == record.id)
+                .values(deleted_at=datetime.now())
+            )
+            await db.commit()
+            return False
+
+        # 校验通过，软删除（一次性使用）
+        await db.execute(
+            update(VerificationCode)
+            .where(VerificationCode.id == record.id)
+            .values(deleted_at=datetime.now())
+        )
+        await db.commit()
+        return True
+

@@ -11,68 +11,11 @@ Accept: application/json
 ###
 
 
-# ==================== 认证相关测试 ====================
+# ==================== 邮箱验证码注册流程测试 ====================
 
-# 1. 用户注册
-POST http://127.0.0.1:8000/api/v1/auth/register
-Content-Type: application/json
-
-{
-  "username": "BaoZi",
-  "email": "293529819@qq.com",
-  "password": "123456"
-}
-
-###
-
-# 2. 用户登录（使用正确的凭据）
-POST http://127.0.0.1:8000/api/v1/auth/login
-Content-Type: application/json
-
-{
-  "username": "BaoZi",
-  "password": "123456"
-}
-
-###
-
-# 3. 用户登录（使用错误的密码 - 测试失败场景）
-POST http://127.0.0.1:8000/api/v1/auth/login
-Content-Type: application/json
-
-{
-  "username": "testuser",
-  "password": "wrongpassword"
-}
-
-###
-
-# 4. 用户注册（重复用户名 - 测试唯一性约束）
-POST http://127.0.0.1:8000/api/v1/auth/register
-Content-Type: application/json
-
-{
-  "username": "testuser",
-  "email": "another@example.com",
-  "password": "123456"
-}
-
-###
-
-# 5. 用户注册（弱密码测试 - 少于6位）
-POST http://127.0.0.1:8000/api/v1/auth/register
-Content-Type: application/json
-
-{
-  "username": "weakuser",
-  "email": "weak@example.com",
-  "password": "123"
-}
-
-###
-
-# 6. 发送邮箱验证码（需要先注册一个用户）
-POST http://127.0.0.1:8000/api/v1/auth/send-code
+# 1. 发送注册验证码（第一步：获取验证码）
+# 执行后请查看邮箱获取6位验证码
+POST http://127.0.0.1:8000/api/v1/auth/send-register-code
 Content-Type: application/json
 
 {
@@ -81,32 +24,76 @@ Content-Type: application/json
 
 ###
 
-# 7. 校验邮箱验证码（将 YOUR_CODE 替换为实际收到的6位验证码）
-POST http://127.0.0.1:8000/api/v1/auth/verify-code
+# 2. 完成用户注册（第二步：使用收到的验证码）
+# ⚠️ 将 YOUR_CODE 替换为实际收到的6位验证码
+POST http://127.0.0.1:8000/api/v1/auth/register
 Content-Type: application/json
 
 {
-  "email": "293529819@qq.com",
-  "code": "851688"
+  "user_in": {
+    "username": "BaoZi",
+    "email": "293529819@qq.com",
+    "password": "123456"
+  },
+  "email_code": "061866"
 }
 
 ###
 
-# 8. 发送验证码到未注册的邮箱（测试404错误场景）
-POST http://127.0.0.1:8000/api/v1/auth/send-code
+# 3. 用户登录（验证注册成功）
+POST http://127.0.0.1:8000/api/v1/auth/login
 Content-Type: application/json
 
 {
-  "email": "nonexistent@example.com"
+  "username": "BaoZi",
+  "password": "123456"
 }
 
 ###
 
-# 9. 校验错误的验证码（测试400错误场景）
-POST http://127.0.0.1:8000/api/v1/auth/verify-code
+
+# ==================== 异常场景测试 ====================
+
+# 4. 已注册邮箱再次发送验证码（应返回400错误）
+POST http://127.0.0.1:8000/api/v1/auth/send-register-code
 Content-Type: application/json
 
 {
-  "email": "test@example.com",
-  "code": "000000"
+  "email": "293529819@qq.com"
+}
+
+###
+
+# 5. 使用错误验证码注册（应返回400错误）
+POST http://127.0.0.1:8000/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "user_in": {
+    "username": "FakeUser",
+    "email": "fake@example.com",
+    "password": "111111"
+  },
+  "email_code": "000000"
+}
+
+###
+
+# 6. 频繁发送验证码测试（60秒内重复发送，应返回429错误）
+# 先发送第一次
+POST http://127.0.0.1:8000/api/v1/auth/send-register-code
+Content-Type: application/json
+
+{
+  "email": "test@example.com"
+}
+
+###
+
+# 立即发送第二次（间隔小于60秒）
+POST http://127.0.0.1:8000/api/v1/auth/send-register-code
+Content-Type: application/json
+
+{
+  "email": "test@example.com"
 }

@@ -1,6 +1,6 @@
 import enum
 from typing import List, Optional
-from sqlalchemy import String, Text, ForeignKey, Integer, Boolean, Table, Column, Enum,DateTime
+from sqlalchemy import String, Text, ForeignKey, Integer, Boolean, Table, Column, Enum, DateTime, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from models.base import Base
 from datetime import datetime
@@ -48,9 +48,27 @@ class User(Base):
 
     articles: Mapped[List["Article"]] = relationship(back_populates="author")
 
-    email_code: Mapped[Optional[str]] = mapped_column(String(10), nullable=True, comment="验证码")
-    code_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, comment="验证码过期时间")
-    is_verified: Mapped[bool] = mapped_column(Boolean, server_default="0", comment="邮箱是否验证")
+
+class VerificationCode(Base):
+    """验证码表：用于注册、找回密码等场景"""
+    __tablename__ = "verification_codes"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    email: Mapped[str] = mapped_column(String(100), index=True, comment="邮箱地址")
+    code: Mapped[str] = mapped_column(String(10), comment="验证码")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        server_default=text("CURRENT_TIMESTAMP"),
+        comment="创建时间"
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime, comment="过期时间")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        server_default=text("CURRENT_TIMESTAMP"),
+        onupdate=text("CURRENT_TIMESTAMP"),
+        comment="更新时间"
+    )
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, comment="删除时间（软删除）")
 
 
 class Category(Base):
@@ -76,7 +94,7 @@ class Article(Base):
     title: Mapped[str] = mapped_column(String(200), index=True, comment="标题")
     summary: Mapped[str] = mapped_column(String(500), comment="摘要")
 
-    # 内容区支持复杂文档 [cite: 13, 27]
+    # 内容区支持复杂文档
     content: Mapped[str] = mapped_column(Text(length=4294967295), comment="源码")
     html_content: Mapped[str] = mapped_column(Text(length=4294967295), comment="渲染HTML")
 
