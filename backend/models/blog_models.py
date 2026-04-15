@@ -142,3 +142,4 @@ class Message(Base):
     email: Mapped[str] = mapped_column(String(100))
     content: Mapped[str] = mapped_column(Text)
     reply_content: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="博主回复")
+

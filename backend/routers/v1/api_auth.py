@@ -89,3 +89,4 @@ async def send_register_code(payload: EmailCodeRequest, db: AsyncSession = Depen
 
     return {"message": "验证码已发送至您的邮箱"}
 
+
