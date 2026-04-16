@@ -49,10 +49,34 @@
 
             <div v-if="!isLogin" class="input-group">
               <label>电子邮箱</label>
+              <div class="email-input-wrapper">
+                <input 
+                  v-model="formData.email" 
+                  type="email" 
+                  placeholder="Email Address" 
+                  required 
+                  :disabled="codeSent"
+                  @input="clearMessages"
+                />
+                <button 
+                  type="button"
+                  class="send-code-btn"
+                  @click="handleSendCode"
+                  :disabled="countdown > 0 || !formData.email || isSubmitting"
+                >
+                  {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- 验证码输入框 -->
+            <div v-if="!isLogin && showCodeInput" class="input-group">
+              <label>验证码</label>
               <input 
-                v-model="formData.email" 
-                type="email" 
-                placeholder="Email Address" 
+                v-model="verificationCode" 
+                type="text" 
+                placeholder="请输入6位验证码" 
+                maxlength="6"
                 required 
                 @input="clearMessages"
               />
@@ -110,6 +134,12 @@ const isSubmitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 
+// 验证码相关状态
+const showCodeInput = ref(false)
+const verificationCode = ref('')
+const codeSent = ref(false)
+const countdown = ref(0)
+
 // 响应式表单数据
 const formData = reactive({
   username: '',
@@ -126,6 +156,57 @@ const toggleMode = () => {
 const clearMessages = () => {
   errorMessage.value = ''
   successMessage.value = ''
+}
+
+/**
+ * 发送邮箱验证码
+ */
+const handleSendCode = async () => {
+  if (!formData.email) {
+    errorMessage.value = '请先输入邮箱地址'
+    return
+  }
+  
+  // 验证邮箱格式
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(formData.email)) {
+    errorMessage.value = '请输入有效的邮箱地址'
+    return
+  }
+  
+  if (countdown.value > 0) {
+    return // 防止重复发送
+  }
+
+  isSubmitting.value = true
+  clearMessages()
+
+  try {
+    console.log('发送验证码请求:', { email: formData.email });
+    const result = await authAPI.sendVerificationCode(formData.email)
+    
+    if (result.success) {
+      successMessage.value = '验证码已发送至您的邮箱'
+      codeSent.value = true
+      showCodeInput.value = true
+      
+      // 开始60秒倒计时
+      countdown.value = 60
+      const timer = setInterval(() => {
+        countdown.value--
+        if (countdown.value <= 0) {
+          clearInterval(timer)
+        }
+      }, 1000)
+    } else {
+      errorMessage.value = result.message
+    }
+  } catch (error) {
+    console.error('发送验证码失败:', error)
+    errorMessage.value = '发送验证码失败，请稍后重试'
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
 /**
@@ -160,26 +241,66 @@ const handleSubmit = async () => {
         isSubmitting.value = false
       }
     } else {
-      // 注册逻辑
-      console.log('开始注册请求，用户名:', formData.username, '邮箱:', formData.email)
-      const { data, error } = await authAPI.register({
+      // 注册逻辑：先验证邮箱
+      console.log('开始注册流程，用户名:', formData.username, '邮箱:', formData.email)
+      
+      // 1. 检查是否已获取验证码
+      if (!codeSent.value || !verificationCode.value) {
+        errorMessage.value = '请先获取并输入邮箱验证码'
+        isSubmitting.value = false
+        return
+      }
+
+      // 2. 验证邮箱验证码
+      console.log('正在验证邮箱验证码...', { email: formData.email, code: verificationCode.value })
+      
+      // 确保验证码是字符串且去除空格
+      const cleanCode = verificationCode.value.toString().trim();
+      if (cleanCode.length !== 6) {
+        errorMessage.value = '验证码必须是6位数字'
+        console.error('❌ 验证码长度错误:', cleanCode.length, '原始值:', verificationCode.value)
+        isSubmitting.value = false
+        return
+      }
+      
+      const verifyResult = await authAPI.verifyEmailCode({
+        email: formData.email,
+        code: cleanCode
+      })
+
+      if (!verifyResult.success) {
+        errorMessage.value = verifyResult.message || '验证码错误，请重新输入'
+        console.error('❌ 验证码验证失败:', verifyResult.message, '输入的验证码:', verificationCode.value)
+        isSubmitting.value = false
+        return
+      }
+
+      console.log('✅ 邮箱验证码验证成功')
+
+      // 3. 验证码正确后，执行注册
+      const result = await authAPI.register({
         username: formData.username,
         email: formData.email,
         password: formData.password
       })
       
-      if (!error.value && data.value) {
+      if (result.success) {
         // 注册成功：自动切换到登录模式
         console.log('✅ 注册成功！新用户创建完成')
         successMessage.value = '注册成功！请使用新账号登录'
         setTimeout(() => {
           isLogin.value = true
           formData.email = ''
+          formData.password = ''
+          verificationCode.value = ''
+          showCodeInput.value = false
+          codeSent.value = false
+          countdown.value = 0
           successMessage.value = ''
         }, 2000)
       } else {
         // 注册失败：显示详细的错误信息
-        const errorMsg = error.value?.data?.detail || error.value?.message || '注册失败，请检查输入信息'
+        const errorMsg = result.message || '注册失败，请检查输入信息'
         console.error('❌ 注册失败:', errorMsg)
         errorMessage.value = errorMsg
         isSubmitting.value = false
@@ -304,6 +425,40 @@ const handleSubmit = async () => {
       border: 1px solid #d2d2d7; background: #f5f5f7; font-size: 1rem;
       transition: all 0.3s;
       &:focus { background: #fff; border-color: #3b82f6; outline: none; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+      &:disabled { opacity: 0.6; cursor: not-allowed; }
+    }
+  }
+
+  // 邮箱输入框和按钮的布局
+  .email-input-wrapper {
+    display: flex;
+    gap: 10px;
+    
+    input {
+      flex: 1;
+    }
+    
+    .send-code-btn {
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid #d2d2d7;
+      background: #f5f5f7;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #3b82f6;
+      cursor: pointer;
+      transition: all 0.3s;
+      white-space: nowrap;
+      
+      &:hover:not(:disabled) {
+        background: #e5e7eb;
+        border-color: #3b82f6;
+      }
+      
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
     }
   }
 }
