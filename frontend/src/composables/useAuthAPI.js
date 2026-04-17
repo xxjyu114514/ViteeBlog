@@ -107,19 +107,16 @@ export function useAuthAPI() {
     const { data, error } = await useBaseFetch('/auth/register').post(userData).json()
     
     if (!error.value) {
-      return { data: data.value, error: null }
+      return { data, error }
     }
     
-    // 返回友好的错误信息
-    return { 
-      data: null, 
-      error: { 
-        value: { 
-          ...error.value, 
-          friendlyMessage: extractFriendlyErrorMessage(error.value, '注册') 
-        } 
-      } 
+    // 修改错误对象，添加友好的错误信息
+    error.value = {
+      ...error.value,
+      friendlyMessage: extractFriendlyErrorMessage(error.value, '注册')
     }
+    
+    return { data, error }
   }
 
   // 发送注册验证码
@@ -127,19 +124,16 @@ export function useAuthAPI() {
     const { data, error } = await useBaseFetch('/auth/send-register-code').post({ email }).json()
     
     if (!error.value) {
-      return { data: data.value, error: null }
+      return { data, error }
     }
     
-    // 返回友好的错误信息
-    return { 
-      data: null, 
-      error: { 
-        value: { 
-          ...error.value, 
-          friendlyMessage: extractFriendlyErrorMessage(error.value, '发送验证码') 
-        } 
-      } 
+    // 修改错误对象，添加友好的错误信息
+    error.value = {
+      ...error.value,
+      friendlyMessage: extractFriendlyErrorMessage(error.value, '发送验证码')
     }
+    
+    return { data, error }
   }
 
   return { login, register, sendRegisterCode }
