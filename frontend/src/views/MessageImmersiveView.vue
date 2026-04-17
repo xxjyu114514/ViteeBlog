@@ -16,8 +16,21 @@
         </div>
         <h1 class="glass-text">留言板</h1>
         <p class="intro-text">MESSAGE BOARD / 2026</p>
+        
+        <!-- 增加留言统计 -->
+        <div class="stats-preview">
+          <span class="stat-item">📝 128条留言</span>
+          <span class="stat-item">💬 45位访客</span>
+        </div>
+        
+        <!-- 增加最新留言预览 -->
+        <div class="latest-message">
+          <p class="message-author">来自 @技术爱好者：</p>
+          <p class="message-content">博客内容很实用，期待更多分享！</p>
+        </div>
+        
         <div class="enter-hint">
-          <span>点击进入留言</span>
+          <span>点击进入留言互动</span>
         </div>
       </div>
     </section>
@@ -78,6 +91,46 @@ const handleClick = () => {
     color: rgba(255, 255, 255, 0.7);
     text-transform: uppercase; 
     letter-spacing: 2px;
+  }
+  
+  .stats-preview {
+    display: flex;
+    gap: 20px;
+    margin: 20px 0;
+    justify-content: center;
+    
+    .stat-item {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 8px 16px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+  }
+
+  .latest-message {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 16px;
+    margin: 20px 0;
+    max-width: 400px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    
+    .message-author {
+      color: #3b82f6;
+      font-weight: 600;
+      margin: 0 0 8px 0;
+      font-size: 0.9rem;
+    }
+    
+    .message-content {
+      color: rgba(255, 255, 255, 0.9);
+      margin: 0;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
   }
   
   .enter-hint {

@@ -9,19 +9,42 @@
         </div>
       </header>
       
-      <nav class="admin-menu">
-        <button class="menu-item">📝 发布文章</button>
-        <button class="menu-item">📂 内容管理</button>
-        <button class="menu-item">⚙️ 系统设置</button>
-        <button @click="userStore.logout()" class="menu-item logout">退出登录</button>
-      </nav>
+      <div class="menu-section">
+        <button 
+          v-for="item in menuItems" 
+          :key="item.name" 
+          class="menu-item"
+        >
+          {{ item.name }}
+        </button>
+        
+        <!-- 退出登录按钮 -->
+        <button @click="handleLogout" class="menu-item logout">退出登录</button>
+      </div>
+      
     </div>
   </div>
 </template>
 
 <script setup>
 import { useUserStore } from '@/stores/user'
+import { useRouter } from 'vue-router'
+
 const userStore = useUserStore()
+const router = useRouter()
+
+// 退出登录处理函数
+const handleLogout = () => {
+  userStore.logout()
+  router.push('/login')
+}
+
+const menuItems = [
+  { name: '📝 发布文章' },
+  { name: '📂 内容管理' },
+  { name: '⚙️ 系统设置' }
+]
+
 </script>
 
 <style lang="scss" scoped>
