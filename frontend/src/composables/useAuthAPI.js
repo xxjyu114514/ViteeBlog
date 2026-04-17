@@ -33,6 +33,54 @@ const useBaseFetch = createFetch({
   },
 })
 
+// 统一的错误信息提取函数
+const extractFriendlyErrorMessage = (error, context = '操作') => {
+  // 开发者调试信息（保留详细错误）
+  if (error) {
+    console.error(`🐛 ${context}错误详情:`, {
+      status: error.status,
+      message: error.message,
+      data: error.data,
+      url: error.url
+    })
+  }
+  
+  // 用户友好提示
+  if (!error) {
+    return `${context}失败，请稍后重试`
+  }
+  
+  // 优先使用后端返回的具体错误详情
+  if (error.data?.detail) {
+    return error.data.detail
+  }
+  
+  // 根据HTTP状态码提供友好提示
+  switch (error.status) {
+    case 400:
+      return '输入信息有误，请检查后重试'
+    case 401:
+      return '身份验证失败，请检查用户名和密码'
+    case 403:
+      if (error.data?.detail && error.data.detail.includes('锁定')) {
+        return error.data.detail // 保留具体的锁定时间信息
+      }
+      return '操作被拒绝，请稍后重试'
+    case 404:
+      return '请求的资源不存在'
+    case 429:
+      return '操作太频繁，请稍后再试'
+    case 500:
+      return '系统繁忙，请稍后重试'
+    case 502:
+    case 503:
+    case 504:
+      return '服务暂时不可用，请稍后重试'
+    default:
+      return `${context}失败，请稍后重试`
+  }
+}
+
 export function useAuthAPI() {
   const userStore = useUserStore()
   const router = useRouter()
@@ -49,31 +97,49 @@ export function useAuthAPI() {
       return { success: true }
     }
     
-    // 更准确地提取错误信息
-    let errorMessage = '登录失败'
-    if (error.value) {
-      // 尝试从不同位置获取错误详情
-      if (error.value.data?.detail) {
-        errorMessage = error.value.data.detail
-      } else if (error.value.message) {
-        errorMessage = error.value.message
-      } else if (typeof error.value === 'string') {
-        errorMessage = error.value
-      } else {
-        errorMessage = `HTTP ${error.value.status || '未知错误'}`
-      }
-    }
+    // 使用友好的错误信息
+    const errorMessage = extractFriendlyErrorMessage(error.value, '登录')
     return { success: false, message: errorMessage }
   }
 
   // 注册逻辑
   const register = async (userData) => {
-    return useBaseFetch('/auth/register').post(userData).json()
+    const { data, error } = await useBaseFetch('/auth/register').post(userData).json()
+    
+    if (!error.value) {
+      return { data: data.value, error: null }
+    }
+    
+    // 返回友好的错误信息
+    return { 
+      data: null, 
+      error: { 
+        value: { 
+          ...error.value, 
+          friendlyMessage: extractFriendlyErrorMessage(error.value, '注册') 
+        } 
+      } 
+    }
   }
 
   // 发送注册验证码
   const sendRegisterCode = async (email) => {
-    return useBaseFetch('/auth/send-register-code').post({ email }).json()
+    const { data, error } = await useBaseFetch('/auth/send-register-code').post({ email }).json()
+    
+    if (!error.value) {
+      return { data: data.value, error: null }
+    }
+    
+    // 返回友好的错误信息
+    return { 
+      data: null, 
+      error: { 
+        value: { 
+          ...error.value, 
+          friendlyMessage: extractFriendlyErrorMessage(error.value, '发送验证码') 
+        } 
+      } 
+    }
   }
 
   return { login, register, sendRegisterCode }
