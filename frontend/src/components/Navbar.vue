@@ -19,7 +19,23 @@
       </div>
 
       <div class="nav-right">
-        <router-link to="/login" class="login-btn">LOGIN</router-link>
+        <!-- 未登录状态：显示LOGIN按钮 -->
+        <router-link 
+          v-if="!userStore.isAuthenticated" 
+          to="/login" 
+          class="login-btn"
+        >
+          LOGIN
+        </router-link>
+        
+        <!-- 已登录状态：显示个人主页入口 -->
+        <router-link 
+          v-else 
+          to="/personal" 
+          class="personal-btn"
+        >
+          个人中心
+        </router-link>
       </div>
     </div>
   </nav>
@@ -28,8 +44,10 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
+const userStore = useUserStore()
 
 const menuItems = [
   { name: '首页', path: '/' },
@@ -40,7 +58,7 @@ const menuItems = [
 
 // 统一判定沉浸模式
 const isImmersiveMode = computed(() => {
-  return ['/', '/posts-immersive', '/about-immersive', '/message-immersive', '/login'].includes(route.path)
+  return ['/', '/posts-immersive', '/about-immersive', '/message-immersive', '/login', '/personal'].includes(route.path)
 })
 
 </script>
@@ -61,7 +79,7 @@ const isImmersiveMode = computed(() => {
   color: var(--text-main);
   border-bottom: 1px solid var(--text-main);
 
-  // --- 沉浸模式：首页 & 登录页 ---
+  // --- 沉浸模式：首页 & 登录页 & 个人中心 ---
   &.is-immersive {
     background: transparent; 
     color: var(--bg-white);
@@ -139,7 +157,8 @@ const isImmersiveMode = computed(() => {
   }
 }
 
-.login-btn {
+.login-btn,
+.personal-btn {
   text-decoration: none;
   color: inherit;
   font-weight: 800;

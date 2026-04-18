@@ -14,8 +14,20 @@
         </div>
         <h1 class="glass-text">关于我</h1>
         <p class="intro-text">ABOUT ME / 2026</p>
+        
+        <!-- 增加个人标签预览 -->
+        <div class="tags-preview">
+          <span class="tag">Vue 3</span>
+          <span class="tag">Python</span>
+          <span class="tag">观测笔记</span>
+          <span class="tag">技术分享</span>
+        </div>
+        
+        <!-- 增加简短个人介绍 -->
+        <p class="bio-preview">记录技术成长与生活感悟的观测者</p>
+        
         <div class="enter-hint">
-          <span>点击进入详情</span>
+          <span>点击查看完整介绍</span>
         </div>
       </div>
     </section>
@@ -76,6 +88,32 @@ const handleClick = () => {
     color: rgba(255, 255, 255, 0.7);
     text-transform: uppercase; 
     letter-spacing: 2px;
+  }
+  
+  .tags-preview {
+    display: flex;
+    gap: 12px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+    justify-content: center;
+    
+    .tag {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+  }
+
+  .bio-preview {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1rem;
+    text-align: center;
+    margin: 15px 0;
+    max-width: 500px;
+    line-height: 1.5;
   }
   
   .enter-hint {

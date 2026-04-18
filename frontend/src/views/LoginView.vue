@@ -213,7 +213,7 @@ const handleSubmit = async () => {
         // 显示成功提示（短暂显示后跳转）
         successMessage.value = '登录成功！正在跳转到个人中心...'
         setTimeout(() => {
-          router.push('/')
+          router.push('/personal')
         }, 1500)
       } else {
         // 登录失败：显示友好的错误信息
@@ -245,11 +245,11 @@ const handleSubmit = async () => {
           
           if (loginResult.success) {
             console.log('✅ 自动登录成功！欢迎新用户:', formData.username)
-            successMessage.value = '注册并登录成功！正在跳转到个人中心...'
+            successMessage.value = '注册并登录成功！正在跳转到首页...'
             
-            // 跳转到首页（已登录状态下会显示个人中心）
+            // 跳转到个人中心
             setTimeout(() => {
-              router.push('/')
+              router.push('/personal')
             }, 1500)
           } else {
             // 自动登录失败，切换到登录模式让用户手动登录
