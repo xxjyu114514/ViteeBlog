@@ -2,7 +2,8 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings
-from routers.v1 import api_auth  # 预导入路由模块
+from routers.v1 import api_auth, api_article  # 预导入路由模块
+from fastapi.staticfiles import StaticFiles #挂载文章和图片路径的静态目录
 
 def create_app() -> FastAPI:
     """
@@ -24,10 +25,13 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # 2. 注册路由 (目前先定义入口，后续我们去 routers/v1 下填充代码)
+    # 2. 注册路由
     app.include_router(api_auth.router, prefix="/api/v1/auth", tags=["认证管理"])
-    # app.include_router(api_article.router, prefix="/api/v1/articles", tags=["文章管理"])
-
+    app.include_router(api_article.router, prefix="/api/v1/article", tags=["文章管理"])
+    
+    # 3. 挂载静态文件目录
+    app.mount("/static/storage", StaticFiles(directory="storage"), name="static_storage")
+    
     @app.get("/", tags=["Root"])
     async def root():
         return {"message": "Welcome to ViteeBlog API", "status": "running"}

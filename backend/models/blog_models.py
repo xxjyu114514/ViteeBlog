@@ -90,21 +90,25 @@ class Tag(Base):
 
 
 class Article(Base):
-    """文章表：高并发查询优化版"""
+    """文章表：高并发查询优化与生命周期管理版 """
     title: Mapped[str] = mapped_column(String(200), index=True, comment="标题")
     summary: Mapped[str] = mapped_column(String(500), comment="摘要")
 
-    # 内容区支持复杂文档
-    content: Mapped[str] = mapped_column(Text(length=4294967295), comment="源码")
-    html_content: Mapped[str] = mapped_column(Text(length=4294967295), comment="渲染HTML")
+    # 内容区：支持物理路径存储
+    content_path: Mapped[str] = mapped_column(String(500), comment="MD文件存储的物理路径")
+    html_content: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="可选：缓存的HTML渲染内容")
 
-    # 枚举约束
+    # 状态与类型
     editor_type: Mapped[EditorType] = mapped_column(
         Enum(EditorType), server_default=EditorType.MARKDOWN.value, comment="编辑器类型"
     )
     status: Mapped[ArticleStatus] = mapped_column(
         Enum(ArticleStatus), server_default=ArticleStatus.DRAFT.value, index=True, comment="状态"
     )
+
+    # --- 新增：生命周期管理字段 ---
+    published_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, comment="发布时间")
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, comment="删除时间（软删除）")
 
     cover_image: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     view_count: Mapped[int] = mapped_column(Integer, server_default="0", index=True, comment="阅读量")

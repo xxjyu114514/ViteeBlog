@@ -99,3 +99,271 @@ Content-Type: application/json
 }
 
 ###
+
+
+# ==================== 文章管理功能测试 ====================
+
+# 步骤0：博主登录获取Token（用于后续文章操作）
+# ⚠️ 请确保该用户具有 ADMIN 角色
+POST http://127.0.0.1:8000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "BaoZi",
+  "password": "123456"
+}
+
+> {%
+    // 提取token供后续使用
+    client.global.set("auth_token", response.body.access_token);
+%}
+
+###
+
+# 1. 创建新文章（自动保存为草稿）
+POST http://127.0.0.1:8000/api/v1/article/autosave
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "title": "我的第一篇测试文章",
+  "content": "# Hello World\n\n这是使用FastAPI创建的Markdown文章。\n\n## 功能测试\n- 自动保存\n- 文件存储\n- 数据库关联",
+  "category_id": null,
+  "tag_ids": []
+}
+
+> {%
+    // 提取article_id供后续使用
+    client.global.set("article_id", response.body.article_id);
+%}
+
+###
+
+# 2. 更新已有文章（修改标题和内容）
+POST http://127.0.0.1:8000/api/v1/article/autosave
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "title": "我的第二篇测试文章（已更新）",
+  "content": "# Hello World\n\n这是更新后的内容。\n\n## 新增功能\n- 支持实时更新\n- 异步文件写入\n- 事务安全保障",
+  "article_id": {{article_id}},
+  "category_id": null,
+  "tag_ids": []
+}
+
+###
+
+# 3. 获取文章详情（包含Markdown内容）
+GET http://127.0.0.1:8000/api/v1/article/{{article_id}}
+Accept: application/json
+
+###
+
+# 4. 正式发布文章
+PUT http://127.0.0.1:8000/api/v1/article/{{article_id}}/publish
+Authorization: Bearer {{auth_token}}
+
+###
+
+# 5. 获取公开文章列表（前台展示）
+GET http://127.0.0.1:8000/api/v1/article/list/public
+Accept: application/json
+
+###
+
+# 6. 按分类筛选文章列表（假设category_id=1）
+GET http://127.0.0.1:8000/api/v1/article/list/public?category_id=1
+Accept: application/json
+
+###
+
+# 7. 再次获取文章详情（验证阅读计数是否增加）
+GET http://127.0.0.1:8000/api/v1/article/{{article_id}}
+Accept: application/json
+
+###
+
+# 8. 软删除文章（移至回收站）
+DELETE http://127.0.0.1:8000/api/v1/article/{{article_id}}
+Authorization: Bearer {{auth_token}}
+
+###
+
+# 9. 验证删除后文章不在公开列表中
+GET http://127.0.0.1:8000/api/v1/article/list/public
+Accept: application/json
+
+###
+
+# 10. 尝试访问已删除的文章（应返回404）
+GET http://127.0.0.1:8000/api/v1/article/{{article_id}}
+Accept: application/json
+
+###
+
+# 11. 查看回收站列表（应包含刚删除的文章）
+GET http://127.0.0.1:8000/api/v1/article/recycle-bin/list
+Authorization: Bearer {{auth_token}}
+Accept: application/json
+
+###
+
+# 12. 恢复已删除的文章
+POST http://127.0.0.1:8000/api/v1/article/{{article_id}}/restore
+Authorization: Bearer {{auth_token}}
+
+###
+
+# 13. 验证恢复后文章可以正常访问
+GET http://127.0.0.1:8000/api/v1/article/{{article_id}}
+Accept: application/json
+
+###
+
+# 14. 验证恢复后文章重新出现在公开列表
+GET http://127.0.0.1:8000/api/v1/article/list/public
+Accept: application/json
+
+###
+
+# 15. 再次软删除文章（为硬删除做准备）
+DELETE http://127.0.0.1:8000/api/v1/article/{{article_id}}
+Authorization: Bearer {{auth_token}}
+
+###
+
+# 16. 彻底删除文章（硬删除 - 从回收站粉碎）
+DELETE http://127.0.0.1:8000/api/v1/article/{{article_id}}/hard
+Authorization: Bearer {{auth_token}}
+
+###
+
+# 17. 验证硬删除后文章无法恢复（应返回404）
+POST http://127.0.0.1:8000/api/v1/article/{{article_id}}/restore
+Authorization: Bearer {{auth_token}}
+
+###
+
+# 18. 验证硬删除后回收站中不再有此文章
+GET http://127.0.0.1:8000/api/v1/article/recycle-bin/list
+Authorization: Bearer {{auth_token}}
+Accept: application/json
+
+###
+
+
+# ==================== 异常场景测试 ====================
+
+# 19. 未授权访问（无Token）
+POST http://127.0.0.1:8000/api/v1/article/autosave
+Content-Type: application/json
+
+{
+  "title": "未授权测试",
+  "content": "这应该失败"
+}
+
+###
+
+# 20. 无权操作他人文章（使用普通用户Token）
+# 先以普通用户身份登录
+POST http://127.0.0.1:8000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "CommonUser",
+  "password": "123456"
+}
+
+> {%
+    client.global.set("common_token", response.body.access_token);
+%}
+
+###
+
+# 尝试用普通用户Token发布文章（应返回403）
+POST http://127.0.0.1:8000/api/v1/article/autosave
+Content-Type: application/json
+Authorization: Bearer {{common_token}}
+
+{
+  "title": "权限不足测试",
+  "content": "普通用户不能创建文章"
+}
+
+###
+
+# 21. 访问不存在的文章
+GET http://127.0.0.1:8000/api/v1/article/99999
+Accept: application/json
+
+###
+
+# 22. 尝试恢复不存在的文章（应返回404）
+POST http://127.0.0.1:8000/api/v1/article/99999/restore
+Authorization: Bearer {{auth_token}}
+
+###
+
+# 23. 尝试硬删除不存在的文章（应返回404）
+DELETE http://127.0.0.1:8000/api/v1/article/99999/hard
+Authorization: Bearer {{auth_token}}
+
+###
+
+# 24. 创建多篇文章测试批量列表
+POST http://127.0.0.1:8000/api/v1/article/autosave
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "title": "第二篇测试文章",
+  "content": "# 第二篇文章\n\n用于测试列表排序",
+  "category_id": null,
+  "tag_ids": []
+}
+
+> {%
+    client.global.set("article_id_2", response.body.article_id);
+%}
+
+###
+
+# 发布第二篇文章
+PUT http://127.0.0.1:8000/api/v1/article/{{article_id_2}}/publish
+Authorization: Bearer {{auth_token}}
+
+###
+
+# 验证列表中包含两篇文章（如果第一篇已被硬删除，则只有一篇）
+GET http://127.0.0.1:8000/api/v1/article/list/public
+Accept: application/json
+
+###
+
+# 清理：软删除第二篇文章
+DELETE http://127.0.0.1:8000/api/v1/article/{{article_id_2}}
+Authorization: Bearer {{auth_token}}
+
+###
+
+# 25. 查看回收站（应包含第二篇文章）
+GET http://127.0.0.1:8000/api/v1/article/recycle-bin/list
+Authorization: Bearer {{auth_token}}
+Accept: application/json
+
+###
+
+# 26. 清理回收站：硬删除第二篇文章
+DELETE http://127.0.0.1:8000/api/v1/article/{{article_id_2}}/hard
+Authorization: Bearer {{auth_token}}
+
+###
+
+# 27. 最终验证：回收站应为空
+GET http://127.0.0.1:8000/api/v1/article/recycle-bin/list
+Authorization: Bearer {{auth_token}}
+Accept: application/json
+
+###

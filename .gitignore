@@ -98,3 +98,10 @@ $RECYCLE.BIN/
 *.bak
 *.orig
 *.log
+
+# 忽略 storage 下的具体文件，但保留目录结构
+storage/articles/*
+storage/images/*
+
+# 强制不忽略 .gitkeep 文件
+!**/ .gitkeep
