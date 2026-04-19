@@ -13,6 +13,7 @@ const AboutView = () => import('../views/AboutView.vue')
 const MessageView = () => import('../views/MessageView.vue')
 const LoginView = () => import('../views/LoginView.vue')
 const PersonalCenterView = () => import('../views/PersonalCenterView.vue')
+const ArticleDetailView = () => import('../views/ArticleDetailView.vue')
 
 const routes = [
   {
@@ -32,6 +33,12 @@ const routes = [
     name: 'posts',
     component: PostListView,
     meta: { index: 10, title: '文章列表' }
+  },
+  {
+    path: '/article/:id',
+    name: 'article-detail',
+    component: ArticleDetailView,
+    meta: { index: 11, title: '文章详情' }
   },
   {
     path: '/about-immersive',
@@ -101,4 +108,4 @@ router.afterEach((to) => {
   document.title = to.meta.title ? `${to.meta.title} - ${baseTitle}` : baseTitle
 })
 
-export default router 
+export default router

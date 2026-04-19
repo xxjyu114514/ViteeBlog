@@ -1,5 +1,5 @@
 <template>
-  <div class="post-item-card card card-hover">
+  <div class="post-item-card card card-hover" @click="handleClick">
     <div class="post-meta meta-text">
       <span class="date">{{ post.date }}</span>
       <span class="dot">·</span>
@@ -14,9 +14,19 @@
 </template>
 
 <script setup>
-defineProps({
+import { useRouter } from 'vue-router'
+
+const props = defineProps({
   post: Object
 })
+
+const router = useRouter()
+
+const handleClick = () => {
+  if (props.post && props.post.id) {
+    router.push(`/article/${props.post.id}`)
+  }
+}
 </script>
 
 <style lang="scss" scoped>
