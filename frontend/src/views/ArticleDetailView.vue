@@ -23,7 +23,7 @@
     <div v-else-if="article" class="article-detail-container">
       <div class="container-narrow">
         <div class="article-header">
-          <h1 class="article-title">{{ article.info.title }}</h1>
+          <h1 class="article-title" v-html="renderedTitle"></h1>
           <div class="article-meta flex-between">
             <div class="meta-info">
               <span class="author">作者: {{ article.info.author.username }}</span>
@@ -108,12 +108,6 @@ const loading = ref(true)
 const error = ref(null)
 const deleting = ref(false)
 
-// 计算属性
-const renderedContent = computed(() => {
-  if (!article.value?.content) return ''
-  return md.render(article.value.content)
-})
-
 // 格式化日期
 const formatDate = (dateString) => {
   if (!dateString) return '未知时间'
@@ -127,19 +121,25 @@ const formatDate = (dateString) => {
   })
 }
 
+// 渲染内容
+const renderedContent = computed(() => {
+  if (!article.value?.content) return ''
+  return md.render(article.value.content)
+})
+
+const renderedTitle = computed(() => {
+  if (!article.value?.info?.title) return ''
+  return md.renderInline(article.value.info.title)
+})
+
 // 加载文章
 const loadArticle = async () => {
-  const articleId = route.params.id
-  if (!articleId) {
-    error.value = '文章ID无效'
-    loading.value = false
-    return
-  }
-
   loading.value = true
   error.value = null
   
+  const articleId = route.params.id
   const result = await getArticleDetail(articleId)
+  
   if (result.success) {
     article.value = result.data
   } else {
@@ -150,9 +150,7 @@ const loadArticle = async () => {
 
 // 编辑文章
 const editArticle = () => {
-  router.push(`/manage-articles`)
-  // 在实际应用中，可能需要传递文章ID到管理页面进行编辑
-  // 这里简化处理，直接跳转到管理页面
+  router.push(`/edit-article/${route.params.id}`)
 }
 
 // 删除文章
@@ -160,7 +158,7 @@ const deleteArticle = async () => {
   if (!confirm('确定要将此文章移至回收站吗？')) return
   
   deleting.value = true
-  const result = await softDeleteArticle(article.value.info.id)
+  const result = await softDeleteArticle(route.params.id)
   if (result.success) {
     alert('文章已移至回收站')
     router.push('/posts')

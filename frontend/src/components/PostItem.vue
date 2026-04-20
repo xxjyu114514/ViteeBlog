@@ -5,7 +5,7 @@
       <span class="dot">·</span>
       <span class="views">{{ post.view_count }} 阅读</span>
     </div>
-    <h2 class="post-title title-large">{{ post.title }}</h2>
+    <h2 class="post-title title-large" v-html="renderedTitle"></h2>
     <p class="post-summary text-clamp-2">{{ post.summary }}</p>
     <div class="post-footer">
       <span class="more">阅读全文</span>
@@ -14,14 +14,21 @@
 </template>
 
 <script setup>
-import { defineProps } from 'vue'
+import { defineProps, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import MarkdownIt from 'markdown-it'
 
 const props = defineProps({
   post: Object
 })
 
 const router = useRouter()
+
+// 初始化Markdown解析器（简化版，仅用于标题）
+const md = new MarkdownIt({
+  html: false,
+  linkify: true
+})
 
 // 格式化日期
 const formatDate = (dateString) => {
@@ -33,6 +40,12 @@ const formatDate = (dateString) => {
     day: '2-digit'
   })
 }
+
+// 渲染标题
+const renderedTitle = computed(() => {
+  if (!props.post?.title) return ''
+  return md.renderInline(props.post.title)
+})
 
 // 处理点击事件
 const handleClick = () => {

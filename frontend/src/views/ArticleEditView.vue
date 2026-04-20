@@ -37,14 +37,18 @@
 
       <div class="editor-form">
         <div class="form-group">
-          <label>标题</label>
+          <label>标题（支持Markdown）</label>
           <input 
             v-model="currentArticle.title" 
             type="text" 
             class="input-field"
-            placeholder="请输入文章标题"
+            placeholder="请输入文章标题（支持Markdown语法）"
             :disabled="saving"
           >
+          <div v-if="currentArticle.title" class="title-preview mt-10">
+            <strong>标题预览:</strong>
+            <div class="markdown-preview" v-html="renderedTitle"></div>
+          </div>
         </div>
         
         <div class="form-group">
@@ -94,7 +98,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useArticleAPI } from '@/composables/useArticleAPI'
@@ -140,6 +144,11 @@ const canSave = computed(() => {
 const renderedContent = computed(() => {
   if (!currentArticle.value.content) return ''
   return md.render(currentArticle.value.content)
+})
+
+const renderedTitle = computed(() => {
+  if (!currentArticle.value.title) return ''
+  return md.renderInline(currentArticle.value.title)
 })
 
 // 处理内容变化
@@ -235,15 +244,6 @@ const loadArticle = async () => {
 }
 
 // 监听标签输入变化
-const watchTagInput = () => {
-  if (tagInput.value === '') {
-    currentArticle.value.tag_ids = []
-  }
-}
-
-// 使用watch监听tagInput变化
-import { watch } from 'vue'
-
 watch(tagInput, (newVal) => {
   if (newVal === '') {
     currentArticle.value.tag_ids = []
