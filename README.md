@@ -327,7 +327,10 @@ def downgrade():
 
 ## 📝 文章管理模块
 
-> ⚠️ **权限要求**：除获取公开列表和文章详情外，其他接口均需 `admin` 角色
+### 权限说明
+- **公开接口**：获取文章列表、获取文章详情
+- **登录用户**：创建/编辑文章、上传图片
+- **管理员专属**：审核文章、查看全站文章、调整用户权限
 
 ### 核心功能概览
 - ✍️ **自动保存**：实时同步草稿到服务器（文件 + 数据库）
@@ -339,23 +342,17 @@ def downgrade():
 
 ### 1. 自动保存/更新文章
 
-**接口**: `POST /article/autosave`
-
-**权限**: `admin` 仅
-
-**功能说明**:
-- 新建文章时自动生成 Markdown 文件并创建数据库记录
-- 更新文章时同步修改文件和数据库
-- 支持标签关联和分类设置
+**接口**: `POST /article/autosave`  
+**权限**: 所有登录用户
 
 **请求体**:
 ```json
 {
-  "title": "我的第一篇文章",
-  "content": "# Hello World\n\n这是文章内容...",
+  "title": "文章标题",
+  "content": "# Markdown 内容",
   "article_id": null,
   "category_id": 1,
-  "tag_ids": [1, 2, 3]
+  "tag_ids": [1, 2]
 }
 ```
 
@@ -363,8 +360,8 @@ def downgrade():
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | title | string | ✅ | 文章标题 |
-| content | string | ✅ | Markdown 格式内容 |
-| article_id | int | ❌ | 文章ID（新建时为 null，更新时必填） |
+| content | string | ✅ | Markdown 内容 |
+| article_id | int | ❌ | 新建时为 null，更新时必填 |
 | category_id | int | ❌ | 分类ID |
 | tag_ids | int[] | ❌ | 标签ID数组 |
 
@@ -372,231 +369,142 @@ def downgrade():
 ```json
 {
   "article_id": 1,
-  "url": "/static/storage/articles/user5_1776582611.md",
-  "message": "内容已同步"
+  "message": "已同步"
 }
 ```
 
-**错误响应**:
-- `403`: 无权操作此文章（非作者）
-- `500`: 文件系统或数据库写入失败
-
 **前端注意**:
-- ✅ 建议实现防抖保存（用户停止输入后2-3秒自动调用）
-- ✅ 也可定期保存（如每30秒）
-- ✅ 页面关闭前务必调用一次确保数据不丢失
-- ⚠️ 新建文章返回 `article_id`，后续更新需携带此 ID
+- ✅ 建议实现防抖保存（停止输入后2秒自动调用）
+- ✅ 新建文章返回 `article_id`，后续更新需携带此 ID
+- ⚠️ 每次保存会重置审核状态（`is_audited=false`）
 
 ---
 
 ### 2. 获取文章详情
 
-**接口**: `GET /article/{article_id}`
-
-**权限**: 公开（已删除文章返回404）
+**接口**: `GET /article/{article_id}`  
+**权限**: 公开
 
 **成功响应** (200):
 ```json
 {
   "info": {
     "id": 1,
-    "title": "我的第一篇文章",
-    "summary": "Hello World 这是文章内容...",
+    "title": "文章标题",
+    "summary": "摘要内容...",
     "status": "published",
     "view_count": 42,
     "published_at": "2026-04-19T10:00:00",
-    "author": { "id": 5, "username": "BaoZi" },
+    "author": { "id": 1, "username": "BaoZi" },
     "category": { "id": 1, "name": "技术分享" },
-    "tags": [
-      { "id": 1, "name": "FastAPI" },
-      { "id": 2, "name": "Python" }
-    ]
+    "tags": [{ "id": 1, "name": "FastAPI" }]
   },
-  "content": "# Hello World\n\n这是文章内容..."
+  "content": "# Markdown 原始内容"
 }
 ```
 
-**错误响应**:
-- `404`: 文章不存在或已被删除
-
 **前端注意**:
-- ✅ 每次访问会自动增加阅读计数（`view_count`）
-- ✅ `content` 字段为原始 Markdown，需前端渲染
-- ⚠️ 已软删除的文章无法访问
+- ✅ 每次访问自动增加阅读计数
+- ✅ `content` 为原始 Markdown，需前端渲染
+- ⚠️ 已删除文章返回 404
 
 ---
 
 ### 3. 发布文章
 
-**接口**: `PUT /article/{article_id}/publish`
+**接口**: `PUT /article/{article_id}/publish`  
+**权限**: 文章作者或管理员
 
-**权限**: `admin` 仅（且必须为文章作者）
-
-**功能说明**:
-- 将草稿状态改为已发布
-- 设置发布时间（`published_at`）
-- 若在回收站中，会自动恢复
+**功能**: 将草稿改为已发布状态，设置发布时间
 
 **成功响应** (200):
 ```json
-{
-  "message": "文章已发布"
-}
+{ "message": "已发布" }
 ```
 
-**错误响应**:
-- `404`: 文章不存在或无权操作
+**注意**: 发布时会重置审核状态（`is_audited=false`）
 
 ---
 
-### 4. 获取公开文章列表
+### 4. 获取公开文章列表（分页）
 
-**接口**: `GET /article/list/public`
-
+**接口**: `GET /article/list/public?page=1&size=10&category_id=1`  
 **权限**: 公开
 
 **查询参数**:
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| category_id | int | ❌ | 按分类筛选 |
-
-**请求示例**:
-```
-GET /article/list/public?category_id=1
-```
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| page | int | 1 | 页码（从1开始） |
+| size | int | 10 | 每页数量（1-100） |
+| category_id | int | - | 按分类筛选 |
 
 **成功响应** (200):
 ```json
-[
-  {
-    "id": 1,
-    "title": "我的第一篇文章",
-    "summary": "Hello World 这是文章内容...",
-    "status": "published",
-    "view_count": 42,
-    "published_at": "2026-04-19T10:00:00",
-    "category_id": 1
-  },
-  {
-    "id": 2,
-    "title": "第二篇文章",
-    "summary": "...",
-    "status": "published",
-    "view_count": 15,
-    "published_at": "2026-04-18T15:30:00",
-    "category_id": 2
-  }
-]
+{
+  "items": [
+    {
+      "id": 1,
+      "title": "文章标题",
+      "summary": "摘要...",
+      "status": "published",
+      "view_count": 42,
+      "published_at": "2026-04-19T10:00:00"
+    }
+  ],
+  "total": 50,
+  "page": 1,
+  "size": 10
+}
 ```
 
 **前端注意**:
-- ✅ 返回列表按 `published_at` 降序排列（最新的在前）
+- ✅ 按 `published_at` 降序排列
 - ✅ 仅返回已发布且未删除的文章
-- ✅ 不包含文章正文（`content`），需单独请求详情接口
 
 ---
 
-### 5. 移至回收站（软删除）
+### 7. 移至回收站（软删除）
 
-**接口**: `DELETE /article/{article_id}`
+**接口**: `DELETE /article/{article_id}`  
+**权限**: 文章作者或管理员
 
-**权限**: `admin` 仅（且必须为文章作者）
-
-**功能说明**:
-- 设置 `deleted_at` 时间戳，文章从前台消失
-- 数据和物理文件仍然保留
-- 可在回收站中查看和恢复
+**功能**: 设置 `deleted_at`，文章从前台消失但数据保留
 
 **成功响应** (200):
 ```json
-{
-  "message": "已移至回收站"
-}
+{ "message": "已删除" }
 ```
 
-**错误响应**:
-- `404`: 文章不存在或无权操作
-
 ---
 
-### 6. 查看回收站
+### 8. 恢复文章
 
-**接口**: `GET /article/recycle-bin/list`
+**接口**: `POST /article/{article_id}/restore`  
+**权限**: 文章作者或管理员
 
-**权限**: `admin` 仅
-
-**功能说明**:
-- 返回当前用户所有已软删除的文章
-- **自动清理**：超过30天的文章会被永久删除（包括物理文件）
+**功能**: 清除 `deleted_at`，文章重新可见
 
 **成功响应** (200):
 ```json
-[
-  {
-    "id": 1,
-    "title": "已删除的文章",
-    "deleted_at": "2026-04-19T10:00:00",
-    "status": "draft",
-    "view_count": 42
-  }
-]
+{ "message": "已恢复" }
+```
+
+---
+
+### 9. 彻底删除（硬删除）
+
+**接口**: `DELETE /article/{article_id}/hard`  
+**权限**: 文章作者或管理员
+
+**⚠️ 警告**: 此操作不可逆！会删除数据库记录和物理文件
+
+**成功响应** (200):
+```json
+{ "message": "永久删除成功" }
 ```
 
 **前端注意**:
-- ✅ 每次调用会自动清理30天前的过期文章
-- ✅ 可用于实现“回收站”页面
-- ⚠️ 清理操作不可逆
-
----
-
-### 7. 恢复文章
-
-**接口**: `POST /article/{article_id}/restore`
-
-**权限**: `admin` 仅（且必须为文章作者）
-
-**功能说明**:
-- 将 `deleted_at` 设为 `NULL`
-- 文章重新出现在前台和列表中
-
-**成功响应** (200):
-```json
-{
-  "message": "文章已恢复"
-}
-```
-
-**错误响应**:
-- `404`: 文章不存在或未被删除（无需恢复）
-
----
-
-### 8. 彻底删除（硬删除）
-
-**接口**: `DELETE /article/{article_id}/hard`
-
-**权限**: `admin` 仅（且必须为文章作者）
-
-**⚠️ 警告**: 此操作不可逆！
-
-**功能说明**:
-1. 删除磁盘上的 Markdown 文件
-2. 从数据库中永久删除记录
-3. 无法恢复
-
-**成功响应** (200):
-```json
-{
-  "message": "文章及其文件已永久从服务器删除"
-}
-```
-
-**错误响应**:
-- `404`: 文章不存在或无权操作
-
-**前端注意**:
-- ⚠️ 执行前必须二次确认（弹窗提示）
-- ✅ 建议仅在回收站页面提供此功能
+- ⚠️ 执行前必须二次确认
 - ⚠️ 删除后无法撤销
 
 ---

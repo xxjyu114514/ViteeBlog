@@ -2,6 +2,7 @@ import asyncio
 from logging.config import fileConfig
 from os.path import abspath, dirname
 import sys
+import os
 
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -13,6 +14,13 @@ from alembic import context
 ROOT_DIR = dirname(dirname(abspath(__file__)))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
+
+# 显式设置 .env 文件路径，确保 Pydantic Settings 能正确加载
+os.environ['ENV_FILE'] = os.path.join(ROOT_DIR, '.env')
+
+# 在导入 settings 之前，手动加载 .env 文件
+from dotenv import load_dotenv
+load_dotenv(os.path.join(ROOT_DIR, '.env'))
 
 from core.config import settings
 from models.base import Base
