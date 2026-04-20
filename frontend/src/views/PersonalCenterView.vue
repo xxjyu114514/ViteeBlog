@@ -10,16 +10,53 @@
       </header>
       
       <div class="menu-section">
+        <!-- 普通用户菜单 -->
         <button 
-          v-for="item in menuItems" 
-          :key="item.name" 
+          v-if="!userStore.isAdmin"
           class="menu-item"
+          @click="goToPosts"
         >
-          {{ item.name }}
+          📖 浏览文章
+        </button>
+        
+        <!-- 管理员专属菜单 -->
+        <template v-if="userStore.isAdmin">
+          <button 
+            class="menu-item admin-item"
+            @click="goToArticleEdit"
+          >
+            ✍️ 新建文章
+          </button>
+          <button 
+            class="menu-item admin-item"
+            @click="goToArticleManage"
+          >
+            📂 文章管理
+          </button>
+          <button 
+            class="menu-item admin-item"
+            @click="goToPublishedPosts"
+          >
+            📰 已发布文章
+          </button>
+        </template>
+        
+        <!-- 通用菜单 -->
+        <button 
+          class="menu-item"
+          @click="goToPosts"
+        >
+          🔍 浏览所有文章
+        </button>
+        <button 
+          class="menu-item"
+          @click="goToSettings"
+        >
+          ⚙️ 系统设置
         </button>
         
         <!-- 退出登录按钮 -->
-        <button @click="handleLogout" class="menu-item logout">退出登录</button>
+        <button @click="handleLogout" class="menu-item logout">🚪 退出登录</button>
       </div>
       
     </div>
@@ -39,12 +76,27 @@ const handleLogout = () => {
   router.push('/login')
 }
 
-const menuItems = [
-  { name: '📝 发布文章' },
-  { name: '📂 内容管理' },
-  { name: '⚙️ 系统设置' }
-]
+// 导航函数
+const goToArticleEdit = () => {
+  router.push('/edit-article')
+}
 
+const goToArticleManage = () => {
+  router.push('/manage-articles')
+}
+
+const goToPublishedPosts = () => {
+  router.push('/posts')
+}
+
+const goToPosts = () => {
+  router.push('/posts')
+}
+
+const goToSettings = () => {
+  // TODO: 添加系统设置页面
+  alert('系统设置功能开发中...')
+}
 </script>
 
 <style lang="scss" scoped>
@@ -93,7 +145,7 @@ const menuItems = [
   }
 }
 
-.admin-menu {
+.menu-section {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -107,9 +159,25 @@ const menuItems = [
     text-align: left;
     cursor: pointer;
     transition: all 0.3s;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 
-    &:hover { background: rgba(255,255,255,0.15); transform: translateX(5px); }
-    &.logout { color: #ff4d4d; margin-top: 10px; }
+    &:hover { 
+      background: rgba(255,255,255,0.15); 
+      transform: translateX(5px); 
+    }
+    
+    &.logout { 
+      color: #ff4d4d; 
+      margin-top: 20px; 
+    }
+    
+    &.admin-item {
+      background: rgba(59, 130, 246, 0.1);
+      border-left: 3px solid #3b82f6;
+    }
   }
 }
 </style>

@@ -14,6 +14,8 @@ const MessageView = () => import('../views/MessageView.vue')
 const LoginView = () => import('../views/LoginView.vue')
 const PersonalCenterView = () => import('../views/PersonalCenterView.vue')
 const ArticleDetailView = () => import('../views/ArticleDetailView.vue')
+const ArticleManageView = () => import('../views/ArticleManageView.vue')
+const ArticleEditView = () => import('../views/ArticleEditView.vue')
 
 const routes = [
   {
@@ -39,6 +41,24 @@ const routes = [
     name: 'article-detail',
     component: ArticleDetailView,
     meta: { index: 11, title: '文章详情' }
+  },
+  {
+    path: '/manage-articles',
+    name: 'article-manage',
+    component: ArticleManageView,
+    meta: { index: 6, title: '文章管理', requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/edit-article',
+    name: 'article-edit',
+    component: ArticleEditView,
+    meta: { index: 7, title: '编辑文章', requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/edit-article/:id',
+    name: 'article-edit-detail',
+    component: ArticleEditView,
+    meta: { index: 8, title: '编辑文章', requiresAuth: true, requiresAdmin: true }
   },
   {
     path: '/about-immersive',
@@ -97,6 +117,9 @@ router.beforeEach((to, from, next) => {
   } else if (to.meta.guestOnly && userStore.isAuthenticated) {
     // 已登录尝试进入“仅限游客”页面（如登录页） -> 强制重定向回首页
     next('/')
+  } else if (to.meta.requiresAdmin && !userStore.isAdmin) {
+    // 需要管理员权限但不是管理员 -> 跳转到个人中心或首页
+    next('/personal')
   } else {
     next()
   }

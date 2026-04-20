@@ -28,7 +28,7 @@ const { handleWheel } = usePrimaryPageWheel('home')
   width: 100%; 
   height: 100%;
   // 引用项目资源目录下的背景图
-  background: #111 url('../assets/hero-bg.jpg') center/cover no-repeat;
+  background: #111 url('../assets/hero-bg.webp') center/cover no-repeat;
   color: white;
 }
 
