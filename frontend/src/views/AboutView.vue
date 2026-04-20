@@ -172,7 +172,7 @@ onBeforeUnmount(() => {
 
 .about-hero {
   height: 50vh;
-  background: #1a1a1a url('@/assets/about-bg.jpg') center/cover;
+  background: #1a1a1a url('@/assets/about-bg.webp') center/cover;
   display: flex;
   justify-content: center;
   align-items: center;

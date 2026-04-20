@@ -59,7 +59,7 @@ const handleClick = () => {
 .hero-static {
   width: 100%; 
   height: 100%;
-  background: #111 url('../assets/hero-bg.jpg') center/cover no-repeat;
+  background: #111 url('../assets/hero-bg.webp') center/cover no-repeat;
   color: white;
 }
 

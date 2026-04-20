@@ -30,7 +30,7 @@ frontend/
 │   ├── assets/                # 静态资源文件
 │   │   ├── main.scss          # 全局基础样式
 │   │   ├── avatar.png         # 用户头像
-│   │   └── hero-bg.jpg        # 首页背景图
+│   │   └── hero-bg.webp        # 首页背景图
 │   ├── components/            # 可复用组件
 │   │   ├── Navbar.vue         # 固定导航栏组件
 │   │   ├── PostItem.vue       # 单篇文章展示组件
