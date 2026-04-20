@@ -1,9 +1,9 @@
 <template>
   <div class="post-item-card card card-hover" @click="handleClick">
     <div class="post-meta meta-text">
-      <span class="date">{{ post.date }}</span>
+      <span class="date">{{ formatDate(post.published_at) }}</span>
       <span class="dot">·</span>
-      <span class="views">{{ post.views }} 阅读</span>
+      <span class="views">{{ post.view_count }} 阅读</span>
     </div>
     <h2 class="post-title title-large">{{ post.title }}</h2>
     <p class="post-summary text-clamp-2">{{ post.summary }}</p>
@@ -14,6 +14,7 @@
 </template>
 
 <script setup>
+import { defineProps } from 'vue'
 import { useRouter } from 'vue-router'
 
 const props = defineProps({
@@ -22,6 +23,18 @@ const props = defineProps({
 
 const router = useRouter()
 
+// 格式化日期
+const formatDate = (dateString) => {
+  if (!dateString) return '未知时间'
+  const date = new Date(dateString)
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+}
+
+// 处理点击事件
 const handleClick = () => {
   if (props.post && props.post.id) {
     router.push(`/article/${props.post.id}`)

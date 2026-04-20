@@ -1,0 +1,129 @@
+/* 文章编辑页面特有样式 */
+
+.editor-header {
+  margin-bottom: 30px;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.editor-form {
+  background: var(--bg-white);
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.editor-container {
+  display: flex;
+  gap: 30px;
+  height: 500px;
+}
+
+.editor-textarea {
+  flex: 1;
+  min-height: 500px;
+  padding: 16px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  transition: var(--transition-base);
+}
+
+.editor-textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.preview-panel {
+  flex: 1;
+  background: var(--bg-smoke);
+  border-radius: 8px;
+  padding: 20px;
+  overflow-y: auto;
+  border: 1px solid var(--border-light);
+}
+
+.preview-panel h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: var(--text-main);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.markdown-preview {
+  line-height: 1.6;
+  color: var(--text-main);
+}
+
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: var(--text-main);
+}
+
+.markdown-preview p {
+  margin: 0 0 16px 0;
+}
+
+.markdown-preview code {
+  background: #f4f4f4;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 0.9em;
+}
+
+.markdown-preview pre {
+  background: #f4f4f4;
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 16px 0;
+}
+
+.markdown-preview pre code {
+  background: none;
+  padding: 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .editor-container {
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .editor-textarea {
+    min-height: 300px;
+  }
+  
+  .preview-panel {
+    height: auto;
+    min-height: 300px;
+  }
+}
+
+/* 错误消息 */
+.error-message {
+  color: #ef4444;
+  font-size: 0.875rem;
+  padding: 12px;
+  background: #fee2e2;
+  border-radius: 8px;
+  border-left: 4px solid #ef4444;
+}
+
+.mb-20 {
+  margin-bottom: 20px;
+}
