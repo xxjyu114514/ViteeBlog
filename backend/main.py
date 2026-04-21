@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings
-from routers.v1 import api_auth, api_article  # 预导入路由模块
+from routers.v1 import api_auth, api_article,api_meta  # 预导入路由模块
 from fastapi.staticfiles import StaticFiles #挂载文章和图片路径的静态目录
 
 def create_app() -> FastAPI:
@@ -26,8 +26,13 @@ def create_app() -> FastAPI:
     )
 
     # 2. 注册路由
+    # 认证模块
     app.include_router(api_auth.router, prefix="/api/v1/auth", tags=["认证管理"])
-    app.include_router(api_article.router, prefix="/api/v1/article", tags=["文章管理"])
+    # 文章模块
+    app.include_router(api_article.router, prefix="/api/v1/article", tags=["文章业务"])
+    # 元数据模块（分类与标签管理）
+    app.include_router(api_meta.router, prefix="/api/v1/meta", tags=["分类与标签管理"])
+
     
     # 3. 挂载静态文件目录
     app.mount("/static/storage", StaticFiles(directory="storage"), name="static_storage")

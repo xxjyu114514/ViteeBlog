@@ -38,7 +38,7 @@ async def upload_article_image(file: UploadFile = File(...), user: User = Depend
         raise HTTPException(status_code=500, detail="图片保存失败")
 
 
-# --- 用户权限管理 (保留逻辑：不可自降、末位保护) ---
+# --- 用户权限管理 ---
 @router.put("/admin/users/{target_user_id}/role", summary="【管理员专用】调整用户权限")
 async def update_user_role(
         target_user_id: int,
@@ -61,8 +61,8 @@ async def update_user_role(
     return {"message": "权限更新成功"}
 
 
-# --- 文章核心逻辑 (保留逻辑：自动保存) ---
-@router.post("/autosave", summary="自动保存")
+# --- 文章核心逻辑 (已健全分类与标签关联) ---
+@router.post("/autosave", summary="自动保存（集成分类标签）")
 async def autosave_article(
         title: str = Body(...),
         content: str = Body(...),
@@ -73,9 +73,24 @@ async def autosave_article(
         db: AsyncSession = Depends(get_db)
 ):
     try:
+        # 1. 验证分类是否存在
+        if category_id:
+            cat_res = await db.execute(select(Category).where(Category.id == category_id))
+            if not cat_res.scalars().first():
+                raise HTTPException(status_code=400, detail="所选分类不存在")
+
+        # 2. 准备标签列表
+        tags_list = []
+        if tag_ids:
+            tag_res = await db.execute(select(Tag).where(Tag.id.in_(tag_ids)))
+            tags_list = list(tag_res.scalars().all())
+
         article = None
         if article_id:
-            res = await db.execute(select(Article).options(selectinload(Article.tags)).where(Article.id == article_id))
+            # 加载 tags 关系以便更新
+            res = await db.execute(
+                select(Article).options(selectinload(Article.tags)).where(Article.id == article_id)
+            )
             article = res.scalars().first()
             if not article or (article.user_id != user.id and user.role != UserRole.ADMIN):
                 raise HTTPException(status_code=403, detail="无权操作")
@@ -88,48 +103,55 @@ async def autosave_article(
             await f.write(content)
 
         if not article_id:
-            article = Article(title=title, summary=content[:200].strip(), content_path=file_path, user_id=user.id,
-                              category_id=category_id, is_audited=False)
-            if tag_ids:
-                tag_res = await db.execute(select(Tag).where(Tag.id.in_(tag_ids)))
-                article.tags = list(tag_res.scalars().all())
+            # 新建并绑定
+            article = Article(
+                title=title,
+                summary=content[:200].replace("#", "").strip(),
+                content_path=file_path,
+                user_id=user.id,
+                category_id=category_id,
+                is_audited=False,
+                tags=tags_list
+            )
             db.add(article)
         else:
-            article.title, article.category_id, article.is_audited = title, category_id, False
-            if tag_ids is not None:
-                tag_res = await db.execute(select(Tag).where(Tag.id.in_(tag_ids)))
-                article.tags = list(tag_res.scalars().all())
+            # 更新并重新绑定
+            article.title = title
+            article.category_id = category_id
+            article.is_audited = False
+            article.summary = content[:200].replace("#", "").strip()
+            article.tags = tags_list
+
         await db.commit()
         return {"article_id": article.id, "message": "已同步"}
+    except HTTPException as he:
+        raise he
     except Exception:
         await db.rollback()
         raise HTTPException(status_code=500, detail="保存失败")
 
 
-# --- 列表逻辑 (新增：分页功能集成) ---
+# --- 列表逻辑 ---
 
-@router.get("/list/public", summary="首页公共列表 (集成分页)")
+@router.get("/list/public", summary="首页公共列表 (分页+关系)")
 async def get_public_articles(
         category_id: Optional[int] = None,
         page: int = Query(1, ge=1, description="页码"),
         size: int = Query(10, ge=1, le=100, description="每页数量"),
         db: AsyncSession = Depends(get_db)
 ):
-    """
-    方案 A：发布即可见。加入分页参数减少单次负载。
-    """
-    # 1. 构建基础查询条件
+    # 构建基础查询条件
     filters = [Article.status == ArticleStatus.PUBLISHED, Article.deleted_at.is_(None)]
     if category_id:
         filters.append(Article.category_id == category_id)
 
-    # 2. 查询总数
+    # 查询总数
     count_stmt = select(func.count(Article.id)).where(and_(*filters))
-    total_res = await db.execute(count_stmt)
-    total = total_res.scalar()
+    total = (await db.execute(count_stmt)).scalar()
 
-    # 3. 分页查询数据
-    stmt = select(Article).where(and_(*filters)).order_by(Article.published_at.desc())
+    # 分页查询数据 (加载分类和标签关系)
+    stmt = select(Article).options(selectinload(Article.category), selectinload(Article.tags)) \
+        .where(and_(*filters)).order_by(Article.published_at.desc())
     stmt = stmt.limit(size).offset((page - 1) * size)
 
     result = await db.execute(stmt)
@@ -143,7 +165,7 @@ async def get_public_articles(
     }
 
 
-@router.get("/user/my-articles", summary="获取我的文章列表 (分页)")
+@router.get("/user/my-articles", summary="获取我的文章列表")
 async def get_my_articles(
         page: int = Query(1, ge=1),
         size: int = Query(10, ge=1, le=50),
@@ -151,10 +173,7 @@ async def get_my_articles(
         db: AsyncSession = Depends(get_db)
 ):
     filters = [Article.user_id == user.id, Article.deleted_at.is_(None)]
-
-    count_stmt = select(func.count(Article.id)).where(and_(*filters))
-    total_res = await db.execute(count_stmt)
-    total = total_res.scalar()
+    total = (await db.execute(select(func.count(Article.id)).where(and_(*filters)))).scalar()
 
     stmt = select(Article).where(and_(*filters)).order_by(Article.created_at.desc())
     stmt = stmt.limit(size).offset((page - 1) * size)
@@ -163,40 +182,49 @@ async def get_my_articles(
     return {"items": res.scalars().all(), "total": total}
 
 
-@router.get("/admin/all-articles", summary="【管理员专用】获取全站所有文章 (分页)")
+@router.get("/admin/all-articles", summary="【管理员专用】获取全站所有文章")
 async def admin_get_all_articles(
         page: int = Query(1, ge=1),
         size: int = Query(20, ge=1),
         user: User = Depends(allow_admin_only),
         db: AsyncSession = Depends(get_db)
 ):
-    # 统计总数
-    total_res = await db.execute(select(func.count(Article.id)))
-    total = total_res.scalar()
-
-    # 分页查询
+    total = (await db.execute(select(func.count(Article.id)))).scalar()
     res = await db.execute(
-        select(Article)
+        select(Article).options(selectinload(Article.author))
         .order_by(Article.created_at.desc())
         .limit(size).offset((page - 1) * size)
     )
     return {"items": res.scalars().all(), "total": total}
 
 
-# --- 其他保留功能 (详情、删除、恢复、审核、发布) ---
+# --- 详情获取 (含分类标签) ---
 
-@router.get("/{article_id}", summary="获取详情")
+@router.get("/{article_id}", summary="获取详情 (含元数据)")
 async def get_article_detail(article_id: int, db: AsyncSession = Depends(get_db)):
-    res = await db.execute(select(Article).options(selectinload(Article.author)).where(Article.id == article_id,
-                                                                                       Article.deleted_at.is_(None)))
+    # 预加载作者、分类、标签
+    res = await db.execute(
+        select(Article)
+        .options(selectinload(Article.author), selectinload(Article.category), selectinload(Article.tags))
+        .where(Article.id == article_id, Article.deleted_at.is_(None))
+    )
     article = res.scalars().first()
-    if not article: raise HTTPException(status_code=404)
+    if not article: raise HTTPException(status_code=404, detail="文章不存在")
+
     content = ""
     if os.path.exists(article.content_path):
-        async with aiofiles.open(article.content_path, mode='r', encoding='utf-8') as f: content = await f.read()
+        async with aiofiles.open(article.content_path, mode='r', encoding='utf-8') as f:
+            content = await f.read()
+
     article.view_count += 1
     await db.commit()
-    return {"info": article, "content": content}
+
+    return {
+        "info": article,
+        "content": content,
+        "category_name": article.category.name if article.category else "未分类",
+        "tags": [t.name for t in article.tags]
+    }
 
 
 @router.delete("/{article_id}", summary="移至回收站")
