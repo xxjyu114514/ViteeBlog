@@ -328,9 +328,9 @@ def downgrade():
 ## 📝 文章管理模块
 
 ### 权限说明
-- **公开接口**：获取文章列表、获取文章详情
-- **登录用户**：创建/编辑文章、上传图片
-- **管理员专属**：审核文章、查看全站文章、调整用户权限
+- **公开接口**：获取文章列表、获取文章详情、查看分类/标签
+- **登录用户**：创建/编辑文章、上传图片、创建标签
+- **管理员专属**：审核文章、查看全站文章、调整用户权限、管理分类/标签
 
 ### 核心功能概览
 - ✍️ **自动保存**：实时同步草稿到服务器（文件 + 数据库）
@@ -463,7 +463,122 @@ def downgrade():
 
 ---
 
-### 7. 移至回收站（软删除）
+### 5. 获取我的文章列表
+
+**接口**: `GET /article/user/my-articles?page=1&size=10`  
+**权限**: 所有登录用户
+
+**查询参数**:
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| page | int | 1 | 页码（从1开始） |
+| size | int | 10 | 每页数量（1-50） |
+
+**成功响应** (200):
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "title": "我的草稿",
+      "summary": "摘要...",
+      "status": "draft",
+      "created_at": "2026-04-19T10:00:00"
+    }
+  ],
+  "total": 5
+}
+```
+
+**前端注意**:
+- ✅ 返回当前用户的所有文章（包括草稿和已发布）
+- ✅ 按 `created_at` 降序排列
+
+---
+
+### 6. 获取全站文章（管理员）
+
+**接口**: `GET /article/admin/all-articles?page=1&size=20`  
+**权限**: 仅管理员
+
+**查询参数**:
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| page | int | 1 | 页码（从1开始） |
+| size | int | 20 | 每页数量 |
+
+**成功响应** (200):
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "title": "文章标题",
+      "author": { "id": 1, "username": "BaoZi" },
+      "status": "published",
+      "is_audited": true,
+      "created_at": "2026-04-19T10:00:00"
+    }
+  ],
+  "total": 100
+}
+```
+
+**前端注意**:
+- ✅ 包含所有用户的文章
+- ✅ 预加载作者信息
+- ⚠️ 普通用户调用返回 403
+
+---
+
+### 7. 审核文章
+
+**接口**: `PUT /article/admin/articles/{article_id}/audit`  
+**权限**: 仅管理员
+
+**功能**: 将文章标记为已审核（`is_audited=true`）
+
+**成功响应** (200):
+```json
+{ "message": "已审核" }
+```
+
+**注意**: 文章编辑或重新发布后会重置为未审核状态
+
+---
+
+### 8. 上传图片
+
+**接口**: `POST /article/upload-image`  
+**权限**: 所有登录用户
+
+**请求格式**: `multipart/form-data`
+
+**请求参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| file | File | ✅ | 图片文件 |
+
+**成功响应** (200):
+```json
+{
+  "url": "/static/storage/images/a1b2c3d4.jpg",
+  "filename": "example.jpg"
+}
+```
+
+**错误响应**:
+- `400`: 只能上传图片文件 / 图片太大了（超过10MB）
+- `500`: 图片保存失败
+
+**前端注意**:
+- ✅ 支持格式：jpg, jpeg, png, gif, webp 等
+- ✅ 文件大小限制：10MB
+- ✅ 返回的 URL 可直接用于 Markdown 插入：`![alt](http://127.0.0.1:8000/static/storage/images/a1b2c3d4.jpg)`
+
+---
+
+### 9. 移至回收站（软删除）
 
 **接口**: `DELETE /article/{article_id}`  
 **权限**: 文章作者或管理员
@@ -506,6 +621,159 @@ def downgrade():
 **前端注意**:
 - ⚠️ 执行前必须二次确认
 - ⚠️ 删除后无法撤销
+
+---
+
+## 🏷️ 元数据管理模块（分类与标签）
+
+### 权限说明
+- **公开接口**：查看所有分类、查看所有标签
+- **登录用户**：创建标签
+- **管理员专属**：创建/删除分类、删除标签
+
+---
+
+### 1. 查看所有分类
+
+**接口**: `GET /meta/categories`  
+**权限**: 公开
+
+**成功响应** (200):
+```json
+[
+  { "id": 1, "name": "技术分享" },
+  { "id": 2, "name": "生活随笔" }
+]
+```
+
+---
+
+### 2. 创建分类（管理员）
+
+**接口**: `POST /meta/categories`  
+**权限**: 仅管理员
+
+**请求体**:
+```json
+{
+  "name": "技术分享"
+}
+```
+
+**成功响应** (200):
+```json
+{ "id": 1, "name": "技术分享" }
+```
+
+**错误响应**:
+- `400`: 该分类名称已存在
+- `403`: 权限不足
+
+---
+
+### 3. 删除分类（管理员）
+
+**接口**: `DELETE /meta/categories/{cat_id}`  
+**权限**: 仅管理员
+
+**成功响应** (200):
+```json
+{ "message": "分类已删除" }
+```
+
+**⚠️ 警告**: 删除分类不会级联删除关联的文章，文章的 `category_id` 会变为 null
+
+---
+
+### 4. 查看所有标签
+
+**接口**: `GET /meta/tags`  
+**权限**: 公开
+
+**成功响应** (200):
+```json
+[
+  { "id": 1, "name": "FastAPI" },
+  { "id": 2, "name": "Vue3" }
+]
+```
+
+---
+
+### 5. 创建标签（所有用户）
+
+**接口**: `POST /meta/tags`  
+**权限**: 所有登录用户
+
+**请求体**:
+```json
+{
+  "name": "FastAPI"
+}
+```
+
+**成功响应** (200):
+```json
+{ "id": 1, "name": "FastAPI" }
+```
+
+**特殊行为**:
+- ✅ 如果标签已存在，直接返回已有标签（不报错）
+- ✅ 普通用户和管理员都可以创建标签
+- ✅ 自动去重，避免数据库中出现重复标签
+
+---
+
+### 6. 删除标签（管理员）
+
+**接口**: `DELETE /meta/tags/{tag_id}`  
+**权限**: 仅管理员
+
+**成功响应** (200):
+```json
+{ "message": "标签已从系统库中移除" }
+```
+
+**⚠️ 警告**: 
+- 这是物理删除标签库条目
+- 通常只有发现违规标签时才调用
+- 删除后关联文章的标签关系会自动解除
+
+---
+
+## 👤 用户权限管理
+
+### 调整用户角色（管理员）
+
+**接口**: `PUT /article/admin/users/{target_user_id}/role`  
+**权限**: 仅管理员
+
+**请求体**:
+```json
+{
+  "new_role": "admin"
+}
+```
+
+**参数说明**:
+| 字段 | 类型 | 必填 | 可选值 |
+|------|------|------|--------|
+| new_role | string | ✅ | `"admin"` 或 `"common"` |
+
+**成功响应** (200):
+```json
+{ "message": "权限更新成功" }
+```
+
+**错误响应**:
+- `400`: 不能修改自己的权限 / 系统必须保留至少一名管理员
+- `404`: 用户不存在
+- `422`: 参数验证失败（必须是 `admin` 或 `common`）
+
+**前端注意**:
+- ⚠️ 枚举值是小写字符串（`"admin"` 而非 `"ADMIN"`）
+- ⚠️ 不能降级最后一个管理员
+- ⚠️ 不能修改自己的角色
 
 ---
 
@@ -559,8 +827,8 @@ await axios.delete(`/api/v1/article/${articleId}`, {
   headers: { 'Authorization': `Bearer ${token}` }
 })
 
-// 2. 查看回收站
-const recycleBin = await axios.get('/api/v1/article/recycle-bin/list', {
+// 2. 查看我的文章列表
+const myArticles = await axios.get('/api/v1/article/user/my-articles?page=1&size=10', {
   headers: { 'Authorization': `Bearer ${token}` }
 })
 
@@ -619,6 +887,92 @@ window.addEventListener('beforeunload', async () => {
   if (saveTimer) clearTimeout(saveTimer)
   // 立即保存
   await saveArticle()
+})
+```
+
+### 场景5: 图片上传与使用
+
+```javascript
+// 1. 选择图片文件
+const fileInput = document.querySelector('input[type="file"]')
+const file = fileInput.files[0]
+
+// 2. 上传图片
+const formData = new FormData()
+formData.append('file', file)
+
+const uploadResponse = await axios.post('/api/v1/article/upload-image', formData, {
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'multipart/form-data'
+  }
+})
+
+// 3. 获取图片 URL
+const imageUrl = uploadResponse.data.url
+// 例如: "/static/storage/images/a1b2c3d4.jpg"
+
+// 4. 插入到 Markdown 编辑器
+const markdownImage = `![${file.name}](http://127.0.0.1:8000${imageUrl})`
+editor.insertText(markdownImage)
+```
+
+### 场景6: 管理分类和标签
+
+```javascript
+// 1. 获取所有分类（用于下拉选择）
+const categories = await axios.get('/api/v1/meta/categories')
+// [{ id: 1, name: '技术分享' }, ...]
+
+// 2. 获取所有标签
+const tags = await axios.get('/api/v1/meta/tags')
+// [{ id: 1, name: 'FastAPI' }, ...]
+
+// 3. 创建新标签（普通用户也可以）
+const newTag = await axios.post('/api/v1/meta/tags', {
+  name: 'Python'
+}, {
+  headers: { 'Authorization': `Bearer ${token}` }
+})
+// 如果标签已存在，直接返回已有标签
+
+// 4. 创建文章时绑定分类和标签
+await axios.post('/api/v1/article/autosave', {
+  title: '我的文章',
+  content: '# 内容...',
+  article_id: null,
+  category_id: 1,  // 选择分类
+  tag_ids: [1, 2]  // 选择多个标签
+}, {
+  headers: { 'Authorization': `Bearer ${token}` }
+})
+```
+
+### 场景7: 管理员操作
+
+```javascript
+// 1. 查看所有文章（包括其他用户的）
+const allArticles = await axios.get('/api/v1/article/admin/all-articles?page=1&size=20', {
+  headers: { 'Authorization': `Bearer ${adminToken}` }
+})
+
+// 2. 审核文章
+await axios.put(`/api/v1/article/admin/articles/${articleId}/audit`, {}, {
+  headers: { 'Authorization': `Bearer ${adminToken}` }
+})
+
+// 3. 创建分类
+await axios.post('/api/v1/meta/categories', {
+  name: '新技术'
+}, {
+  headers: { 'Authorization': `Bearer ${adminToken}` }
+})
+
+// 4. 调整用户权限
+await axios.put(`/api/v1/article/admin/users/${userId}/role`, {
+  new_role: 'admin'  // 注意：小写字符串
+}, {
+  headers: { 'Authorization': `Bearer ${adminToken}` }
 })
 ```
 
@@ -707,13 +1061,13 @@ axios.interceptors.response.use(
 
 - [ ] 文章搜索功能
 - [ ] 文章版本历史
-- [ ] 富文本编辑器支持
-- [ ] 图片上传与管理
+- [x] 图片上传与管理
+- [x] 分类与标签管理
 - [ ] 评论系统
 - [ ] 点赞与收藏
 
 ---
 
 **最后更新时间**: 2026-04-19  
-**文档版本**: v3.0  
+**文档版本**: v3.2  
 **维护者**: Backend Team
