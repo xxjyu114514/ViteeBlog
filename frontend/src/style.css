@@ -25,6 +25,15 @@
   padding: 0 24px;
 }
 
+/* 文章编辑页面宽容器 - 至少80%宽度 */
+.editor-container-wide {
+  width: 100%;
+  min-width: 80%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
 /* 卡片样式 */
 .card {
   background: var(--bg-white);

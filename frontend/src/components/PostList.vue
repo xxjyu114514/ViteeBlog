@@ -64,7 +64,9 @@ const loadArticles = async () => {
   
   const result = await getPublicArticles()
   if (result.success) {
-    articles.value = result.data
+    // 后端返回的是分页对象 {items: [], total: number, page: number, size: number}
+    // 需要提取 items 数组
+    articles.value = result.data.items || []
   } else {
     error.value = result.message
   }

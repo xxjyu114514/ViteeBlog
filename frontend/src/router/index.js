@@ -46,19 +46,19 @@ const routes = [
     path: '/manage-articles',
     name: 'article-manage',
     component: ArticleManageView,
-    meta: { index: 6, title: '文章管理', requiresAuth: true, requiresAdmin: true }
+    meta: { index: 6, title: '文章管理', requiresAuth: true }
   },
   {
     path: '/edit-article',
     name: 'article-edit',
     component: ArticleEditView,
-    meta: { index: 7, title: '编辑文章', requiresAuth: true, requiresAdmin: true }
+    meta: { index: 7, title: '编辑文章', requiresAuth: true }
   },
   {
     path: '/edit-article/:id',
     name: 'article-edit-detail',
     component: ArticleEditView,
-    meta: { index: 8, title: '编辑文章', requiresAuth: true, requiresAdmin: true }
+    meta: { index: 8, title: '编辑文章', requiresAuth: true }
   },
   {
     path: '/about-immersive',

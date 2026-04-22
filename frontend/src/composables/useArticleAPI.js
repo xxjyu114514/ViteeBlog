@@ -117,11 +117,19 @@ export function useArticleAPI() {
     return { success: false, message: errorMessage }
   }
 
-  // 获取公开文章列表
-  const getPublicArticles = async (categoryId = null) => {
+  // 获取公开文章列表（支持分页和分类筛选）
+  const getPublicArticles = async (categoryId = null, page = 1, size = 10) => {
     let url = '/article/list/public'
+    const params = new URLSearchParams()
+    
     if (categoryId) {
-      url += `?category_id=${categoryId}`
+      params.append('category_id', categoryId)
+    }
+    params.append('page', page)
+    params.append('size', size)
+    
+    if (params.toString()) {
+      url += `?${params.toString()}`
     }
     
     const { data, error } = await useBaseFetch(url).get().json()
@@ -131,6 +139,20 @@ export function useArticleAPI() {
     }
     
     const errorMessage = extractFriendlyErrorMessage(error.value, '获取文章列表')
+    return { success: false, message: errorMessage }
+  }
+
+  // 获取用户自己的文章列表（支持分页）
+  const getMyArticles = async (page = 1, size = 10) => {
+    const url = `/article/user/my-articles?page=${page}&size=${size}`
+    
+    const { data, error } = await useBaseFetch(url).get().json()
+    
+    if (!error.value) {
+      return { success: true, data: data.value }
+    }
+    
+    const errorMessage = extractFriendlyErrorMessage(error.value, '获取我的文章')
     return { success: false, message: errorMessage }
   }
 
@@ -146,18 +168,6 @@ export function useArticleAPI() {
     return { success: false, message: errorMessage }
   }
 
-  // 查看回收站
-  const getRecycleBinArticles = async () => {
-    const { data, error } = await useBaseFetch('/article/recycle-bin/list').get().json()
-    
-    if (!error.value) {
-      return { success: true, data: data.value }
-    }
-    
-    const errorMessage = extractFriendlyErrorMessage(error.value, '获取回收站')
-    return { success: false, message: errorMessage }
-  }
-
   // 恢复文章
   const restoreArticle = async (articleId) => {
     const { data, error } = await useBaseFetch(`/article/${articleId}/restore`).post({}).json()
@@ -170,26 +180,13 @@ export function useArticleAPI() {
     return { success: false, message: errorMessage }
   }
 
-  // 彻底删除文章（硬删除）
-  const hardDeleteArticle = async (articleId) => {
-    const { data, error } = await useBaseFetch(`/article/${articleId}/hard`).delete().json()
-    
-    if (!error.value) {
-      return { success: true }
-    }
-    
-    const errorMessage = extractFriendlyErrorMessage(error.value, '永久删除')
-    return { success: false, message: errorMessage }
-  }
-
   return {
     autoSaveArticle,
     getArticleDetail,
     publishArticle,
     getPublicArticles,
+    getMyArticles,
     softDeleteArticle,
-    getRecycleBinArticles,
-    restoreArticle,
-    hardDeleteArticle
+    restoreArticle
   }
 }

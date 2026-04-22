@@ -66,52 +66,6 @@
         <p>暂无文章</p>
         <button class="btn-primary mt-20" @click="handleCreateNew">立即创建第一篇文章</button>
       </div>
-
-      <!-- 回收站区域 -->
-      <div class="recycle-section mt-40">
-        <div class="flex-between mb-20">
-          <h2 class="title-medium">回收站</h2>
-          <span class="recycle-count" v-if="recycleBinArticles.length > 0">
-            ({{ recycleBinArticles.length }} 篇)
-          </span>
-        </div>
-        
-        <div v-if="recycleBinArticles.length > 0" class="recycle-list">
-          <div 
-            v-for="article in recycleBinArticles" 
-            :key="article.id" 
-            class="recycle-item card"
-          >
-            <div class="flex-between">
-              <div class="recycle-info">
-                <h4 class="recycle-title">{{ article.title }}</h4>
-                <div class="meta-text">
-                  <span>删除于 {{ formatDate(article.deleted_at) }}</span>
-                </div>
-              </div>
-              <div class="recycle-actions">
-                <button 
-                  class="btn-action btn-restore"
-                  @click="handleRestore(article.id)"
-                  :disabled="restoringId === article.id"
-                >
-                  {{ restoringId === article.id ? '恢复中...' : '恢复' }}
-                </button>
-                <button 
-                  class="btn-action btn-hard-delete"
-                  @click="handleHardDelete(article.id)"
-                  :disabled="hardDeletingId === article.id"
-                >
-                  {{ hardDeletingId === article.id ? '删除中...' : '永久删除' }}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div v-else class="empty-recycle">
-          <p>回收站为空</p>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -123,22 +77,18 @@ import { useArticleAPI } from '@/composables/useArticleAPI'
 
 const router = useRouter()
 const {
-  getPublicArticles,
+  getMyArticles,
   publishArticle,
   softDeleteArticle,
-  getRecycleBinArticles,
-  restoreArticle,
-  hardDeleteArticle
+  restoreArticle
 } = useArticleAPI()
 
 // 状态管理
 const loading = ref(true)
 const articles = ref([])
-const recycleBinArticles = ref([])
 const publishingId = ref(null)
 const deletingId = ref(null)
 const restoringId = ref(null)
-const hardDeletingId = ref(null)
 
 // 格式化日期
 const formatDate = (dateString) => {
@@ -156,23 +106,13 @@ const formatDate = (dateString) => {
 // 获取文章列表
 const fetchArticles = async () => {
   loading.value = true
-  const result = await getPublicArticles()
+  const result = await getMyArticles()
   if (result.success) {
-    articles.value = result.data
+    articles.value = result.data.items || []
   } else {
-    console.error('获取文章列表失败:', result.message)
+    console.error('获取我的文章列表失败:', result.message)
   }
   loading.value = false
-}
-
-// 获取回收站文章
-const fetchRecycleBin = async () => {
-  const result = await getRecycleBinArticles()
-  if (result.success) {
-    recycleBinArticles.value = result.data
-  } else {
-    console.error('获取回收站失败:', result.message)
-  }
 }
 
 // 处理新建文章
@@ -205,7 +145,6 @@ const handleSoftDelete = async (articleId) => {
   const result = await softDeleteArticle(articleId)
   if (result.success) {
     await fetchArticles()
-    await fetchRecycleBin()
   } else {
     alert(result.message)
   }
@@ -218,31 +157,14 @@ const handleRestore = async (articleId) => {
   const result = await restoreArticle(articleId)
   if (result.success) {
     await fetchArticles()
-    await fetchRecycleBin()
   } else {
     alert(result.message)
   }
   restoringId.value = null
 }
 
-// 处理硬删除
-const handleHardDelete = async (articleId) => {
-  if (!confirm('⚠️ 此操作不可逆！确定要永久删除此文章及其文件吗？')) return
-  
-  hardDeletingId.value = articleId
-  const result = await hardDeleteArticle(articleId)
-  if (result.success) {
-    await fetchRecycleBin()
-    alert('文章已永久删除')
-  } else {
-    alert(result.message)
-  }
-  hardDeletingId.value = null
-}
-
 // 初始化
 onMounted(async () => {
   await fetchArticles()
-  await fetchRecycleBin()
 })
 </script>
