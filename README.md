@@ -179,6 +179,19 @@ axios.get('/api/v1/article/list/public', {
 
 ---
 
+
+## 轻量化开发模式 (Lite Mode)
+
+为了方便前端调试或快速部署，本项目支持 **SQLite 兼容模式**。在该模式下，你无需安装和配置 MySQL 数据库即可启动完整后端服务。
+
+### 使用方法
+
+在启动项目时，添加 `-lite` 额外参数：
+
+```bash
+python main.py -lite
+
+
 ## 🗄️ 数据库迁移（Alembic）
 
 > ⚠️ **重要**：所有 Alembic 命令必须在 `backend/` 目录下执行
