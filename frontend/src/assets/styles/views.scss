@@ -1,0 +1,196 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+/* =======================================
+   沉浸式视图合集 (About, Message, Posts)
+   ======================================= */
+.about-immersive-wrapper, .message-immersive-wrapper, .posts-immersive-wrapper {
+  @include immersive-view;
+}
+
+.about-immersive-wrapper {
+  .tags-preview {
+    display: flex; gap: 12px; margin: 20px 0; flex-wrap: wrap; justify-content: center;
+    .tag {
+      background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px);
+      padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+  }
+  .bio-preview { color: rgba(255, 255, 255, 0.8); font-size: 1rem; margin: 15px 0; max-width: 500px; line-height: 1.5; }
+}
+
+.message-immersive-wrapper {
+  .stats-preview {
+    display: flex; gap: 20px; margin: 20px 0; justify-content: center;
+    .stat-item {
+      background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px);
+      padding: 8px 16px; border-radius: 12px; font-size: 0.9rem; border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+  }
+  .latest-message {
+    background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border-radius: 16px;
+    padding: 16px; margin: 20px 0; max-width: 400px; border: 1px solid rgba(255, 255, 255, 0.1);
+    .message-author { color: $color-primary; font-weight: 600; margin: 0 0 8px 0; font-size: 0.9rem; }
+    .message-content { color: rgba(255, 255, 255, 0.9); margin: 0; font-size: 0.95rem; line-height: 1.5; }
+  }
+}
+
+/* =======================================
+   Home 主页与 Login 登录
+   ======================================= */
+.home-view-wrapper {
+  overflow: hidden; background: $bg-dark;
+  .hero-static {
+    position: relative; width: 100%; height: 100%;
+    background: $bg-dark url('../hero-bg.webp') center/cover no-repeat; color: white;
+  }
+  .hero-content {
+    position: absolute; left: 60px; bottom: 80px; text-align: left; z-index: 10; padding: 20px 30px;
+    font-family: 'PingFangHeavy', "PingFang SC", sans-serif;
+    .glass-text {
+      font-size: 2.4rem; font-weight: 900; letter-spacing: -0.5px; margin: 0; line-height: 1.1;
+      background: linear-gradient(160deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.3) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 4px 15px rgba(0, 0, 0, 0.3)) blur(0.4px); position: relative;
+      &::before {
+        content: '观测笔记'; position: absolute; left: 0; top: 0; z-index: -1; color: transparent;
+        text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+      }
+    }
+    .intro-text { font-size: 0.9rem; font-weight: 600; color: rgba(255, 255, 255, 0.6); margin-top: 8px; letter-spacing: 1.5px; text-transform: uppercase; }
+  }
+}
+@media (max-width: 768px) { .home-view-wrapper .hero-content { left: 30px; bottom: 50px; .glass-text { font-size: 1.8rem; } } }
+
+.login-page { display: flex; width: 100%; height: 100vh; background: #fff; overflow: hidden; }
+.login-visual {
+  flex: 2; position: relative;
+  .bg-wrapper { position: absolute; inset: 0; z-index: 1; .bg-image { width: 100%; height: 100%; object-fit: cover; } .top-shadow-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 20%, transparent 70%, rgba(0,0,0,0.6) 100%); } }
+  .visual-content { position: relative; z-index: 2; height: 100%; display: flex; align-items: flex-end; padding: 80px; color: #fff; .brand-info { h1 { font-size: 3.8rem; font-weight: 800; margin-bottom: 15px; } .animated-bar { width: 60px; height: 5px; background: $color-primary; margin-bottom: 25px; } p { letter-spacing: 5px; opacity: 0.7; font-size: 0.9rem; } } }
+}
+.login-form-container {
+  flex: 1; min-width: 450px; background: #fff; display: flex; align-items: center; justify-content: center; padding: 60px; padding-top: 100px; position: relative; z-index: 10; box-shadow: -10px 0 30px rgba(0,0,0,0.03);
+  .form-card { width: 100%; max-width: 360px; }
+}
+
+/* =======================================
+   管理列表、回收站与通用卡片
+   ======================================= */
+.admin-controls { padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef; }
+.pagination { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-top: 1px solid $border-color; }
+
+.article-list, .category-list, .tag-list { margin-top: 20px; }
+.article-item, .category-item, .tag-item { padding: 20px; margin-bottom: 20px; border-radius: 8px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
+.article-info, .category-info, .tag-info { flex: 1; }
+.article-title, .category-name, .tag-name { margin: 0 0 8px 0; font-size: 1.1rem; font-weight: 600; color: $text-main; }
+.meta-text { display: flex; flex-wrap: wrap; gap: 10px; color: $text-muted; font-size: 14px; }
+.article-actions, .category-actions, .tag-actions { display: flex; gap: 8px; align-items: center; }
+
+.recycle-section { border-top: 1px solid $border-color-light; padding-top: 20px; }
+.title-medium { font-size: 1.2rem; font-weight: 600; color: $text-main; margin: 0; }
+.recycle-count { color: $text-secondary; font-size: 0.9rem; }
+.recycle-item { margin-bottom: 16px; }
+.recycle-title { font-size: 1rem; font-weight: 500; margin: 0 0 6px 0; color: $text-main; }
+.recycle-actions { display: flex; gap: 8px; }
+.empty-recycle { text-align: center; padding: 20px 0; color: $text-secondary; }
+
+/* =======================================
+   编辑与详情页 (Article Edit / Detail)
+   ======================================= */
+.editor-container-wide, .article-edit-page { max-width: 1200px; margin: 0 auto; padding: 90px 20px 20px; }
+.editor-header { margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+.editor-actions { display: flex; gap: 12px; align-items: center; }
+.editor-form { background: $bg-white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); min-width: 80%; max-width: 1200px; width: 100%; margin: 0 auto; }
+.form-row { display: flex; gap: 20px; margin-bottom: 20px; }
+
+#vditor-editor { width: 100%; min-height: 600px; border: 1px solid $border-color; border-radius: 12px; }
+.fallback-textarea { width: 100%; min-height: 400px; padding: 12px; border: 1px solid $border-color-light; border-radius: 8px; font-family: monospace; resize: vertical; }
+
+.tag-selector { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; min-height: 40px; background: white; }
+.selected-tag { display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: #e3f2fd; border: 1px solid #bbdefb; border-radius: 12px; font-size: 12px; color: #1976d2; .remove-tag { cursor: pointer; font-weight: bold; color: #f44336; } }
+
+/* Typora风格编辑器 */
+.typora-editor {
+  min-height: 600px; padding: 24px; border: 1px solid $border-color-light; border-radius: 12px;
+  font-family: 'Inter', sans-serif; font-size: 16px; background: white; color: #333;
+  outline: none; transition: $transition-base; width: 100%; word-wrap: break-word;
+  @include markdown-typography; // 注入统一的 Markdown 样式
+  &.editor-focused { border-color: $color-primary; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+  &:empty::before { content: "请输入文章内容（支持Markdown语法）"; color: #999; font-style: italic; }
+}
+.hidden-markdown-storage { display: none; }
+@media (max-width: 768px) { .typora-editor { min-height: 400px; padding: 20px; } .editor-form { min-width: 100%; padding: 20px; } }
+
+/* 文章详情页 */
+.article-detail-container {
+  .article-header {
+    margin-bottom: 40px;
+    .article-title { font-size: 2.2rem; font-weight: 700; color: $text-main; line-height: 1.3; margin-bottom: 20px; word-break: break-word; }
+    .article-meta {
+      .meta-info { font-size: 0.95rem; color: $text-secondary; .author, .publish-date, .view-count { margin-right: 16px; } }
+      .admin-actions { .btn-action { padding: 8px 16px; font-size: 0.9rem; margin-left: 12px; } }
+    }
+  }
+  .article-content {
+    margin-bottom: 40px;
+    .markdown-content { font-size: 1.05rem; color: $text-main; @include markdown-typography; } // 复用同一套 Markdown 样式
+  }
+  .article-footer {
+    padding-top: 30px; border-top: 1px solid $border-color-light;
+    .category-tags {
+      display: flex; flex-wrap: wrap; gap: 20px;
+      .category-item, .tags-section { display: flex; align-items: center; gap: 8px; .category-label, .tags-label { font-weight: 600; color: $text-main; } .category-name { color: $color-primary; font-weight: 500; } }
+      .tags-list { display: flex; gap: 8px; .tag-item { padding: 4px 12px; background: rgba(59, 130, 246, 0.1); color: $color-primary; border-radius: 20px; font-size: 0.85rem; font-weight: 500; } }
+    }
+  }
+}
+
+/* =======================================
+   PersonalCenter 个人中心 (暗黑拟态风格)
+   ======================================= */
+.personal-center { background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%); }
+.container-grid { max-width: 1200px; margin: 0 auto; padding: 90px 20px 40px 20px; display: grid; grid-template-columns: 1fr; gap: 30px; }
+@media (min-width: 768px) { .container-grid { grid-template-columns: 1fr 1fr; } .user-info-card { grid-column: 1 / -1; } }
+@media (min-width: 1024px) { .container-grid { gap: 40px; } }
+
+.glass-card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(30px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); padding: 30px; }
+.card-title { color: white; margin: 0 0 20px 0; font-size: 1.25rem; font-weight: 600; }
+
+.user-info { display: flex; align-items: center; gap: 20px; }
+.user-info .avatar-placeholder { width: 64px; height: 64px; background: linear-gradient(135deg, #fff 0%, #ccc 100%); color: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.5rem; }
+.user-info h2 { color: white; margin: 0; }
+.user-info .role-badge { font-size: 0.7rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; }
+
+.menu-section { display: flex; flex-direction: column; gap: 12px; }
+.menu-section .menu-item { background: rgba(255,255,255,0.05); border: none; color: white; padding: 15px; border-radius: 12px; text-align: left; cursor: pointer; transition: all 0.3s; font-size: 1rem; display: flex; align-items: center; gap: 12px; }
+.menu-section .menu-item:hover { background: rgba(255,255,255,0.15); transform: translateX(5px); }
+.menu-section .menu-item.logout { color: #ff4d4d; }
+.menu-section .menu-item.admin-item { background: rgba(59, 130, 246, 0.1); border-left: 3px solid $color-primary; }
+
+/* =======================================
+   常规 About 与 Message 页面
+   ======================================= */
+.about-container { width: 100%; background: $bg-light; min-height: 100vh; }
+.about-hero { height: 50vh; background: #1a1a1a url('@/assets/about-bg.webp') center/cover; display: flex; justify-content: center; align-items: center; color: white; position: relative; background-attachment: fixed; }
+.about-main { max-width: 900px; margin: -100px auto 0; padding: 0 20px 100px; position: relative; z-index: 2; background: $bg-light; border-radius: 20px 20px 0 0; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.1); }
+.content-card { background: white; padding: 40px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+
+.message-header { text-align: center; margin: 80px 0 40px 0; h1 { font-size: 2.5rem; color: $text-main; margin-bottom: 16px; } p { color: $text-muted; font-size: 1.1rem; max-width: 600px; margin: 0 auto; line-height: 1.6; } }
+.message-form-section { max-width: 700px; margin: 0 auto 60px auto; padding: 0 20px; }
+.message-form { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); }
+.submit-btn { width: 100%; padding: 14px; background: $color-primary; color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: background 0.2s; &:hover:not(:disabled) { background: $color-primary-hover; } &:disabled { background: #9ca3af; cursor: not-allowed; } }
+
+.message-list-section { max-width: 800px; margin: 0 auto; padding: 0 20px 80px; h2 { font-size: 1.8rem; color: $text-main; margin-bottom: 30px; text-align: center; } }
+.no-messages { text-align: center; color: $text-muted; font-size: 1.1rem; padding: 40px; background: #f9fafb; border-radius: 16px; }
+.messages-container { display: flex; flex-direction: column; gap: 24px; }
+.message-item { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05); border-left: 4px solid $color-primary; }
+.message-author { font-weight: 700; color: $text-main; font-size: 1.1rem; }
+.message-time { color: #9ca3af; font-size: 0.9rem; }
+.message-content { color: #374151; line-height: 1.6; font-size: 1rem; }
+.message-reply { margin-top: 20px; padding-top: 20px; border-top: 1px solid #f3f4f6; }
+.reply-author { font-weight: 600; color: $color-primary; font-size: 1rem; }
+.reply-time { color: #9ca3af; font-size: 0.85rem; }
+.reply-content { color: $text-secondary; line-height: 1.6; font-style: italic; }
+
+.post-page-wrapper { overflow-y: auto; background: $bg-white; scroll-behavior: smooth; position: relative; }
+.content-scroller { max-width: 1100px; margin: 0 auto; }   

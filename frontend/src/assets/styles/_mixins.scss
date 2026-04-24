@@ -1,0 +1,109 @@
+@use 'variables' as *;
+
+// 玻璃拟态文字渐变
+@mixin glass-text-effect($font-size: 3.5rem, $weight: 700) {
+  font-size: $font-size;
+  font-weight: $weight;
+  background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.5) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+// 沉浸式视图通用框架
+@mixin immersive-view {
+  overflow: hidden;
+  background: $bg-dark;
+  cursor: pointer;
+
+  .hero-static {
+    width: 100%;
+    height: 100%;
+    background: $bg-dark url('../hero-bg.webp') center/cover no-repeat;
+    color: white;
+  }
+
+  .hero-content {
+    text-align: center;
+    z-index: 10;
+
+    .icon-box {
+      margin-bottom: 20px;
+      svg { width: 80px; height: 80px; color: white; opacity: 0.8; }
+    }
+
+    .glass-text {
+      @include glass-text-effect(3.5rem, 700);
+      letter-spacing: 4px;
+    }
+
+    .intro-text {
+      font-size: 1.1rem;
+      color: rgba(255, 255, 255, 0.7);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .enter-hint {
+      margin-top: 40px;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.9rem;
+      animation: pulse 2s infinite;
+    }
+  }
+}
+
+// Loading 旋转动画
+@mixin loading-spinner($size: 40px) {
+  width: $size;
+  height: $size;
+  border: 4px solid $border-color-light;
+  border-top: 4px solid $color-primary;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+// Markdown 核心排版样式 (合并了 Typora 和 详情页的重复样式)
+@mixin markdown-typography {
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 2em; margin-bottom: 1em; color: $text-main; font-weight: 600; line-height: 1.3;
+  }
+  h1 { font-size: 2em; } h2 { font-size: 1.5em; } h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; } h5 { font-size: 1em; } h6 { font-size: 0.9em; }
+
+  p { margin: 0 0 1.2em 0; line-height: 1.7; }
+  
+  a { color: $color-primary; text-decoration: none; transition: color 0.2s;
+    &:hover { color: $color-primary-hover; text-decoration: underline; }
+  }
+
+  img { max-width: 100%; height: auto; border-radius: 8px; margin: 1.5em 0; }
+
+  blockquote {
+    margin: 1.5em 0; padding: 16px 24px;
+    border-left: 4px solid $color-primary;
+    background: rgba(59, 130, 246, 0.05); color: $text-muted; font-style: italic;
+  }
+
+  code {
+    background: rgba(0, 0, 0, 0.05); padding: 3px 6px; border-radius: 4px;
+    font-family: 'Monaco', 'Consolas', 'Menlo', monospace; font-size: 0.9em; color: #d73a49;
+  }
+
+  pre {
+    background: #f8f9fa; padding: 20px; border-radius: 8px;
+    overflow-x: auto; margin: 1.5em 0; line-height: 1.45;
+    code { background: none; padding: 0; color: #333; font-size: 14px; }
+  }
+
+  ul, ol { margin: 1.5em 0; padding-left: 2em;
+    li { margin-bottom: 0.5em; line-height: 1.6; }
+  }
+
+  table { width: 100%; border-collapse: collapse; margin: 20px 0;
+    th, td { padding: 12px; border: 1px solid $border-color-light; text-align: left; }
+    th { background: rgba(59, 130, 246, 0.05); font-weight: 600; }
+  }
+}
+
+@keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }

@@ -1,0 +1,98 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+/* === 全局按钮体系 === */
+.btn-primary {
+  background: $color-primary; color: white; border: none; padding: 10px 20px;
+  border-radius: 8px; font-weight: 500; cursor: pointer; transition: $transition-base;
+  &:hover:not(:disabled) { background: $color-primary-hover; transform: translateY(-2px); }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+.btn-secondary {
+  background: transparent; color: $text-main; border: 1px solid $border-color-light;
+  padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; transition: $transition-base;
+  &:hover:not(:disabled) { background: $bg-smoke; }
+}
+
+.btn-action {
+  padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 500;
+  cursor: pointer; transition: $transition-base; border: 1px solid transparent;
+}
+
+// 按钮变体
+.btn-publish { background: $color-success; color: white; &:hover:not(:disabled) { background: $color-success-hover; } }
+.btn-edit { background: $color-warning; color: white; &:hover:not(:disabled) { background: $color-warning-hover; } }
+.btn-delete { background: $color-danger; color: white; &:hover:not(:disabled) { background: $color-danger-hover; } &:disabled { background: $color-danger-disabled; cursor: not-allowed; } }
+.btn-restore { background: $color-purple; color: white; &:hover:not(:disabled) { background: $color-purple-hover; } }
+.btn-hard-delete { background: $color-danger-dark; color: white; &:hover:not(:disabled) { background: $color-danger-dark-hover; } }
+.btn-audit { background: $color-success; color: white; &:hover:not(:disabled) { background: $color-success-hover; } &:disabled { background: #a7f3d0; cursor: not-allowed; } }
+
+/* === 页面独立返回按钮 === */
+.back-button {
+  position: fixed; top: 100px; left: 20px; z-index: 1000; padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.7); color: white; border-radius: 20px; cursor: pointer; font-size: 0.9rem; transition: background 0.3s;
+  &.light {
+    background: #f9fafb; border: 1px solid $border-color; color: $text-main; text-decoration: none; font-weight: 600;
+    &:hover { background: #f3f4f6; transform: translateX(-2px); }
+  }
+  &:hover:not(.light) { background: rgba(0, 0, 0, 0.9); }
+}
+
+/* === 表单元素 === */
+.form-group {
+  margin-bottom: 20px;
+  label { display: block; margin-bottom: 8px; font-weight: 500; color: $text-main; }
+}
+
+.input-field, .select-field {
+  width: 100%; padding: 12px; border: 1px solid $border-color-light;
+  border-radius: 8px; font-size: 1rem; transition: $transition-base; background: white; box-sizing: border-box;
+  &:focus { outline: none; border-color: $color-primary; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+}
+
+.textarea-field {
+  width: 100%; min-height: 200px; padding: 12px; border: 1px solid $border-color-light;
+  border-radius: 8px; font-size: 1rem; font-family: inherit; resize: vertical; transition: $transition-base;
+  &:focus { outline: none; border-color: $color-primary; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+}
+
+/* === 模态框体系 === */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.5);
+  display: flex; justify-content: center; align-items: center; z-index: 1000;
+}
+.modal-content {
+  background: $bg-white; border-radius: 16px; max-width: 600px; width: 90%;
+  max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+.modal-header { padding: 24px; border-bottom: 1px solid $border-color-light; display: flex; justify-content: space-between; align-items: center; }
+.modal-title { font-size: 1.25rem; font-weight: 600; color: $text-main; margin: 0; }
+.modal-close {
+  background: none; border: none; font-size: 1.5rem; cursor: pointer; color: $text-secondary;
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  &:hover { color: $text-main; }
+}
+.modal-body { padding: 24px; }
+.modal-footer { padding: 24px; border-top: 1px solid $border-color-light; }
+.modal-actions { display: flex; gap: 12px; justify-content: center; }
+
+/* === 状态标签与全局提示 === */
+.status-draft { background: $color-warning-light; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 500; }
+.status-published { background: $color-success; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 500; }
+.status-audited { background: #dbeafe; color: #1e40af; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-left: 8px; }
+
+.error-message { color: $color-danger; font-size: 0.875rem; padding: 12px; background: #fee2e2; border-radius: 8px; border-left: 4px solid $color-danger; }
+.loading-state { text-align: center; padding: 40px 0; }
+.loading-spinner { @include loading-spinner(); margin: 0 auto 16px; }
+.empty-state { text-align: center; padding: 40px 0; p { color: $text-secondary; font-size: 1.1rem; } }
+
+/* === 辅助工具类 === */
+.flex-row { display: flex; align-items: flex-end; }
+.flex-1 { flex: 1; }
+.flex-2 { flex: 2; }
+.mt-20 { margin-top: 20px; }
+.mt-40 { margin-top: 40px; }
+.mb-20 { margin-bottom: 20px; }
+.mb-30 { margin-bottom: 30px; }
+.mr-10 { margin-right: 10px; }

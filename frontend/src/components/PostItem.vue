@@ -53,41 +53,10 @@ const handleClick = () => {
     router.push(`/article/${props.post.id}`)
   }
 }
+
+import "./PostItem.scss"
 </script>
 
 <style lang="scss" scoped>
-.post-item-card {
-  cursor: pointer;
 
-  &:hover {
-    .more {
-      color: var(--primary-color);
-      padding-left: 5px;
-    }
-  }
-}
-
-.post-meta {
-  margin-bottom: 12px;
-  .dot { opacity: 0.5; }
-}
-
-.post-title {
-  margin-bottom: 12px;
-}
-
-.post-summary {
-  color: var(--text-muted);
-  line-height: 1.6;
-  margin-bottom: 20px;
-}
-
-.post-footer {
-  .more {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-    transition: all 0.3s ease;
-  }
-}
 </style>

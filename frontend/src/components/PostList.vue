@@ -93,66 +93,10 @@ onMounted(() => {
 defineExpose({
   refresh: loadArticles
 })
+
+import "./PostList.scss"
 </script>
 
 <style lang="scss" scoped>
-.post-list-wrapper {
-  padding: 60px 24px; // 增加顶部高度，避开固定导航栏
-}
 
-.tab-header {
-  display: flex;
-  gap: 20px; 
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06); // 极淡的底线
-  margin-bottom: 40px;
-  
-  button {
-    padding: 14px 12px;
-    background: none;
-    border: none;
-    font-size: 1.05rem;
-    color: var(--text-secondary);
-    cursor: pointer;
-    position: relative;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    
-    &:hover {
-      color: var(--text-main);
-    }
-
-    &.active {
-      color: var(--primary-color);
-      font-weight: 600;
-      
-      &::after {
-        content: '';
-        position: absolute;
-        bottom: -1px;
-        left: 0;
-        width: 100%;
-        height: 2.5px;
-        background: var(--primary-color);
-        border-radius: 4px 4px 0 0; // 顶部微圆角
-      }
-    }
-    
-    &.refresh-btn {
-      margin-left: auto;
-      padding: 14px 16px;
-      font-size: 0.9rem;
-      color: var(--primary-color);
-      
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-    }
-  }
-}
-
-.list-content {
-  display: flex;
-  flex-direction: column;
-  gap: 24px; // 帖子卡片之间的间距
-}
 </style>
