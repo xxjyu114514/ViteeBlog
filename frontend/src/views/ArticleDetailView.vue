@@ -21,6 +21,10 @@
     </div>
     
     <div v-else-if="article" class="article-detail-container">
+      <div class="back-button" @click="handleBack">
+        ← 返回
+      </div>
+      
       <div class="container-narrow">
         <div class="article-header">
           <h1 class="article-title" v-html="renderedTitle"></h1>
@@ -171,6 +175,11 @@ const deleteArticle = async () => {
 // 返回首页
 const goBack = () => {
   router.push('/')
+}
+
+// 返回上一页
+const handleBack = () => {
+  router.go(-1)
 }
 
 // 初始化

@@ -2,6 +2,10 @@
   <div class="page-wrapper-base">
     <div class="nav-placeholder"></div>
     
+    <div class="back-button" @click="handleBack">
+      ← 返回
+    </div>
+    
     <div class="container-narrow">
       <div class="flex-between mb-30">
         <h1 class="title-large">{{ userStore.isAdmin ? '全站文章管理' : '我的文章' }}</h1>
@@ -340,6 +344,11 @@ onMounted(async () => {
   }
   await fetchArticles(1)
 })
+
+// 返回上一页
+const handleBack = () => {
+  router.go(-1)
+}
 </script>
 
 <style scoped>

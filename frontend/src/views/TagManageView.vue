@@ -2,6 +2,10 @@
   <div class="page-wrapper-base">
     <div class="nav-placeholder"></div>
     
+    <div class="back-button" @click="handleBack">
+      ← 返回
+    </div>
+    
     <div class="container-narrow">
       <div class="flex-between mb-30">
         <h1 class="title-large">标签管理</h1>
@@ -91,8 +95,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
+const router = useRouter()
 const userStore = useUserStore()
 
 // 状态管理
@@ -237,6 +243,11 @@ const handleDelete = async (tagId) => {
   deletingId.value = null
 }
 
+// 返回上一页
+const handleBack = () => {
+  router.go(-1)
+}
+
 // 初始化
 onMounted(async () => {
   // 检查是否为管理员
@@ -251,194 +262,5 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.tag-list {
-  margin-top: 20px;
-}
 
-.tag-item {
-  padding: 20px;
-  margin-bottom: 15px;
-  border-radius: 8px;
-}
-
-.tag-info {
-  flex: 1;
-}
-
-.tag-name {
-  margin: 0 0 10px 0;
-  font-size: 18px;
-  color: #333;
-}
-
-.meta-text {
-  color: #666;
-  font-size: 14px;
-}
-
-.tag-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.btn-action {
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  border: none;
-  cursor: pointer;
-}
-
-.btn-edit {
-  background-color: #8b5cf6;
-  color: white;
-}
-
-.btn-edit:hover:not(:disabled) {
-  background-color: #7c3aed;
-}
-
-.btn-edit:disabled {
-  background-color: #c4a7ff;
-  cursor: not-allowed;
-}
-
-.btn-delete {
-  background-color: #ef4444;
-  color: white;
-}
-
-.btn-delete:hover:not(:disabled) {
-  background-color: #dc2626;
-}
-
-.btn-delete:disabled {
-  background-color: #fca5a5;
-  cursor: not-allowed;
-}
-
-.loading-state {
-  text-align: center;
-  padding: 40px;
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #3498db;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 20px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: #666;
-}
-
-.mt-20 {
-  margin-top: 20px;
-}
-
-/* 模态框样式 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  padding: 30px;
-  border-radius: 12px;
-  max-width: 500px;
-  width: 90%;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
-
-.modal-title {
-  margin: 0 0 20px 0;
-  font-size: 20px;
-  color: #333;
-  text-align: center;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #333;
-}
-
-.input-field {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  box-sizing: border-box;
-}
-
-.input-field:focus {
-  outline: none;
-  border-color: #3b82f6;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: center;
-  gap: 15px;
-}
-
-.btn-secondary {
-  padding: 10px 20px;
-  border: 1px solid #ddd;
-  background: white;
-  color: #333;
-  border-radius: 6px;
-  cursor: pointer;
-  font-SIZE: 14px;
-}
-
-.btn-secondary:hover {
-  background: #f5f5f5;
-}
-
-.btn-primary {
-  padding: 10px 20px;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #2563eb;
-}
-
-.btn-primary:disabled {
-  background: #93c5fd;
-  cursor: not-allowed;
-}
 </style>

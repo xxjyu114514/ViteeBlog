@@ -1,5 +1,9 @@
 <template>
   <div class="personal-center">
+    <div class="back-button" @click="handleBack">
+      ← 返回
+    </div>
+    
     <div class="container-grid">
       <!-- 用户信息卡片 -->
       <div class="glass-card user-info-card">
@@ -130,4 +134,10 @@ const goToSettings = () => {
   // TODO: 添加系统设置页面
   alert('系统设置功能开发中...')
 }
+
+// 返回上一页
+const handleBack = () => {
+  router.go(-1)
+}
+
 </script>

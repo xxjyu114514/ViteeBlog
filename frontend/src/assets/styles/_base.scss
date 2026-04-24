@@ -28,15 +28,36 @@
 .btn-hard-delete { background: $color-danger-dark; color: white; &:hover:not(:disabled) { background: $color-danger-dark-hover; } }
 .btn-audit { background: $color-success; color: white; &:hover:not(:disabled) { background: $color-success-hover; } &:disabled { background: #a7f3d0; cursor: not-allowed; } }
 
-/* === 页面独立返回按钮 === */
+/* === 全局返回按钮 === */
 .back-button {
-  position: fixed; top: 100px; left: 20px; z-index: 1000; padding: 8px 16px;
-  background: rgba(0, 0, 0, 0.7); color: white; border-radius: 20px; cursor: pointer; font-size: 0.9rem; transition: background 0.3s;
+  position: fixed;
+  top: 100px;
+  left: 20px;
+  z-index: 1000;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: $transition-base;
+  
   &.light {
-    background: #f9fafb; border: 1px solid $border-color; color: $text-main; text-decoration: none; font-weight: 600;
-    &:hover { background: #f3f4f6; transform: translateX(-2px); }
+    background: #f9fafb;
+    border: 1px solid $border-color;
+    color: $text-main;
+    text-decoration: none;
+    font-weight: 600;
+    
+    &:hover {
+      background: #f3f4f6;
+      transform: translateX(-2px);
+    }
   }
-  &:hover:not(.light) { background: rgba(0, 0, 0, 0.9); }
+  
+  &:hover:not(.light) {
+    background: rgba(0, 0, 0, 0.9);
+  }
 }
 
 /* === 表单元素 === */

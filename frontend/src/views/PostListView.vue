@@ -37,33 +37,5 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.post-page-wrapper {
-  overflow-y: auto; // 滚动条在这里
-  background: var(--bg-white);
-  scroll-behavior: smooth;
-  position: relative;
-}
 
-.content-scroller {
-  max-width: 1100px;
-  margin: 0 auto;
-}
-
-.back-button {
-  position: fixed;
-  top: 100px;
-  left: 20px;
-  z-index: 1000;
-  padding: 8px 16px;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background 0.3s;
-  
-  &:hover {
-    background: rgba(0, 0, 0, 0.9);
-  }
-}
 </style>

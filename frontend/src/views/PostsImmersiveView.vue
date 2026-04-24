@@ -37,59 +37,5 @@ const handleClick = () => {
 </script>
 
 <style lang="scss" scoped>
-.posts-immersive-wrapper {
-  overflow: hidden;
-  background: #111;
-  cursor: pointer;
-}
 
-.hero-static {
-  width: 100%; 
-  height: 100%;
-  background: #111 url('../assets/hero-bg.webp') center/cover no-repeat;
-  color: white;
-}
-
-.hero-content {
-  text-align: center; 
-  z-index: 10;
-  
-  .icon-box {
-    margin-bottom: 20px;
-    svg {
-      width: 80px; 
-      height: 80px; 
-      color: white;
-      opacity: 0.8;
-    }
-  }
-  
-  .glass-text {
-    font-size: 3.5rem; 
-    font-weight: 700; 
-    letter-spacing: 4px;
-    background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.5) 100%);
-    -webkit-background-clip: text; 
-    -webkit-text-fill-color: transparent;
-  }
-  
-  .intro-text {
-    font-size: 1.1rem; 
-    color: rgba(255, 255, 255, 0.7);
-    text-transform: uppercase; 
-    letter-spacing: 2px;
-  }
-  
-  .enter-hint {
-    margin-top: 40px;
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 0.9rem;
-    animation: pulse 2s infinite;
-    
-    @keyframes pulse {
-      0%, 100% { opacity: 0.5; }
-      50% { opacity: 1; }
-    }
-  }
-}
 </style>
