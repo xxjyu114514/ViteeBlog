@@ -44,9 +44,18 @@ const routes = [
   },
   {
     path: '/manage-articles',
-    name: 'article-manage',
-    component: ArticleManageView,
-    meta: { index: 6, title: '文章管理', requiresAuth: true }
+    component: () => import('@/views/ArticleManageView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/categories',
+    component: () => import('@/views/CategoryManageView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/tags',
+    component: () => import('@/views/TagManageView.vue'),
+    meta: { requiresAuth: true }
   },
   {
     path: '/edit-article',
@@ -118,7 +127,8 @@ router.beforeEach((to, from, next) => {
     // 已登录尝试进入“仅限游客”页面（如登录页） -> 强制重定向回首页
     next('/')
   } else if (to.meta.requiresAdmin && !userStore.isAdmin) {
-    // 需要管理员权限但不是管理员 -> 跳转到个人中心或首页
+    // 需要管理员权限但不是管理员 -> 显示错误提示并跳转到个人中心
+    alert('权限不足：此功能仅限管理员使用')
     next('/personal')
   } else {
     next()

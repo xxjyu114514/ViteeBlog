@@ -74,6 +74,11 @@
   background: #dc2626;
 }
 
+.btn-delete:disabled {
+  background: #fca5a5;
+  cursor: not-allowed;
+}
+
 .btn-restore {
   background: #8b5cf6;
   color: white;

@@ -37,14 +37,54 @@
           >
         </div>
         
-        <div class="flex-row gap-20">
+        <div class="form-row">
           <div class="form-group flex-1">
-            <label>分类ID</label>
-            <input v-model="currentArticle.category_id" type="number" class="input-field" :disabled="saving">
+            <label>分类</label>
+            <select 
+              v-model="currentArticle.category_id" 
+              class="input-field select-field"
+              :disabled="saving || loadingCategories"
+            >
+              <option value="">请选择分类</option>
+              <option 
+                v-for="category in categories" 
+                :key="category.id" 
+                :value="category.id"
+              >
+                {{ category.name }}
+              </option>
+            </select>
+            <div v-if="loadingCategories" class="loading-text">加载分类中...</div>
           </div>
           <div class="form-group flex-2">
-            <label>标签IDs（逗号分隔）</label>
-            <input v-model="tagInput" type="text" class="input-field" placeholder="如：1,2,3" :disabled="saving">
+            <label>标签</label>
+            <div class="tag-selector">
+              <div 
+                v-for="tag in selectedTags" 
+                :key="tag.id" 
+                class="selected-tag"
+              >
+                {{ tag.name }}
+                <span class="remove-tag" @click.stop="removeTag(tag.id)">×</span>
+              </div>
+              <select 
+                v-model="newTagId" 
+                class="tag-select input-field"
+                :disabled="saving || loadingTags"
+                @change="addTag"
+              >
+                <option value="">+ 选择标签</option>
+                <option 
+                  v-for="tag in availableTags" 
+                  :key="tag.id" 
+                  :value="tag.id"
+                  :disabled="selectedTags.some(t => t.id === tag.id)"
+                >
+                  {{ tag.name }}
+                </option>
+              </select>
+            </div>
+            <div v-if="loadingTags" class="loading-text">加载标签中...</div>
           </div>
         </div>
 
@@ -65,7 +105,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useArticleAPI } from '@/composables/useArticleAPI'
@@ -80,9 +120,16 @@ const { autoSaveArticle, publishArticle, getArticleDetail } = useArticleAPI()
 // 后端基础配置
 const BACKEND_URL = 'http://localhost:8000'
 
+// 分类和标签相关状态
+const categories = ref([])
+const tags = ref([])
+const selectedTags = ref([])
+const newTagId = ref('')
+const loadingCategories = ref(false)
+const loadingTags = ref(false)
+
 // 响应式状态
 const currentArticle = ref({ title: '', content: '', category_id: null, tag_ids: [] })
-const tagInput = ref('')
 const saving = ref(false)
 const publishing = ref(false)
 const statusMessage = ref('')
@@ -94,6 +141,76 @@ let vditorInstance = null
 const canSave = computed(() => {
   return currentArticle.value.title.trim() !== '' && currentArticle.value.content.trim() !== ''
 })
+
+// 计算属性：可用的标签（未被选中的）
+const availableTags = computed(() => {
+  return tags.value.filter(tag => !selectedTags.value.some(selected => selected.id === tag.id))
+})
+
+// 获取分类列表
+const fetchCategories = async () => {
+  loadingCategories.value = true
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/v1/article/categories`, {
+      headers: {
+        'Authorization': `Bearer ${userStore.token}`
+      }
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      categories.value = data.items || []
+    } else {
+      console.error('获取分类列表失败:', await response.json().catch(() => ({})))
+    }
+  } catch (error) {
+    console.error('获取分类列表异常:', error)
+  }
+  loadingCategories.value = false
+}
+
+// 获取标签列表
+const fetchTags = async () => {
+  loadingTags.value = true
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/v1/article/tags`, {
+      headers: {
+        'Authorization': `Bearer ${userStore.token}`
+      }
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      tags.value = data.items || []
+    } else {
+      console.error('获取标签列表失败:', await response.json().catch(() => ({})))
+    }
+  } catch (error) {
+    console.error('获取标签列表异常:', error)
+  }
+  loadingTags.value = false
+}
+
+// 添加标签
+const addTag = () => {
+  if (!newTagId.value) return
+  
+  const tagToAdd = tags.value.find(tag => tag.id === parseInt(newTagId.value))
+  if (tagToAdd && !selectedTags.value.some(tag => tag.id === tagToAdd.id)) {
+    selectedTags.value.push(tagToAdd)
+  }
+  newTagId.value = ''
+}
+
+// 移除标签
+const removeTag = (tagId) => {
+  selectedTags.value = selectedTags.value.filter(tag => tag.id !== tagId)
+}
+
+// 监听 selectedTags 变化，更新 currentArticle.tag_ids
+watch(selectedTags, (newTags) => {
+  currentArticle.value.tag_ids = newTags.map(tag => tag.id)
+}, { deep: true })
 
 /**
  * 初始化编辑器
@@ -166,6 +283,12 @@ const showStatus = (msg, error = false) => {
 const loadArticleData = async () => {
   const articleId = route.params.id
   
+  // 先加载分类和标签
+  await Promise.all([
+    fetchCategories(),
+    fetchTags()
+  ])
+
   if (!articleId) {
     // 新建模式
     await nextTick()
@@ -184,7 +307,14 @@ const loadArticleData = async () => {
       category_id: info.category?.id || null,
       tag_ids: info.tags?.map(t => t.id) || []
     }
-    tagInput.value = currentArticle.value.tag_ids.join(',')
+    
+    // 设置已选择的标签
+    if (info.tags) {
+      selectedTags.value = info.tags.map(tag => ({
+        id: tag.id,
+        name: tag.name
+      }))
+    }
     
     await nextTick()
     initVditor(currentArticle.value.content)
@@ -202,14 +332,8 @@ const handleSave = async () => {
   
   saving.value = true
   
-  // 处理标签
-  const tag_ids = tagInput.value 
-    ? tagInput.value.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
-    : []
-
   const payload = {
     ...currentArticle.value,
-    tag_ids,
     article_id: editingArticle.value?.id || null
   }
 
@@ -316,4 +440,69 @@ onUnmounted(() => {
 }
 .btn-publish:hover { background-color: #7c3aed; }
 .btn-publish:disabled { background-color: #c4b5fd; cursor: not-allowed; }
+
+.select-field {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+
+.select-field:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.loading-text {
+  font-size: 12px;
+  color: #666;
+  margin-top: 5px;
+}
+
+/* 标签选择器 */
+.tag-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  min-height: 40px;
+  background: white;
+}
+
+.tag-select {
+  flex: 1;
+  min-width: 120px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+
+.selected-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #e3f2fd;
+  border: 1px solid #bbdefb;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #1976d2;
+}
+
+.remove-tag {
+  cursor: pointer;
+  font-weight: bold;
+  color: #f44336;
+}
+
+.remove-tag:hover {
+  color: #d32f2f;
+}
 </style>

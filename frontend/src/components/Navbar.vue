@@ -60,7 +60,6 @@ const menuItems = [
 const isImmersiveMode = computed(() => {
   return ['/', '/posts-immersive', '/about-immersive', '/message-immersive', '/login', '/personal'].includes(route.path)
 })
-
 </script>
 
 <style lang="scss" scoped>
