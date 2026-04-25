@@ -1,19 +1,20 @@
-# Test your FastAPI endpoints
+# ViteeBlog API 测试文件
+# 使用方法：在 IntelliJ IDEA / PyCharm 中点击每个请求旁边的运行按钮
 
 GET http://127.0.0.1:8000/
 Accept: application/json
 
 ###
 
-GET http://127.0.0.1:8000/hello/User
-Accept: application/json
+GET http://127.0.0.1:8000/docs
+Accept: text/html
 
 ###
 
 
 # ==================== 认证与用户管理 ====================
 
-# 1. 博主登录
+# 1. 管理员登录
 POST http://127.0.0.1:8000/api/v1/auth/login
 Content-Type: application/json
 
@@ -39,162 +40,200 @@ Content-Type: application/json
 
 ###
 
-# 3. 管理员调整用户权限（示例：将用户升级为管理员）
-PUT http://127.0.0.1:8000/api/v1/article/admin/users/1/role
-Authorization: Bearer {{admin_token}}
-Content-Type: application/json
-
-{
-  "new_role": "admin"
-}
-
-###
-
-
-# ==================== 文章管理核心流程 ====================
-
-# 4. 创建文章（草稿）
-POST http://127.0.0.1:8000/api/v1/article/autosave
-Authorization: Bearer {{admin_token}}
-Content-Type: application/json
-
-{
-  "title": "测试文章",
-  "content": "# Hello\n\n这是测试内容",
-  "category_id": null,
-  "tag_ids": []
-}
-
-> {% client.global.set("article_id", response.body.article_id); %}
-
-###
-
-# 5. 更新文章
-POST http://127.0.0.1:8000/api/v1/article/autosave
-Authorization: Bearer {{admin_token}}
-Content-Type: application/json
-
-{
-  "title": "测试文章（已更新）",
-  "content": "# Hello\n\n更新后的内容",
-  "article_id": {{article_id}},
-  "category_id": null,
-  "tag_ids": []
-}
-
-###
-
-# 6. 查看详情
-GET http://127.0.0.1:8000/api/v1/article/{{article_id}}
-
-###
-
-# 7. 管理员审核文章
-PUT http://127.0.0.1:8000/api/v1/article/admin/articles/{{article_id}}/audit
-Authorization: Bearer {{admin_token}}
-
-###
-
-# 8. 发布文章
-PUT http://127.0.0.1:8000/api/v1/article/{{article_id}}/publish
-Authorization: Bearer {{admin_token}}
-
-###
-
-# 9. 公开列表（分页）
-GET http://127.0.0.1:8000/api/v1/article/list/public?page=1&size=10
-
-###
-
-# 10. 我的文章列表（分页）
-GET http://127.0.0.1:8000/api/v1/article/user/my-articles?page=1&size=10
-Authorization: Bearer {{admin_token}}
-
-###
-
-# 11. 管理员全站文章（分页）
-GET http://127.0.0.1:8000/api/v1/article/admin/all-articles?page=1&size=20
-Authorization: Bearer {{admin_token}}
-
-###
-
-# ==================== 回收站操作 ====================
-
-# 12. 软删除
-DELETE http://127.0.0.1:8000/api/v1/article/{{article_id}}
-Authorization: Bearer {{admin_token}}
-
-###
-
-# 13. 恢复文章
-POST http://127.0.0.1:8000/api/v1/article/{{article_id}}/restore
-Authorization: Bearer {{admin_token}}
-
-###
-
-# 14. 再次删除并硬删除
-DELETE http://127.0.0.1:8000/api/v1/article/{{article_id}}
-Authorization: Bearer {{admin_token}}
-
-###
-
-DELETE http://127.0.0.1:8000/api/v1/article/{{article_id}}/hard
-Authorization: Bearer {{admin_token}}
-
-###
 
 # ==================== 元数据管理（分类与标签） ====================
 
-# 15. 查看所有分类
+# 3. 查看所有分类
 GET http://127.0.0.1:8000/api/v1/meta/categories
 
 ###
 
-# 16. 管理员创建分类
+# 4. 管理员创建分类
 POST http://127.0.0.1:8000/api/v1/meta/categories
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
 
 {
-  "name": "原神"
+  "name": "Java"
 }
+
+> {% client.global.set("category_id", response.body.id); %}
 
 ###
 
-# 17. 查看所有标签
+# 5. 查看所有标签
 GET http://127.0.0.1:8000/api/v1/meta/tags
 
 ###
 
-# 18. 普通用户创建标签（无需管理员权限）
+# 6. 普通用户创建标签
 POST http://127.0.0.1:8000/api/v1/meta/tags
 Authorization: Bearer {{user_token}}
 Content-Type: application/json
 
 {
-  "name": "FastAPI"
+  "name": "Flask"
 }
 
 > {% client.global.set("tag_id", response.body.id); %}
 
 ###
 
-# 19. 管理员删除标签（从系统库移除）
-DELETE http://127.0.0.1:8000/api/v1/meta/tags/{{tag_id}}
+
+# ==================== 文章管理核心流程 ====================
+
+# 7. 创建文章（草稿）
+# ⚠️ 注意：必须先执行第52-60行"管理员创建分类"请求，否则 category_id 变量未定义
+POST http://127.0.0.1:8000/api/v1/article/autosave
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "title": "测试文章114",
+  "summary": "这是测试摘要514",
+  "content_path": "storage/articles/test_123.md",
+  "category_id": {{category_id}},
+  "tag_ids": [],
+  "status": "draft"
+}
+
+> {% client.global.set("article_id", response.body.article_id); %}
+
+###
+
+# 8. 更新文章
+POST http://127.0.0.1:8000/api/v1/article/autosave
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "id": {{article_id}},
+  "title": "测试文章（已更新）",
+  "summary": "更新后的摘要",
+  "content_path": "storage/articles/test_123.md",
+  "category_id": {{category_id}},
+  "tag_ids": [],
+  "status": "draft"
+}
+
+###
+
+# 9. 获取文章详情
+GET http://127.0.0.1:8000/api/v1/article/{{article_id}}
+
+###
+
+# 10. 我的文章列表
+GET http://127.0.0.1:8000/api/v1/article/my-articles
 Authorization: Bearer {{admin_token}}
 
 ###
 
-# 20. 管理员删除分类
-DELETE http://127.0.0.1:8000/api/v1/meta/categories/1
+# 11. 公开文章列表（仅已发布）
+GET http://127.0.0.1:8000/api/v1/article/list?page=1&size=10
+
+###
+
+# 12. 管理员发布文章（免审直发）
+PUT http://127.0.0.1:8000/api/v1/article/{{article_id}}/publish
 Authorization: Bearer {{admin_token}}
 
 ###
 
 
-# ==================== 图片上传（需curl测试） ====================
-# curl -X POST "http://127.0.0.1:8000/api/v1/article/upload-image" \
-#   -H "Authorization: Bearer {{admin_token}}" \
-#   -F "file=@/path/to/image.png"
+# ==================== 普通用户提交流程 ====================
+
+# 13. 普通用户创建文章
+# ⚠️ 注意：必须先执行第52-60行"管理员创建分类"请求，否则 category_id 变量未定义
+POST http://127.0.0.1:8000/api/v1/article/autosave
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "title": "普通用户的文章",
+  "summary": "需要审核的文章",
+  "content_path": "storage/articles/user_test.md",
+  "category_id": {{category_id}},
+  "tag_ids": [],
+  "status": "draft"
+}
+
+> {% client.global.set("user_article_id", response.body.article_id); %}
 
 ###
+
+# 14. 普通用户提交审核
+PUT http://127.0.0.1:8000/api/v1/article/{{user_article_id}}/publish
+Authorization: Bearer {{user_token}}
+
+###
+
+# 15. 普通用户撤回审核
+POST http://127.0.0.1:8000/api/v1/article/{{user_article_id}}/withdraw
+Authorization: Bearer {{user_token}}
+
+###
+
+
+# ==================== 管理员审核流程 ====================
+
+# 16. 查看待审核文章列表
+GET http://127.0.0.1:8000/api/v1/article/admin/pending
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 17. 管理员审核通过（注意：需要先执行第146-166行创建并提交文章）
+POST http://127.0.0.1:8000/api/v1/article/admin/articles/{{user_article_id}}/review
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "pass_audit": true,
+  "remark": null
+}
+
+###
+
+# 18. 管理员审核驳回（需要先重新提交）
+# 先让普通用户再次提交
+PUT http://127.0.0.1:8000/api/v1/article/{{user_article_id}}/publish
+Authorization: Bearer {{user_token}}
+
+###
+
+# 然后管理员驳回
+POST http://127.0.0.1:8000/api/v1/article/admin/articles/{{user_article_id}}/review
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "pass_audit": false,
+  "remark": "内容需要进一步完善"
+}
+
+###
+
+
+# ==================== 回收站操作 ====================
+
+# 19. 软删除文章
+DELETE http://127.0.0.1:8000/api/v1/article/{{article_id}}
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 20. 恢复文章
+POST http://127.0.0.1:8000/api/v1/article/{{article_id}}/restore
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 21. 硬删除（彻底删除）
+DELETE http://127.0.0.1:8000/api/v1/article/{{article_id}}/hard
+Authorization: Bearer {{admin_token}}
+
+###
+
+
+

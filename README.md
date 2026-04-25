@@ -342,14 +342,35 @@ def downgrade():
 
 ### 权限说明
 - **公开接口**：获取文章列表、获取文章详情、查看分类/标签
-- **登录用户**：创建/编辑文章、上传图片、创建标签
+- **登录用户**：创建/编辑文章、上传图片、创建标签、提交审核
 - **管理员专属**：审核文章、查看全站文章、调整用户权限、管理分类/标签
 
 ### 核心功能概览
 - ✍️ **自动保存**：实时同步草稿到服务器（文件 + 数据库）
-- 🗑️ **回收站机制**：软删除30天后自动清理
+- 📝 **审核流程**：普通用户提交 → 管理员审核 → 发布/驳回
+- 🔙 **撤回功能**：可撤回待审核文章重新编辑
+- 🛡️ **防灌水**：普通用户最多3篇待审核文章
+- 🗑️ **回收站机制**：软删除后数据保留
 - ♻️ **恢复功能**：可从回收站恢复误删文章
 - 💥 **硬删除**：永久粉碎文章及物理文件
+
+### 文章状态流转
+
+```
+草稿 (DRAFT) → 提交审核 → 待审核 (PENDING) → 管理员审核
+                                              ↓
+                                    ┌─────────┴─────────┐
+                                    ↓                   ↓
+                              通过 (PUBLISHED)    驳回 (DRAFT)
+                                    ↑                   ↓
+                                    └───────────────────┘
+                                         可重新提交
+```
+
+**状态说明**：
+- `draft`: 草稿状态，可自由编辑
+- `pending`: 待审核状态，禁止编辑（需先撤回）
+- `published`: 已发布，公开可见
 
 ---
 
@@ -361,35 +382,45 @@ def downgrade():
 **请求体**:
 ```json
 {
+  "id": null,
   "title": "文章标题",
-  "content": "# Markdown 内容",
-  "article_id": null,
+  "summary": "文章摘要",
+  "content_path": "storage/articles/test_123.md",
   "category_id": 1,
-  "tag_ids": [1, 2]
+  "tag_ids": [1, 2],
+  "status": "draft"
 }
 ```
 
 **参数说明**:
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| title | string | ✅ | 文章标题 |
-| content | string | ✅ | Markdown 内容 |
-| article_id | int | ❌ | 新建时为 null，更新时必填 |
-| category_id | int | ❌ | 分类ID |
+| id | int | ❌ | 新建时为 null，更新时必填 |
+| title | string | ✅ | 文章标题（1-200字符） |
+| summary | string | ❌ | 文章摘要（最多500字符） |
+| content_path | string | ✅ | Markdown 文件存储路径 |
+| category_id | int | ✅ | 分类ID |
 | tag_ids | int[] | ❌ | 标签ID数组 |
+| status | string | ❌ | 文章状态（默认 draft） |
 
 **成功响应** (200):
 ```json
 {
-  "article_id": 1,
-  "message": "已同步"
+  "message": "已保存",
+  "article_id": 1
 }
 ```
+
+**错误响应**:
+- `400`: 文章正在审核中，无法修改内容。请先撤回。
+- `403`: 无权修改此文章
+- `404`: 文章不存在
 
 **前端注意**:
 - ✅ 建议实现防抖保存（停止输入后2秒自动调用）
 - ✅ 新建文章返回 `article_id`，后续更新需携带此 ID
-- ⚠️ 每次保存会重置审核状态（`is_audited=false`）
+- ⚠️ **待审核状态（PENDING）下禁止编辑**，必须先撤回为草稿
+- ⚠️ 保存草稿不会改变文章状态，状态由发布接口控制
 
 ---
 
@@ -401,166 +432,247 @@ def downgrade():
 **成功响应** (200):
 ```json
 {
-  "info": {
-    "id": 1,
-    "title": "文章标题",
-    "summary": "摘要内容...",
-    "status": "published",
-    "view_count": 42,
-    "published_at": "2026-04-19T10:00:00",
-    "author": { "id": 1, "username": "BaoZi" },
-    "category": { "id": 1, "name": "技术分享" },
-    "tags": [{ "id": 1, "name": "FastAPI" }]
+  "id": 1,
+  "title": "文章标题",
+  "summary": "摘要内容...",
+  "content_path": "storage/articles/test_123.md",
+  "status": "published",
+  "submitted_at": null,
+  "reviewed_at": null,
+  "published_at": "2026-04-25T10:00:00",
+  "created_at": "2026-04-25T09:00:00",
+  "updated_at": "2026-04-25T10:00:00",
+  "author": { 
+    "id": 1, 
+    "username": "BaoZi" 
   },
-  "content": "# Markdown 原始内容"
+  "category": { 
+    "id": 1, 
+    "name": "技术分享" 
+  },
+  "tags": [
+    { "id": 1, "name": "FastAPI" }
+  ]
 }
 ```
 
 **前端注意**:
-- ✅ 每次访问自动增加阅读计数
-- ✅ `content` 为原始 Markdown，需前端渲染
+- ✅ 返回完整的文章信息，包括作者、分类、标签
+- ✅ `content_path` 指向 Markdown 文件，需后端读取或前端单独请求
+- ⚠️ 仅返回未删除的文章（`deleted_at IS NULL`）
 - ⚠️ 已删除文章返回 404
 
 ---
 
-### 3. 发布文章
+### 3. 提交审核/发布文章
 
 **接口**: `PUT /article/{article_id}/publish`  
 **权限**: 文章作者或管理员
 
-**功能**: 将草稿改为已发布状态，设置发布时间
+**功能**: 
+- **管理员**: 直接发布文章（跳过审核）
+- **普通用户**: 提交文章进入待审核队列
 
-**成功响应** (200):
+**成功响应** (200) - 管理员:
 ```json
-{ "message": "已发布" }
+{ "message": "管理员文章，已直接发布" }
 ```
 
-**注意**: 发布时会重置审核状态（`is_audited=false`）
+**成功响应** (200) - 普通用户:
+```json
+{ "message": "已提交，等待管理员审核" }
+```
+
+**错误响应**:
+- `400`: 您已有3篇待审核文章，请等待管理员处理后再提交
+- `403`: 文章不存在或无权操作
+
+**状态流转**:
+- 管理员: `任何状态` → `PUBLISHED`（设置 `published_at`）
+- 普通用户: `DRAFT/驳回` → `PENDING`（设置 `submitted_at`，清空 `review_remark`）
+
+**前端注意**:
+- ⚠️ 普通用户最多同时有3篇待审核文章
+- ⚠️ 提交后会清空之前的驳回理由
+- ✅ 建议在提交前提示用户确认
 
 ---
 
-### 4. 获取公开文章列表（分页）
+### 4. 撤回审核中的文章
 
-**接口**: `GET /article/list/public?page=1&size=10&category_id=1`  
+**接口**: `POST /article/{article_id}/withdraw`  
+**权限**: 文章作者
+
+**功能**: 将待审核文章撤回为草稿，允许重新编辑
+
+**成功响应** (200):
+```json
+{ "message": "已撤回为草稿" }
+```
+
+**错误响应**:
+- `400`: 只有待审核状态的文章可以撤回
+- `403`: 无权操作此文章
+
+**状态流转**: `PENDING` → `DRAFT`
+
+**前端注意**:
+- ✅ 仅在文章状态为 `pending` 时显示撤回按钮
+- ✅ 撤回后可以重新编辑并提交
+- ⚠️ 撤回后需要重新提交才能再次进入审核队列
+
+### 5. 获取公开文章列表（分页）
+
+**接口**: `GET /article/list?page=1&size=10`  
 **权限**: 公开
 
 **查询参数**:
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | page | int | 1 | 页码（从1开始） |
-| size | int | 10 | 每页数量（1-100） |
-| category_id | int | - | 按分类筛选 |
+| size | int | 10 | 每页数量 |
 
 **成功响应** (200):
 ```json
-{
-  "items": [
-    {
-      "id": 1,
-      "title": "文章标题",
-      "summary": "摘要...",
-      "status": "published",
-      "view_count": 42,
-      "published_at": "2026-04-19T10:00:00"
-    }
-  ],
-  "total": 50,
-  "page": 1,
-  "size": 10
-}
+[
+  {
+    "id": 1,
+    "title": "文章标题",
+    "summary": "摘要...",
+    "content_path": "storage/articles/test.md",
+    "status": "published",
+    "published_at": "2026-04-25T10:00:00",
+    "created_at": "2026-04-25T09:00:00",
+    "category": { "id": 1, "name": "技术分享" }
+  }
+]
 ```
 
 **前端注意**:
-- ✅ 按 `published_at` 降序排列
-- ✅ 仅返回已发布且未删除的文章
+- ✅ 仅返回已发布且未删除的文章（`status='published' AND deleted_at IS NULL`）
+- ✅ 按 `created_at` 降序排列
+- ✅ 预加载分类信息
 
 ---
 
-### 5. 获取我的文章列表
+### 6. 获取我的文章列表
 
-**接口**: `GET /article/user/my-articles?page=1&size=10`  
+**接口**: `GET /article/my-articles?status=pending`  
 **权限**: 所有登录用户
 
 **查询参数**:
-| 参数 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| page | int | 1 | 页码（从1开始） |
-| size | int | 10 | 每页数量（1-50） |
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| status | string | ❌ | 按状态筛选（draft/pending/published） |
 
 **成功响应** (200):
 ```json
-{
-  "items": [
-    {
-      "id": 1,
-      "title": "我的草稿",
-      "summary": "摘要...",
-      "status": "draft",
-      "created_at": "2026-04-19T10:00:00"
-    }
-  ],
-  "total": 5
-}
+[
+  {
+    "id": 1,
+    "title": "我的草稿",
+    "summary": "摘要...",
+    "status": "draft",
+    "submitted_at": null,
+    "reviewed_at": null,
+    "published_at": null,
+    "created_at": "2026-04-25T10:00:00",
+    "updated_at": "2026-04-25T10:00:00",
+    "category": { "id": 1, "name": "技术分享" }
+  }
+]
 ```
 
 **前端注意**:
-- ✅ 返回当前用户的所有文章（包括草稿和已发布）
-- ✅ 按 `created_at` 降序排列
+- ✅ 返回当前用户的所有文章（不包括已删除）
+- ✅ 按 `updated_at` 降序排列
+- ✅ 可通过 `status` 参数筛选特定状态的文章
+- ✅ 预加载分类信息
 
 ---
 
-### 6. 获取全站文章（管理员）
+### 7. 获取待审核文章列表（管理员）
 
-**接口**: `GET /article/admin/all-articles?page=1&size=20`  
+**接口**: `GET /article/admin/pending`  
 **权限**: 仅管理员
 
-**查询参数**:
-| 参数 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| page | int | 1 | 页码（从1开始） |
-| size | int | 20 | 每页数量 |
+**功能**: 获取所有待审核的文章，按提交时间排序
 
 **成功响应** (200):
 ```json
-{
-  "items": [
-    {
-      "id": 1,
-      "title": "文章标题",
-      "author": { "id": 1, "username": "BaoZi" },
-      "status": "published",
-      "is_audited": true,
-      "created_at": "2026-04-19T10:00:00"
+[
+  {
+    "id": 1,
+    "title": "待审核文章",
+    "summary": "摘要...",
+    "status": "pending",
+    "submitted_at": "2026-04-25T10:00:00",
+    "created_at": "2026-04-25T09:00:00",
+    "author": { 
+      "id": 2, 
+      "username": "testuser" 
+    },
+    "category": { 
+      "id": 1, 
+      "name": "技术分享" 
     }
-  ],
-  "total": 100
-}
+  }
+]
 ```
 
 **前端注意**:
-- ✅ 包含所有用户的文章
-- ✅ 预加载作者信息
+- ✅ 仅返回待审核状态的文章（`status='pending'`）
+- ✅ 按 `submitted_at` 升序排列（先提交先处理）
+- ✅ 预加载作者和分类信息
 - ⚠️ 普通用户调用返回 403
 
 ---
 
-### 7. 审核文章
+### 8. 管理员审核文章
 
-**接口**: `PUT /article/admin/articles/{article_id}/audit`  
+**接口**: `POST /article/admin/articles/{article_id}/review`  
 **权限**: 仅管理员
 
-**功能**: 将文章标记为已审核（`is_audited=true`）
-
-**成功响应** (200):
+**请求体**:
 ```json
-{ "message": "已审核" }
+{
+  "pass_audit": true,
+  "remark": null
+}
 ```
 
-**注意**: 文章编辑或重新发布后会重置为未审核状态
+**参数说明**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| pass_audit | boolean | ✅ | `true`=通过，`false`=驳回 |
+| remark | string | 条件必填 | 驳回时必须填写理由（最多500字符） |
+
+**成功响应** (200) - 通过:
+```json
+{ "message": "审核通过，文章已发布" }
+```
+
+**成功响应** (200) - 驳回:
+```json
+{ "message": "文章已驳回：内容需要进一步完善" }
+```
+
+**错误响应**:
+- `400`: 文章不存在或不在待审状态 / 驳回请填写理由
+- `403`: 权限不足
+
+**状态流转**:
+- 通过: `PENDING` → `PUBLISHED`（设置 `reviewed_at`, `reviewed_by`, `published_at`）
+- 驳回: `PENDING` → `DRAFT`（设置 `reviewed_at`, `reviewed_by`, `review_remark`）
+
+**前端注意**:
+- ⚠️ 驳回时必须填写理由
+- ✅ 审核后可在文章详情中查看审核人和驳回理由
+- ⚠️ 仅能审核状态为 `pending` 的文章
 
 ---
 
-### 8. 上传图片
+### 9. 上传图片
 
 **接口**: `POST /article/upload-image`  
 **权限**: 所有登录用户
@@ -591,7 +703,7 @@ def downgrade():
 
 ---
 
-### 9. 移至回收站（软删除）
+### 10. 移至回收站（软删除）
 
 **接口**: `DELETE /article/{article_id}`  
 **权限**: 文章作者或管理员
@@ -605,7 +717,7 @@ def downgrade():
 
 ---
 
-### 8. 恢复文章
+### 11. 恢复文章
 
 **接口**: `POST /article/{article_id}/restore`  
 **权限**: 文章作者或管理员
@@ -619,7 +731,7 @@ def downgrade():
 
 ---
 
-### 9. 彻底删除（硬删除）
+### 12. 彻底删除（硬删除）
 
 **接口**: `DELETE /article/{article_id}/hard`  
 **权限**: 文章作者或管理员
@@ -737,20 +849,45 @@ def downgrade():
 
 ---
 
-### 6. 删除标签（管理员）
+### 6. 修改标签（管理员）
+
+**接口**: `PUT /meta/tags/{tag_id}`  
+**权限**: 仅管理员
+
+**请求体**:
+```json
+{
+  "name": "Python"
+}
+```
+
+**成功响应** (200):
+```json
+{ "id": 1, "name": "Python" }
+```
+
+**错误响应**:
+- `400`: 该标签名称已存在
+- `404`: 标签不存在
+
+**注意**: 修改后，所有关联该标签的文章会自动同步显示新名称
+
+---
+
+### 7. 删除标签（管理员）
 
 **接口**: `DELETE /meta/tags/{tag_id}`  
 **权限**: 仅管理员
 
 **成功响应** (200):
 ```json
-{ "message": "标签已从系统库中移除" }
+{ "message": "标签已从系统中移除" }
 ```
 
 **⚠️ 警告**: 
 - 这是物理删除标签库条目
+- 由于中间表设置了 `ON DELETE CASCADE`，删除标签会自动解除所有文章的关联
 - 通常只有发现违规标签时才调用
-- 删除后关联文章的标签关系会自动解除
 
 ---
 
@@ -792,90 +929,136 @@ def downgrade():
 
 ## 📊 完整业务流程示例
 
-### 场景1: 创建并发布文章
+### 场景1: 普通用户创建并提交审核文章
 
 ```javascript
 // Step 1: 自动保存草稿
 const saveResponse = await axios.post('/api/v1/article/autosave', {
+  id: null,  // 新建文章
   title: '我的新文章',
-  content: '# 内容...',
-  article_id: null,  // 新建
+  summary: '这是一篇测试文章',
+  content_path: 'storage/articles/test_123.md',
   category_id: 1,
-  tag_ids: [1, 2]
+  tag_ids: [1, 2],
+  status: 'draft'
 }, {
   headers: { 'Authorization': `Bearer ${token}` }
 })
 
 const articleId = saveResponse.data.article_id
 
-// Step 2: 用户点击发布
+// Step 2: 用户点击提交审核
 await axios.put(`/api/v1/article/${articleId}/publish`, {}, {
   headers: { 'Authorization': `Bearer ${token}` }
 })
+// 响应: { "message": "已提交，等待管理员审核" }
 
-// Step 3: 刷新列表
-const listResponse = await axios.get('/api/v1/article/list/public')
+// Step 3: 查看我的待审核文章
+const myPending = await axios.get('/api/v1/article/my-articles?status=pending', {
+  headers: { 'Authorization': `Bearer ${token}` }
+})
 ```
 
-### 场景2: 编辑已有文章
+### 场景2: 管理员审核文章
 
 ```javascript
-// 自动保存（携带 article_id）
+// Step 1: 查看待审核列表
+const pendingList = await axios.get('/api/v1/article/admin/pending', {
+  headers: { 'Authorization': `Bearer ${adminToken}` }
+})
+// [{ id: 1, title: '...', author: {...}, submitted_at: '...' }]
+
+// Step 2: 审核通过
+await axios.post(`/api/v1/article/admin/articles/${articleId}/review`, {
+  pass_audit: true,
+  remark: null
+}, {
+  headers: { 'Authorization': `Bearer ${adminToken}` }
+})
+// 响应: { "message": "审核通过，文章已发布" }
+
+// Step 3: 或者驳回（需要填写理由）
+await axios.post(`/api/v1/article/admin/articles/${articleId}/review`, {
+  pass_audit: false,
+  remark: '内容需要进一步完善，请补充更多示例代码'
+}, {
+  headers: { 'Authorization': `Bearer ${adminToken}` }
+})
+// 响应: { "message": "文章已驳回：内容需要进一步完善，请补充更多示例代码" }
+```
+
+### 场景3: 用户撤回文章重新编辑
+
+```javascript
+// Step 1: 撤回待审核文章
+await axios.post(`/api/v1/article/${articleId}/withdraw`, {}, {
+  headers: { 'Authorization': `Bearer ${token}` }
+})
+// 响应: { "message": "已撤回为草稿" }
+
+// Step 2: 修改文章内容
 await axios.post('/api/v1/article/autosave', {
-  title: '更新后的标题',
-  content: '更新后的内容...',
-  article_id: existingArticleId,  // 关键：携带ID
+  id: articleId,  // 携带ID表示更新
+  title: '修改后的标题',
+  summary: '修改后的摘要',
+  content_path: 'storage/articles/test_123.md',
   category_id: 1,
   tag_ids: [1, 2, 3]
 }, {
   headers: { 'Authorization': `Bearer ${token}` }
 })
+
+// Step 3: 重新提交审核
+await axios.put(`/api/v1/article/${articleId}/publish`, {}, {
+  headers: { 'Authorization': `Bearer ${token}` }
+})
 ```
 
-### 场景3: 删除与恢复
+### 场景4: 管理员直接发布文章
 
 ```javascript
-// 1. 软删除
-await axios.delete(`/api/v1/article/${articleId}`, {
-  headers: { 'Authorization': `Bearer ${token}` }
+// 管理员创建文章后直接发布（跳过审核）
+const saveResponse = await axios.post('/api/v1/article/autosave', {
+  id: null,
+  title: '管理员文章',
+  summary: '无需审核',
+  content_path: 'storage/articles/admin_test.md',
+  category_id: 1,
+  tag_ids: [1]
+}, {
+  headers: { 'Authorization': `Bearer ${adminToken}` }
 })
 
-// 2. 查看我的文章列表
-const myArticles = await axios.get('/api/v1/article/user/my-articles?page=1&size=10', {
-  headers: { 'Authorization': `Bearer ${token}` }
+// 直接发布
+await axios.put(`/api/v1/article/${saveResponse.data.article_id}/publish`, {}, {
+  headers: { 'Authorization': `Bearer ${adminToken}` }
 })
-
-// 3. 恢复文章
-await axios.post(`/api/v1/article/${articleId}/restore`, {}, {
-  headers: { 'Authorization': `Bearer ${token}` }
-})
-
-// 4. 永久删除（谨慎操作！）
-if (confirm('确定要永久删除吗？此操作不可恢复！')) {
-  await axios.delete(`/api/v1/article/${articleId}/hard`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  })
-}
+// 响应: { "message": "管理员文章，已直接发布" }
 ```
 
-### 场景4: 防抖自动保存
+### 场景5: 防抖自动保存
 
 ```javascript
 import { ref, watch } from 'vue'
 
-const content = ref('')
+const title = ref('')
+const summary = ref('')
+const contentPath = ref('')
+const categoryId = ref(1)
+const tagIds = ref([1, 2])
 const articleId = ref(null)
 let saveTimer = null
 
 // 监听内容变化，防抖保存
-watch(content, (newContent) => {
+watch([title, summary, contentPath], async () => {
   clearTimeout(saveTimer)
   saveTimer = setTimeout(async () => {
     try {
       const response = await axios.post('/api/v1/article/autosave', {
+        id: articleId.value,  // null表示新建，有值表示更新
         title: title.value,
-        content: newContent,
-        article_id: articleId.value,
+        summary: summary.value,
+        content_path: contentPath.value,
         category_id: categoryId.value,
         tag_ids: tagIds.value
       }, {
@@ -890,7 +1073,12 @@ watch(content, (newContent) => {
       console.log('自动保存成功')
     } catch (error) {
       console.error('保存失败:', error)
-      ElMessage.error('自动保存失败，请手动保存')
+      // 如果是400错误且提示“正在审核中”，提示用户先撤回
+      if (error.response?.status === 400) {
+        ElMessage.warning('文章正在审核中，请先撤回再编辑')
+      } else {
+        ElMessage.error('自动保存失败，请手动保存')
+      }
     }
   }, 2000)  // 停止输入2秒后保存
 })
@@ -903,7 +1091,7 @@ window.addEventListener('beforeunload', async () => {
 })
 ```
 
-### 场景5: 图片上传与使用
+### 场景6: 图片上传与使用
 
 ```javascript
 // 1. 选择图片文件
@@ -930,7 +1118,7 @@ const markdownImage = `![${file.name}](http://127.0.0.1:8000${imageUrl})`
 editor.insertText(markdownImage)
 ```
 
-### 场景6: 管理分类和标签
+### 场景7: 管理分类和标签
 
 ```javascript
 // 1. 获取所有分类（用于下拉选择）
@@ -949,7 +1137,14 @@ const newTag = await axios.post('/api/v1/meta/tags', {
 })
 // 如果标签已存在，直接返回已有标签
 
-// 4. 创建文章时绑定分类和标签
+// 4. 管理员修改标签名称
+await axios.put('/api/v1/meta/tags/1', {
+  name: 'Python3'
+}, {
+  headers: { 'Authorization': `Bearer ${adminToken}` }
+})
+
+// 5. 创建文章时绑定分类和标签
 await axios.post('/api/v1/article/autosave', {
   title: '我的文章',
   content: '# 内容...',
@@ -961,27 +1156,50 @@ await axios.post('/api/v1/article/autosave', {
 })
 ```
 
-### 场景7: 管理员操作
+### 场景8: 管理员完整操作流程
 
 ```javascript
-// 1. 查看所有文章（包括其他用户的）
-const allArticles = await axios.get('/api/v1/article/admin/all-articles?page=1&size=20', {
+// 1. 查看所有待审核文章
+const pendingList = await axios.get('/api/v1/article/admin/pending', {
   headers: { 'Authorization': `Bearer ${adminToken}` }
 })
 
-// 2. 审核文章
-await axios.put(`/api/v1/article/admin/articles/${articleId}/audit`, {}, {
+// 2. 审核通过
+await axios.post(`/api/v1/article/admin/articles/${articleId}/review`, {
+  pass_audit: true,
+  remark: null
+}, {
   headers: { 'Authorization': `Bearer ${adminToken}` }
 })
 
-// 3. 创建分类
+// 3. 或者驳回
+await axios.post(`/api/v1/article/admin/articles/${articleId}/review`, {
+  pass_audit: false,
+  remark: '内容质量不高，需要改进'
+}, {
+  headers: { 'Authorization': `Bearer ${adminToken}` }
+})
+
+// 4. 创建分类
 await axios.post('/api/v1/meta/categories', {
   name: '新技术'
 }, {
   headers: { 'Authorization': `Bearer ${adminToken}` }
 })
 
-// 4. 调整用户权限
+// 5. 修改分类名称
+await axios.put('/api/v1/meta/categories/1', {
+  name: '前沿技术'
+}, {
+  headers: { 'Authorization': `Bearer ${adminToken}` }
+})
+
+// 6. 删除分类
+await axios.delete('/api/v1/meta/categories/1', {
+  headers: { 'Authorization': `Bearer ${adminToken}` }
+})
+
+// 7. 调整用户权限
 await axios.put(`/api/v1/article/admin/users/${userId}/role`, {
   new_role: 'admin'  // 注意：小写字符串
 }, {
@@ -1075,12 +1293,14 @@ axios.interceptors.response.use(
 - [ ] 文章搜索功能
 - [ ] 文章版本历史
 - [x] 图片上传与管理
-- [x] 分类与标签管理
+- [x] 分类与标签管理（增删改查）
+- [x] 完整审核流程（提交/撤回/审核/驳回）
+- [x] 防灌水机制
 - [ ] 评论系统
 - [ ] 点赞与收藏
 
 ---
 
-**最后更新时间**: 2026-04-19  
-**文档版本**: v3.2  
+**最后更新时间**: 2026-04-25  
+**文档版本**: v4.0  
 **维护者**: Backend Team

@@ -15,6 +15,7 @@ class UserRole(str, enum.Enum):
 class ArticleStatus(str, enum.Enum):
     PUBLISHED = "published"
     DRAFT = "draft"
+    PENDING = "pending"  # 新增：待审核
 
 
 class EditorType(str, enum.Enum):
@@ -44,29 +45,37 @@ class User(Base):
     login_attempts: Mapped[int] = mapped_column(Integer, server_default="0", comment="失败尝试次数")
     last_fail_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, comment="上次失败时间")
 
-    articles: Mapped[List["Article"]] = relationship(back_populates="author", cascade="all, delete-orphan")
+    articles: Mapped[List["Article"]] = relationship(back_populates="author", cascade="all, delete-orphan", foreign_keys="Article.user_id")
 
 
 class Article(Base):
-    """文章表：存储路径与基础信息"""
-    title: Mapped[str] = mapped_column(String(200), index=True, comment="标题")
-    summary: Mapped[str] = mapped_column(String(500), comment="摘要")
-    content_path: Mapped[str] = mapped_column(String(255), comment="Markdown文件物理路径")
+    """文章表：升级审核逻辑"""
+    __tablename__ = "article"
 
-    cover_image: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, comment="文章封面图")
-    view_count: Mapped[int] = mapped_column(Integer, server_default="0", comment="阅读量")
-    status: Mapped[ArticleStatus] = mapped_column(Enum(ArticleStatus), server_default="draft", comment="状态")
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(200), index=True)
+    summary: Mapped[Optional[str]] = mapped_column(String(500))
+    content_path: Mapped[str] = mapped_column(Text)
 
-    # 方案 A 核心字段
-    is_audited: Mapped[bool] = mapped_column(Boolean, server_default="0", index=True, comment="是否已审核")
+    # 状态与审核字段
+    status: Mapped[ArticleStatus] = mapped_column(Enum(ArticleStatus), default=ArticleStatus.DRAFT,
+                                                  server_default="draft")
+    submitted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="提交审核时间")
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="审核完成时间")
+    published_at: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="发布时间")
+    reviewed_by: Mapped[Optional[int]] = mapped_column(ForeignKey("user.id"), comment="审核人ID")
+    review_remark: Mapped[Optional[str]] = mapped_column(String(500), comment="驳回理由")
 
-    published_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, comment="发布时间")
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, comment="软删除时间")
+    # 基础字段
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"))
+    category_id: Mapped[int] = mapped_column(ForeignKey("category.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
-    user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), index=True)
-    category_id: Mapped[Optional[int]] = mapped_column(ForeignKey("category.id", ondelete="SET NULL"), index=True)
-
-    author: Mapped["User"] = relationship(back_populates="articles")
+    # 关系映射
+    author: Mapped["User"] = relationship(back_populates="articles", foreign_keys=[user_id])
+    reviewer: Mapped[Optional["User"]] = relationship(foreign_keys=[reviewed_by])
     category: Mapped[Optional["Category"]] = relationship(back_populates="articles")
     tags: Mapped[List["Tag"]] = relationship(secondary=article_tag, back_populates="articles")
     comments: Mapped[List["Comment"]] = relationship(back_populates="article", cascade="all, delete-orphan")
