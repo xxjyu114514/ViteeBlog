@@ -54,7 +54,7 @@ Authorization: Bearer {{admin_token}}
 Content-Type: application/json
 
 {
-  "name": "Java"
+  "name": "Python"
 }
 
 > {% client.global.set("category_id", response.body.id); %}
@@ -82,7 +82,7 @@ Content-Type: application/json
 
 # ==================== 文章管理核心流程 ====================
 
-# 7. 创建文章（草稿）
+# 7. 创建文章（草稿）- 使用 content 字段
 # ⚠️ 注意：必须先执行第52-60行"管理员创建分类"请求，否则 category_id 变量未定义
 POST http://127.0.0.1:8000/api/v1/article/autosave
 Authorization: Bearer {{admin_token}}
@@ -91,17 +91,16 @@ Content-Type: application/json
 {
   "title": "测试文章114",
   "summary": "这是测试摘要514",
-  "content_path": "storage/articles/test_123.md",
+  "content": "# 测试文章\n\n这是文章内容，使用 Markdown 格式。\n\n## 副标题\n\n一些测试内容...",
   "category_id": {{category_id}},
-  "tag_ids": [],
-  "status": "draft"
+  "tag_ids": []
 }
 
-> {% client.global.set("article_id", response.body.article_id); %}
+> {% client.global.set("article_id", response.body.id); %}
 
 ###
 
-# 8. 更新文章
+# 8. 更新文章 - 修改内容和标题
 POST http://127.0.0.1:8000/api/v1/article/autosave
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
@@ -110,27 +109,26 @@ Content-Type: application/json
   "id": {{article_id}},
   "title": "测试文章（已更新）",
   "summary": "更新后的摘要",
-  "content_path": "storage/articles/test_123.md",
+  "content": "# 更新后的文章\n\n这是更新后的内容。\n\n## 新章节\n\n添加了新的内容段落。",
   "category_id": {{category_id}},
-  "tag_ids": [],
-  "status": "draft"
+  "tag_ids": []
 }
 
 ###
 
-# 9. 获取文章详情
+# 9. 获取文章详情（返回 Article 对象，不包含 content 字段）
 GET http://127.0.0.1:8000/api/v1/article/{{article_id}}
 
 ###
 
-# 10. 我的文章列表
-GET http://127.0.0.1:8000/api/v1/article/my-articles
+# 10. 我的文章列表（新版分页接口）
+GET http://127.0.0.1:8000/api/v1/article/my/list?page=1&size=10
 Authorization: Bearer {{admin_token}}
 
 ###
 
-# 11. 公开文章列表（仅已发布）
-GET http://127.0.0.1:8000/api/v1/article/list?page=1&size=10
+# 11. 公开文章列表（新版分页接口，支持分类筛选）
+GET http://127.0.0.1:8000/api/v1/article/public/list?page=1&size=10
 
 ###
 
@@ -143,7 +141,7 @@ Authorization: Bearer {{admin_token}}
 
 # ==================== 普通用户提交流程 ====================
 
-# 13. 普通用户创建文章
+# 13. 普通用户创建文章 - 使用 content 字段
 # ⚠️ 注意：必须先执行第52-60行"管理员创建分类"请求，否则 category_id 变量未定义
 POST http://127.0.0.1:8000/api/v1/article/autosave
 Authorization: Bearer {{user_token}}
@@ -152,13 +150,12 @@ Content-Type: application/json
 {
   "title": "普通用户的文章",
   "summary": "需要审核的文章",
-  "content_path": "storage/articles/user_test.md",
+  "content": "# 普通用户文章\n\n这是一篇需要审核的文章内容。\n\n## 正文\n\n详细内容在这里...",
   "category_id": {{category_id}},
-  "tag_ids": [],
-  "status": "draft"
+  "tag_ids": []
 }
 
-> {% client.global.set("user_article_id", response.body.article_id); %}
+> {% client.global.set("user_article_id", response.body.id); %}
 
 ###
 

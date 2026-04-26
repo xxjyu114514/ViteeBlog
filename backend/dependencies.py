@@ -1,5 +1,5 @@
 import jwt
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
@@ -7,7 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import async_session_maker
 from models.blog_models import User, UserRole
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
+# 1. 修改 oauth2_scheme，允许手动处理错误
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login", auto_error=False)
+
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
@@ -16,8 +18,14 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         finally:
             await session.close()
 
+
 async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> User:
+    # 2. 开头增加 token 为空的处理
+    if not token:
+        raise HTTPException(status_code=401, detail="请先登录")
+
     try:
+        # 注意：这里的密钥应与 core.security 中的 SECRET_KEY 保持一致
         payload = jwt.decode(token, "whdagm1966", algorithms=["HS256"])
         user_id: str = payload.get("sub")
         if user_id is None:
@@ -31,8 +39,35 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
         raise HTTPException(status_code=401, detail="用户不存在")
     return user
 
+
 async def allow_admin_only(current_user: User = Depends(get_current_user)) -> User:
-    """【拦截器】仅允许管理员身份继续"""
     if current_user.role != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="该操作需要管理员权限")
+        raise HTTPException(status_code=403, detail="权限不足，仅限管理员操作")
     return current_user
+
+
+# 3. 新增 get_current_user_optional 函数
+async def get_current_user_optional(
+        token: Optional[str] = Depends(oauth2_scheme),
+        db: AsyncSession = Depends(get_db)
+) -> Optional[User]:
+    """
+    可选的登录校验：
+    - 如果未提供 token，返回 None
+    - 如果 token 校验失败，返回 None
+    - 如果校验成功且用户存在，返回 User 对象
+    """
+    if not token:
+        return None
+
+    try:
+        payload = jwt.decode(token, "whdagm1966", algorithms=["HS256"])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            return None
+
+        result = await db.execute(select(User).where(User.id == int(user_id)))
+        return result.scalars().first()
+    except Exception:
+        # 解析失败不抛出异常，直接返回 None
+        return None
