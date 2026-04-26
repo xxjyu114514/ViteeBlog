@@ -119,7 +119,7 @@ export function useArticleAPI() {
 
   // 获取公开文章列表（支持分页和分类筛选）
   const getPublicArticles = async (categoryId = null, page = 1, size = 10) => {
-    let url = '/article/list/public'
+    let url = '/article/list'
     const params = new URLSearchParams()
     
     if (categoryId) {
