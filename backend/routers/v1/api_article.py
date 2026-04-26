@@ -17,6 +17,7 @@ from schemas.article_schema import ArticleCreate, ArticleReviewAction
 router = APIRouter()
 
 IMAGE_STORAGE = "storage/images"
+ARTICLE_STORAGE = "storage/articles"
 
 
 # --- 1. 图片上传 (保留原逻辑) ---
@@ -53,6 +54,21 @@ async def autosave_article(
             tag_res = await db.execute(select(Tag).where(Tag.id.in_(article_in.tag_ids)))
             db_tags = tag_res.scalars().all()
 
+        # 如果提供了content，则保存到文件并生成content_path
+        content_path = article_in.content_path
+        if article_in.content:
+            # 生成文件名：user{user_id}_{timestamp}.md
+            timestamp = int(datetime.now().timestamp())
+            filename = f"user{user.id}_{timestamp}.md"
+            content_path = os.path.join(ARTICLE_STORAGE, filename)
+            
+            # 确保目录存在
+            os.makedirs(ARTICLE_STORAGE, exist_ok=True)
+            
+            # 将内容写入文件
+            async with aiofiles.open(content_path, mode="w", encoding="utf-8") as f:
+                await f.write(article_in.content)
+
         if article_in.id:
             res = await db.execute(
                 select(Article).where(Article.id == article_in.id).options(selectinload(Article.tags)))
@@ -70,7 +86,7 @@ async def autosave_article(
             # 更新数据
             db_article.title = article_in.title
             db_article.summary = article_in.summary
-            db_article.content_path = article_in.content_path
+            db_article.content_path = content_path  # 使用新生成的或原有的路径
             db_article.category_id = article_in.category_id
             db_article.tags = db_tags
             # 注意：保存草稿不改变 status，除非显式传值，但通常交给 publish 接口处理状态流转
@@ -79,7 +95,7 @@ async def autosave_article(
             db_article = Article(
                 title=article_in.title,
                 summary=article_in.summary,
-                content_path=article_in.content_path,
+                content_path=content_path,
                 category_id=article_in.category_id,
                 user_id=user.id,
                 tags=db_tags,

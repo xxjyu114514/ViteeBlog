@@ -6,7 +6,8 @@ class ArticleCreate(BaseModel):
     id: Optional[int] = None
     title: str = Field(..., min_length=1, max_length=200)
     summary: Optional[str] = Field(None, max_length=500)
-    content_path: str = Field(..., description="Markdown文件存储路径")
+    content: Optional[str] = Field(None, description="文章内容（Markdown格式）")
+    content_path: Optional[str] = Field(None, description="Markdown文件存储路径（可选，如果提供content则自动生成）")
     category_id: int = Field(..., description="所属分类ID")
     tag_ids: List[int] = Field(default=[], description="关联的标签ID列表")
     status: ArticleStatus = Field(default=ArticleStatus.DRAFT)
