@@ -108,6 +108,7 @@ const { getArticleDetail, softDeleteArticle } = useArticleAPI()
 
 // 状态
 const article = ref(null)
+const articleContent = ref('') // 新增：存储从文件读取的Markdown内容
 const loading = ref(true)
 const error = ref(null)
 const deleting = ref(false)
@@ -127,14 +128,31 @@ const formatDate = (dateString) => {
 
 // 渲染内容
 const renderedContent = computed(() => {
-  if (!article.value?.content) return ''
-  return md.render(article.value.content)
+  if (!articleContent.value) return ''
+  return md.render(articleContent.value)
 })
 
 const renderedTitle = computed(() => {
   if (!article.value?.info?.title) return ''
   return md.renderInline(article.value.info.title)
 })
+
+// 从文件路径加载Markdown内容
+const loadArticleContent = async (contentPath) => {
+  try {
+    const response = await fetch(`http://127.0.0.1:8000${contentPath}`)
+    if (response.ok) {
+      const content = await response.text()
+      articleContent.value = content
+    } else {
+      console.error('加载文章内容失败:', response.status, response.statusText)
+      articleContent.value = '# 文章内容加载失败'
+    }
+  } catch (err) {
+    console.error('加载文章内容异常:', err)
+    articleContent.value = '# 文章内容加载失败'
+  }
+}
 
 // 加载文章
 const loadArticle = async () => {
@@ -146,6 +164,12 @@ const loadArticle = async () => {
   
   if (result.success) {
     article.value = result.data
+    // 从 content_path 加载实际内容
+    if (result.data.info.content_path) {
+      await loadArticleContent(result.data.info.content_path)
+    } else {
+      articleContent.value = result.data.content || ''
+    }
   } else {
     error.value = result.message
   }

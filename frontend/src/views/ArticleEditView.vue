@@ -7,22 +7,41 @@
         <h1 class="title-large">{{ editingArticle ? '编辑文章' : '新建文章' }}</h1>
         <div class="editor-actions">
           <button class="btn-secondary" @click="goBack" :disabled="saving">返回</button>
-          <button class="btn-primary" @click="handleSave" :disabled="saving || !canSave">
+          <button 
+            class="btn-primary" 
+            @click="handleSave" 
+            :disabled="saving || !canSave || isPending"
+          >
             {{ saving ? '保存中...' : '保存草稿' }}
           </button>
           <button 
             v-if="editingArticle && editingArticle.status === 'draft'"
             class="btn-publish" 
             @click="handlePublish"
-            :disabled="saving || !canSave"
+            :disabled="saving || !canSave || isPending"
           >
             {{ publishing ? '发布中...' : '发布文章' }}
+          </button>
+          <button 
+            v-if="editingArticle && editingArticle.status === 'pending'"
+            class="btn-secondary"
+            disabled
+          >
+            待审核中（无法编辑）
           </button>
         </div>
       </div>
 
       <div v-if="statusMessage" :class="['message-banner', isError ? 'error' : 'success']">
         {{ statusMessage }}
+      </div>
+
+      <!-- 待审核状态提示 -->
+      <div v-if="isPending" class="pending-notice">
+        <div class="notice-content">
+          <span class="notice-icon">⚠️</span>
+          <span>文章正在审核中，无法进行编辑。如需修改，请先撤回为草稿。</span>
+        </div>
       </div>
 
       <div class="editor-form">
@@ -33,7 +52,7 @@
             type="text" 
             class="input-field"
             placeholder="请输入文章标题"
-            :disabled="saving"
+            :disabled="saving || isPending"
           >
         </div>
         
@@ -43,7 +62,7 @@
             <select 
               v-model="currentArticle.category_id" 
               class="input-field select-field"
-              :disabled="saving || loadingCategories"
+              :disabled="saving || loadingCategories || isPending"
             >
               <option value="">请选择分类</option>
               <option 
@@ -63,14 +82,19 @@
                 v-for="tag in selectedTags" 
                 :key="tag.id" 
                 class="selected-tag"
+                :class="{ 'disabled': isPending }"
               >
                 {{ tag.name }}
-                <span class="remove-tag" @click.stop="removeTag(tag.id)">×</span>
+                <span 
+                  v-if="!isPending" 
+                  class="remove-tag" 
+                  @click.stop="removeTag(tag.id)"
+                >×</span>
               </div>
               <select 
                 v-model="newTagId" 
                 class="tag-select input-field"
-                :disabled="saving || loadingTags"
+                :disabled="saving || loadingTags || isPending"
                 @change="addTag"
               >
                 <option value="">+ 选择标签</option>
@@ -97,6 +121,7 @@
             v-model="currentArticle.content" 
             class="fallback-textarea"
             placeholder="高级编辑器加载失败，您可以使用普通文本模式编写..."
+            :disabled="isPending"
           ></textarea>
         </div>
       </div>
@@ -140,6 +165,11 @@ let vditorInstance = null
 
 const canSave = computed(() => {
   return currentArticle.value.title.trim() !== '' && currentArticle.value.content.trim() !== ''
+})
+
+// 新增：是否处于待审核状态
+const isPending = computed(() => {
+  return editingArticle.value?.status === 'pending'
 })
 
 // 计算属性：可用的标签（未被选中的）
@@ -301,9 +331,24 @@ const loadArticleData = async () => {
   if (result.success) {
     const info = result.data.info
     editingArticle.value = info
+    // 如果是待审核状态，从 content_path 加载内容；否则使用原有逻辑
+    let contentToLoad = ''
+    if (info.content_path) {
+      try {
+        const contentResponse = await fetch(`http://127.0.0.1:8000${info.content_path}`)
+        if (contentResponse.ok) {
+          contentToLoad = await contentResponse.text()
+        }
+      } catch (err) {
+        console.error('加载待审核文章内容失败:', err)
+      }
+    } else {
+      contentToLoad = result.data.content || ''
+    }
+    
     currentArticle.value = {
       title: info.title,
-      content: result.data.content || '',
+      content: contentToLoad,
       category_id: info.category?.id || null,
       tag_ids: info.tags?.map(t => t.id) || []
     }
@@ -328,13 +373,13 @@ const loadArticleData = async () => {
  * 保存逻辑
  */
 const handleSave = async () => {
-  if (!canSave.value) return
+  if (!canSave.value || isPending.value) return
   
   saving.value = true
   
   const payload = {
     ...currentArticle.value,
-    article_id: editingArticle.value?.id || null
+    id: editingArticle.value?.id || null // 注意：后端期望的是 id 字段，不是 article_id
   }
 
   const result = await autoSaveArticle(payload)
@@ -350,7 +395,7 @@ const handleSave = async () => {
 }
 
 const handlePublish = async () => {
-  if (!editingArticle.value || publishing.value) return
+  if (!editingArticle.value || publishing.value || isPending.value) return
   
   publishing.value = true
   const result = await publishArticle(editingArticle.value.id)
@@ -375,5 +420,32 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.pending-notice {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+}
 
+.notice-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #856404;
+  font-size: 14px;
+}
+
+.notice-icon {
+  font-size: 16px;
+}
+
+.selected-tag.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.selected-tag.disabled .remove-tag {
+  display: none;
+}
 </style>
