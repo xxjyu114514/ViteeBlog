@@ -194,3 +194,28 @@
 
 .post-page-wrapper { overflow-y: auto; background: $bg-white; scroll-behavior: smooth; position: relative; }
 .content-scroller { max-width: 1100px; margin: 0 auto; }   
+
+/* =======================================
+   ArticleManage 文章管理页面特有样式
+   ======================================= */
+.article-manage-wrapper {
+  .radio-group {
+    display: flex;
+    gap: 20px;
+  }
+  .radio-option {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+  }
+  .radio-option input[type="radio"] {
+    margin-right: 8px;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+  .radio-text {
+    font-size: 14px;
+    color: $text-secondary;
+  }
+}

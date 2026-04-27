@@ -30,9 +30,9 @@
           <h1 class="article-title" v-html="renderedTitle"></h1>
           <div class="article-meta flex-between">
             <div class="meta-info">
-              <span class="author">作者: {{ article.info.author.username }}</span>
-              <span class="publish-date">{{ formatDate(article.info.published_at) }}</span>
-              <span class="view-count">阅读: {{ article.info.view_count }} 次</span>
+              <span class="author">作者: {{ getAuthorName() }}</span>
+              <span class="publish-date">{{ formatDate(article.published_at) }}</span>
+              <span class="view-count">阅读: {{ article.view_count || 0 }} 次</span>
             </div>
             <div v-if="userStore.isAdmin" class="admin-actions">
               <button class="btn-action btn-edit" @click="editArticle">
@@ -58,15 +58,15 @@
         
         <div class="article-footer">
           <div class="category-tags">
-            <div v-if="article.info.category" class="category-item">
+            <div v-if="article.category" class="category-item">
               <span class="category-label">分类:</span>
-              <span class="category-name">{{ article.info.category.name }}</span>
+              <span class="category-name">{{ article.category.name }}</span>
             </div>
-            <div v-if="article.info.tags && article.info.tags.length > 0" class="tags-section">
+            <div v-if="article.tags && article.tags.length > 0" class="tags-section">
               <span class="tags-label">标签:</span>
               <div class="tags-list">
                 <span 
-                  v-for="tag in article.info.tags" 
+                  v-for="tag in article.tags" 
                   :key="tag.id" 
                   class="tag-item"
                 >
@@ -113,6 +113,20 @@ const loading = ref(true)
 const error = ref(null)
 const deleting = ref(false)
 
+// 获取作者名称（处理author关系可能未加载的情况）
+const getAuthorName = () => {
+  if (article.value?.author?.username) {
+    return article.value.author.username
+  }
+  // 如果author关系未加载，尝试从其他字段获取
+  if (article.value?.user_id) {
+    // 这里可以添加逻辑来根据user_id获取用户名，但需要额外API调用
+    // 临时方案：显示用户ID或默认名称
+    return `用户${article.value.user_id}`
+  }
+  return '匿名作者'
+}
+
 // 格式化日期
 const formatDate = (dateString) => {
   if (!dateString) return '未知时间'
@@ -133,14 +147,26 @@ const renderedContent = computed(() => {
 })
 
 const renderedTitle = computed(() => {
-  if (!article.value?.info?.title) return ''
-  return md.renderInline(article.value.info.title)
+  if (!article.value?.title) return ''
+  return md.renderInline(article.value.title)
 })
 
 // 从文件路径加载Markdown内容
 const loadArticleContent = async (contentPath) => {
   try {
-    const response = await fetch(`http://127.0.0.1:8000${contentPath}`)
+    // contentPath 格式: "storage/articles/xxx.md"
+    // 后端静态文件服务: /static/storage -> storage/
+    // 所以URL应该是: /static/storage/articles/xxx.md
+    let normalizedPath = contentPath.replace(/\\/g, '/')
+    if (!normalizedPath.startsWith('/')) {
+      normalizedPath = '/' + normalizedPath
+    }
+    // 将 "/storage/" 替换为 "/static/storage/"
+    const urlPath = normalizedPath.replace(/^\/storage\//, '/static/storage/')
+    const url = `http://127.0.0.1:8000${urlPath}`
+    console.log('加载文章内容URL:', url)
+    
+    const response = await fetch(url)
     if (response.ok) {
       const content = await response.text()
       articleContent.value = content
@@ -165,8 +191,8 @@ const loadArticle = async () => {
   if (result.success) {
     article.value = result.data
     // 从 content_path 加载实际内容
-    if (result.data.info.content_path) {
-      await loadArticleContent(result.data.info.content_path)
+    if (result.data.content_path) {
+      await loadArticleContent(result.data.content_path)
     } else {
       articleContent.value = result.data.content || ''
     }

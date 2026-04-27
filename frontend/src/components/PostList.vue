@@ -63,12 +63,16 @@ const loadArticles = async () => {
   error.value = null
   
   const result = await getPublicArticles()
+  console.log('📝 获取公开文章结果:', result) // 调试日志
+  
   if (result.success) {
     // 后端返回的是分页对象 {items: [], total: number, page: number, size: number}
     // 需要提取 items 数组
     articles.value = result.data.items || []
+    console.log('📚 文章列表数据:', articles.value) // 调试日志
   } else {
     error.value = result.message
+    console.error('❌ 获取文章列表失败:', result.message) // 调试日志
   }
   loading.value = false
 }

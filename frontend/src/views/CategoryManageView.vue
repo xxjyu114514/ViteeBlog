@@ -97,6 +97,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { buildUrl } from '@/utils/apiUtils'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -115,15 +116,12 @@ const deletingId = ref(null)
 const fetchCategories = async () => {
   loading.value = true
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/v1/article/categories', {
-      headers: {
-        'Authorization': `Bearer ${userStore.token}`
-      }
-    })
+    const url = buildUrl('/meta/categories', {}, {}, 'META')
+    const response = await fetch(url)
     
     if (response.ok) {
       const data = await response.json()
-      categories.value = data.items || []
+      categories.value = data || []
     } else {
       const errorData = await response.json().catch(() => ({}))
       const errorMessage = errorData.detail || '获取分类列表失败'
@@ -165,7 +163,8 @@ const handleSubmit = async () => {
     // 更新分类
     updatingId.value = editingCategory.value.id
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/v1/article/categories/${editingCategory.value.id}`, {
+      const url = buildUrl('/meta/categories/:cat_id', { cat_id: editingCategory.value.id }, {}, 'META')
+      const response = await fetch(url, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${userStore.token}`,
@@ -191,7 +190,8 @@ const handleSubmit = async () => {
     // 创建分类
     creating.value = true
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/v1/article/categories', {
+      const url = buildUrl('/meta/categories', {}, {}, 'META')
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${userStore.token}`,
@@ -222,7 +222,8 @@ const handleDelete = async (categoryId) => {
   
   deletingId.value = categoryId
   try {
-    const response = await fetch(`http://127.0.0.1:8000/api/v1/article/categories/${categoryId}`, {
+    const url = buildUrl('/meta/categories/:cat_id', { cat_id: categoryId }, {}, 'META')
+    const response = await fetch(url, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${userStore.token}`
@@ -250,13 +251,6 @@ const handleBack = () => {
 
 // 初始化
 onMounted(async () => {
-  // 检查是否为管理员
-  if (!userStore.isAdmin) {
-    alert('权限不足：此功能仅限管理员使用')
-    router.go(-1)
-    return
-  }
-  
   await fetchCategories()
 })
 </script>

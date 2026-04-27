@@ -56,6 +56,17 @@
           >
         </div>
         
+        <div class="form-group">
+          <label>摘要</label>
+          <textarea 
+            v-model="currentArticle.summary" 
+            class="input-field"
+            placeholder="请输入文章摘要（可选，用于列表预览）"
+            :disabled="saving || isPending"
+            rows="3"
+          ></textarea>
+        </div>
+        
         <div class="form-row">
           <div class="form-group flex-1">
             <label>分类</label>
@@ -130,31 +141,24 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useUserStore } from '@/stores/user'
-import { useArticleAPI } from '@/composables/useArticleAPI'
+import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import Vditor from 'vditor'
 import 'vditor/dist/index.css'
+import { useUserStore } from '@/stores/user'
+import { buildUrl } from '@/utils/apiUtils'
+import { useArticleAPI } from '@/composables/useArticleAPI'
 
-const route = useRoute()
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 const { autoSaveArticle, publishArticle, getArticleDetail } = useArticleAPI()
 
-// 后端基础配置
-const BACKEND_URL = 'http://localhost:8000'
-
-// 分类和标签相关状态
-const categories = ref([])
-const tags = ref([])
-const selectedTags = ref([])
-const newTagId = ref('')
-const loadingCategories = ref(false)
-const loadingTags = ref(false)
+// 后端基础URL（从环境变量或配置中获取）
+const BACKEND_URL = process.env.NODE_ENV === 'production' ? '' : 'http://127.0.0.1:8000'
 
 // 响应式状态
-const currentArticle = ref({ title: '', content: '', category_id: null, tag_ids: [] })
+const currentArticle = ref({ title: '', summary: '', content: '', category_id: null, tag_ids: [] })
 const saving = ref(false)
 const publishing = ref(false)
 const statusMessage = ref('')
@@ -162,6 +166,16 @@ const isError = ref(false)
 const editingArticle = ref(null)
 const editorLoadError = ref(false)
 let vditorInstance = null
+
+// 分类和标签数据
+const categories = ref([])
+const tags = ref([])
+const loadingCategories = ref(true)
+const loadingTags = ref(true)
+
+// 新增：标签选择相关状态
+const selectedTags = ref([])
+const newTagId = ref('')
 
 const canSave = computed(() => {
   return currentArticle.value.title.trim() !== '' && currentArticle.value.content.trim() !== ''
@@ -177,19 +191,37 @@ const availableTags = computed(() => {
   return tags.value.filter(tag => !selectedTags.value.some(selected => selected.id === tag.id))
 })
 
+// 标签操作函数
+const addTag = () => {
+  if (newTagId.value && !selectedTags.value.some(tag => tag.id === parseInt(newTagId.value))) {
+    const tagToAdd = tags.value.find(tag => tag.id === parseInt(newTagId.value))
+    if (tagToAdd) {
+      selectedTags.value.push({ id: tagToAdd.id, name: tagToAdd.name })
+      // 注意：这里不再直接操作 selectedTagIds，而是通过 currentArticle.value.tag_ids 同步或者在保存时处理
+      // 为了保持简单，我们更新 currentArticle.value.tag_ids 以保持一致性
+      if (!currentArticle.value.tag_ids.includes(tagToAdd.id)) {
+        currentArticle.value.tag_ids.push(tagToAdd.id)
+      }
+    }
+    newTagId.value = ''
+  }
+}
+
+const removeTag = (tagId) => {
+  selectedTags.value = selectedTags.value.filter(tag => tag.id !== tagId)
+  currentArticle.value.tag_ids = currentArticle.value.tag_ids.filter(id => id !== tagId)
+}
+
 // 获取分类列表
 const fetchCategories = async () => {
   loadingCategories.value = true
   try {
-    const response = await fetch(`${BACKEND_URL}/api/v1/article/categories`, {
-      headers: {
-        'Authorization': `Bearer ${userStore.token}`
-      }
-    })
+    const url = buildUrl('/meta/categories', {}, {}, 'META')
+    const response = await fetch(url)
     
     if (response.ok) {
       const data = await response.json()
-      categories.value = data.items || []
+      categories.value = data || []
     } else {
       console.error('获取分类列表失败:', await response.json().catch(() => ({})))
     }
@@ -203,15 +235,12 @@ const fetchCategories = async () => {
 const fetchTags = async () => {
   loadingTags.value = true
   try {
-    const response = await fetch(`${BACKEND_URL}/api/v1/article/tags`, {
-      headers: {
-        'Authorization': `Bearer ${userStore.token}`
-      }
-    })
+    const url = buildUrl('/meta/tags', {}, {}, 'META')
+    const response = await fetch(url)
     
     if (response.ok) {
       const data = await response.json()
-      tags.value = data.items || []
+      tags.value = data || []
     } else {
       console.error('获取标签列表失败:', await response.json().catch(() => ({})))
     }
@@ -220,27 +249,6 @@ const fetchTags = async () => {
   }
   loadingTags.value = false
 }
-
-// 添加标签
-const addTag = () => {
-  if (!newTagId.value) return
-  
-  const tagToAdd = tags.value.find(tag => tag.id === parseInt(newTagId.value))
-  if (tagToAdd && !selectedTags.value.some(tag => tag.id === tagToAdd.id)) {
-    selectedTags.value.push(tagToAdd)
-  }
-  newTagId.value = ''
-}
-
-// 移除标签
-const removeTag = (tagId) => {
-  selectedTags.value = selectedTags.value.filter(tag => tag.id !== tagId)
-}
-
-// 监听 selectedTags 变化，更新 currentArticle.tag_ids
-watch(selectedTags, (newTags) => {
-  currentArticle.value.tag_ids = newTags.map(tag => tag.id)
-}, { deep: true })
 
 /**
  * 初始化编辑器
@@ -263,8 +271,12 @@ const initVditor = (initialContent) => {
       url: `${BACKEND_URL}/api/v1/article/upload-image`,
       fieldName: 'file',
       max: 10 * 1024 * 1024,
-      headers: {
-        'Authorization': `Bearer ${userStore.token}`
+      // 使用setHeaders函数动态获取token，每次上传前都会调用
+      setHeaders: () => {
+        const userStore = useUserStore()
+        return {
+          'Authorization': `Bearer ${userStore.token}`
+        }
       },
       // 适配后端响应格式
       format: (files, responseText) => {
@@ -375,17 +387,23 @@ const loadArticleData = async () => {
 const handleSave = async () => {
   if (!canSave.value || isPending.value) return
   
+  // 确保内容不为空
+  if (!currentArticle.value.content || currentArticle.value.content.trim() === '') {
+    showStatus('文章内容不能为空', true)
+    return
+  }
+  
   saving.value = true
   
   const payload = {
     ...currentArticle.value,
-    id: editingArticle.value?.id || null // 注意：后端期望的是 id 字段，不是 article_id
+    id: editingArticle.value?.id || null
   }
 
   const result = await autoSaveArticle(payload)
   if (result.success) {
     if (!editingArticle.value) {
-      editingArticle.value = { id: result.data.article_id, status: 'draft' }
+      editingArticle.value = { id: result.data.id, status: 'draft' }
     }
     showStatus('已保存到草稿箱')
   } else {

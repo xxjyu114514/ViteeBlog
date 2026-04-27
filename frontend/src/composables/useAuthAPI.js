@@ -1,10 +1,12 @@
 import { createFetch } from '@vueuse/core'
 import { useUserStore } from '@/stores/user'
 import { useRouter } from 'vue-router'
+import { getBaseUrl } from '@/config/apiConfig'
+import { buildUrl } from '@/utils/apiUtils'
 
 // 创建一个预配置的 fetch 实例
 const useBaseFetch = createFetch({
-  baseUrl: 'http://127.0.0.1:8000/api/v1',
+  baseUrl: getBaseUrl(),
   options: {
     async beforeFetch({ options }) {
       const userStore = useUserStore()

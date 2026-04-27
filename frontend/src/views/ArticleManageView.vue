@@ -1,5 +1,5 @@
 <template>
-  <div class="page-wrapper-base">
+  <div class="page-wrapper-base article-manage-wrapper">
     <div class="nav-placeholder"></div>
     
     <div class="back-button" @click="handleBack">
@@ -74,9 +74,9 @@
                 {{ deletingId === article.id ? '删除中...' : '删除' }}
               </button>
               <button 
-                v-if="userStore.isAdmin && !article.is_audited && article.status === 'published'"
+                v-if="userStore.isAdmin && !article.is_audited && article.status === 'pending'"
                 class="btn-action btn-audit"
-                @click="handleAudit(article.id)"
+                @click="showAuditDialog(article.id)"
                 :disabled="auditingId === article.id"
               >
                 {{ auditingId === article.id ? '审核中...' : '审核' }}
@@ -109,6 +109,61 @@
         </div>
       </div>
 
+      <!-- 审核对话框 -->
+      <div v-if="auditDialog.show" class="modal-overlay" @click="closeAuditDialog">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header">
+            <h3 class="modal-title">审核文章</h3>
+            <button class="modal-close" @click="closeAuditDialog">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label">审核结果:</label>
+              <div class="radio-group">
+                <label class="radio-option">
+                  <input 
+                    type="radio" 
+                    v-model="auditDialog.passAudit" 
+                    :value="true"
+                  />
+                  <span class="radio-text">✅ 通过审核</span>
+                </label>
+                <label class="radio-option">
+                  <input 
+                    type="radio" 
+                    v-model="auditDialog.passAudit" 
+                    :value="false"
+                  />
+                  <span class="radio-text">❌ 驳回文章</span>
+                </label>
+              </div>
+            </div>
+            
+            <div v-if="!auditDialog.passAudit" class="form-group">
+              <label class="form-label">驳回原因:</label>
+              <textarea 
+                v-model="auditDialog.remark"
+                class="textarea-field"
+                placeholder="请输入驳回原因..."
+                rows="4"
+              ></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <div class="modal-actions">
+              <button class="btn-secondary" @click="closeAuditDialog">取消</button>
+              <button 
+                class="btn-primary" 
+                @click="handleAudit"
+                :disabled="auditingId === auditDialog.articleId"
+              >
+                {{ auditingId === auditDialog.articleId ? '审核中...' : '确认审核' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div v-else-if="loading" class="loading-state">
         <div class="loading-spinner"></div>
         <p>加载文章列表中...</p>
@@ -134,7 +189,8 @@ const {
   getMyArticles,
   publishArticle,
   softDeleteArticle,
-  restoreArticle
+  restoreArticle,
+  reviewArticle
 } = useArticleAPI()
 
 // 状态管理
@@ -144,6 +200,12 @@ const publishingId = ref(null)
 const deletingId = ref(null)
 const restoringId = ref(null)
 const auditingId = ref(null)
+const auditDialog = ref({
+  show: false,
+  articleId: null,
+  passAudit: true,
+  remark: ''
+})
 const viewMode = ref('all') // 'mine' | 'all'
 const currentPage = ref(1)
 const pageSize = ref(20)
@@ -222,21 +284,7 @@ const fetchArticles = async (page = 1) => {
       result = await getAdminAllArticles(page, pageSize.value)
     } else {
       // 查看自己的文章（也支持分页）
-      const url = `http://127.0.0.1:8000/api/v1/article/user/my-articles?page=${page}&size=${pageSize.value}`
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${userStore.token}`
-        }
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        result = { success: true, data }
-      } else {
-        const errorData = await response.json().catch(() => ({}))
-        const errorMessage = errorData.detail || '获取我的文章失败'
-        result = { success: false, message: errorMessage }
-      }
+      result = await getMyArticles(page, pageSize.value)
     }
     
     if (result.success) {
@@ -303,30 +351,46 @@ const handleRestore = async (articleId) => {
   restoringId.value = null
 }
 
+// 显示审核对话框
+const showAuditDialog = (articleId) => {
+  auditDialog.value = {
+    show: true,
+    articleId: articleId,
+    passAudit: true,
+    remark: ''
+  }
+}
+
 // 处理审核文章（管理员专属）
-const handleAudit = async (articleId) => {
-  auditingId.value = articleId
+const handleAudit = async () => {
+  if (!auditDialog.value.show || !auditDialog.value.articleId) return
+  
+  auditingId.value = auditDialog.value.articleId
   try {
-    const response = await fetch(`http://127.0.0.1:8000/api/v1/article/admin/articles/${articleId}/audit`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${userStore.token}`,
-        'Content-Type': 'application/json'
-      }
-    })
+    // 使用正确的API接口
+    const result = await reviewArticle(
+      auditDialog.value.articleId, 
+      auditDialog.value.passAudit, 
+      auditDialog.value.remark
+    )
     
-    if (response.ok) {
+    if (result.success) {
       await fetchArticles(currentPage.value)
+      auditDialog.value.show = false
     } else {
-      const errorData = await response.json().catch(() => ({}))
-      const errorMessage = errorData.detail || '审核失败'
-      alert(errorMessage)
+      alert(result.message || '审核操作失败')
     }
   } catch (error) {
     console.error('审核文章异常:', error)
-    alert('审核失败，请稍后重试')
+    alert('审核操作失败，请稍后重试')
+  } finally {
+    auditingId.value = null
   }
-  auditingId.value = null
+}
+
+// 关闭审核对话框
+const closeAuditDialog = () => {
+  auditDialog.value.show = false
 }
 
 // 分页导航
@@ -352,206 +416,5 @@ const handleBack = () => {
 </script>
 
 <style scoped>
-.admin-controls {
-  padding: 15px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-}
-
-.select-field {
-  padding: 8px 12px;
-  border: 1px solid #ced4da;
-  border-radius: 6px;
-  background: white;
-  font-size: 14px;
-}
-
-.mr-10 {
-  margin-right: 10px;
-}
-
-.article-list {
-  margin-top: 20px;
-}
-
-.article-item {
-  padding: 20px;
-  margin-bottom: 15px;
-  border-radius: 8px;
-}
-
-.article-info {
-  flex: 1;
-}
-
-.article-title {
-  margin: 0 0 10px 0;
-  font-size: 18px;
-  color: #333;
-}
-
-.meta-text {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  color: #666;
-  font-size: 14px;
-}
-
-.status-draft {
-  background: #fef3c7;
-  color: #92400e;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-.status-published {
-  background: #d1fae5;
-  color: #065f46;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-.status-audited {
-  background: #dbeafe;
-  color: #1e40af;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
-  margin-left: 8px;
-}
-
-.article-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.btn-action {
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  border: none;
-  cursor: pointer;
-}
-
-.btn-publish {
-  background-color: #3b82f6;
-  color: white;
-}
-
-.btn-publish:hover:not(:disabled) {
-  background-color: #2563eb;
-}
-
-.btn-publish:disabled {
-  background-color: #93c5fd;
-  cursor: not-allowed;
-}
-
-.btn-edit {
-  background-color: #8b5cf6;
-  color: white;
-}
-
-.btn-edit:hover {
-  background-color: #7c3aed;
-}
-
-.btn-delete {
-  background-color: #ef4444;
-  color: white;
-}
-
-.btn-delete:hover:not(:disabled) {
-  background-color: #dc2626;
-}
-
-.btn-delete:disabled {
-  background-color: #fca5a5;
-  cursor: not-allowed;
-}
-
-.btn-audit {
-  background-color: #10b981;
-  color: white;
-}
-
-.btn-audit:hover:not(:disabled) {
-  background-color: #059669;
-}
-
-.btn-audit:disabled {
-  background-color: #a7f3d0;
-  cursor: not-allowed;
-}
-
-.loading-state {
-  text-align: center;
-  padding: 40px;
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #3498db;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 20px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: #666;
-}
-
-.mt-20 {
-  margin-top: 20px;
-}
-
-/* 分页样式 */
-.pagination {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 0;
-  border-top: 1px solid #e5e7eb;
-}
-
-.pagination-btn {
-  padding: 8px 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  background: white;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.pagination-btn:hover:not(:disabled) {
-  background: #f3f4f6;
-}
-
-.pagination-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.page-info {
-  color: #6b7280;
-  font-size: 14px;
-}
-
-.mt-30 {
-  margin-top: 30px;
-}
+/* 所有内联样式已移除，使用_base.scss中的通用类 */
 </style>

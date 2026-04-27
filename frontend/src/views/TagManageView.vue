@@ -11,7 +11,7 @@
         <h1 class="title-large">标签管理</h1>
         <button 
           class="btn-primary" 
-          @click="showCreateModal"
+          @click="openModalForCreate"
           :disabled="creating"
         >
           {{ creating ? '创建中...' : '新建标签' }}
@@ -35,7 +35,7 @@
             <div class="tag-actions">
               <button 
                 class="btn-action btn-edit"
-                @click="showEditModal(tag)"
+                @click="openModalForEdit(tag)"
                 :disabled="updatingId === tag.id"
               >
                 {{ updatingId === tag.id ? '保存中...' : '编辑' }}
@@ -59,12 +59,12 @@
 
       <div v-else class="empty-state">
         <p>暂无标签</p>
-        <button class="btn-primary mt-20" @click="showCreateModal">立即创建第一个标签</button>
+        <button class="btn-primary mt-20" @click="openModalForCreate">立即创建第一个标签</button>
       </div>
     </div>
 
     <!-- 创建/编辑模态框 -->
-    <div v-if="showModal" class="modal-overlay" @click="closeModal">
+    <div v-if="isModalOpen" class="modal-overlay" @click="closeModal">
       <div class="modal-content" @click.stop>
         <h3 class="modal-title">{{ editingTag ? '编辑标签' : '新建标签' }}</h3>
         <div class="form-group">
@@ -82,7 +82,7 @@
           <button class="btn-secondary" @click="closeModal">取消</button>
           <button 
             class="btn-primary" 
-            @click="handleSubmit"
+            @click="handleCreateOrUpdateTag"
             :disabled="!tagName.trim() || creating || updatingId"
           >
             {{ creating || updatingId ? '处理中...' : (editingTag ? '保存' : '创建') }}
@@ -97,16 +97,13 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { buildUrl } from '@/utils/apiUtils'
 
 const router = useRouter()
 const userStore = useUserStore()
 
-// 状态管理
 const loading = ref(true)
 const tags = ref([])
-const showModal = ref(false)
-const tagName = ref('')
-const editingTag = ref(null)
 const creating = ref(false)
 const updatingId = ref(null)
 const deletingId = ref(null)
@@ -115,15 +112,13 @@ const deletingId = ref(null)
 const fetchTags = async () => {
   loading.value = true
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/v1/article/tags', {
-      headers: {
-        'Authorization': `Bearer ${userStore.token}`
-      }
-    })
+    const url = buildUrl('/meta/tags', {}, {}, 'META')
+    const response = await fetch(url)
     
     if (response.ok) {
       const data = await response.json()
-      tags.value = data.items || []
+      // 后端返回的是直接的数组，不是分页格式
+      tags.value = data || []
     } else {
       const errorData = await response.json().catch(() => ({}))
       const errorMessage = errorData.detail || '获取标签列表失败'
@@ -136,36 +131,40 @@ const fetchTags = async () => {
   loading.value = false
 }
 
-// 显示创建模态框
-const showCreateModal = () => {
-  editingTag.value = null
+// 打开模态框（用于创建或更新）
+const tagName = ref('')
+const editingTag = ref(null)
+const isModalOpen = ref(false)
+
+const openModalForCreate = () => {
   tagName.value = ''
-  showModal.value = true
+  editingTag.value = null
+  isModalOpen.value = true
 }
 
-// 显示编辑模态框
-const showEditModal = (tag) => {
-  editingTag.value = tag
+const openModalForEdit = (tag) => {
   tagName.value = tag.name
-  showModal.value = true
+  editingTag.value = tag
+  isModalOpen.value = true
 }
 
-// 关闭模态框
 const closeModal = () => {
-  showModal.value = false
-  editingTag.value = null
-  tagName.value = ''
+  isModalOpen.value = false
 }
 
-// 处理提交（创建或更新）
-const handleSubmit = async () => {
-  if (!tagName.value.trim()) return
-  
+// 处理创建或更新
+const handleCreateOrUpdateTag = async () => {
+  if (!tagName.value.trim()) {
+    alert('请输入标签名称')
+    return
+  }
+
   if (editingTag.value) {
     // 更新标签
     updatingId.value = editingTag.value.id
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/v1/article/tags/${editingTag.value.id}`, {
+      const url = buildUrl('/meta/tags/:tag_id', { tag_id: editingTag.value.id }, {}, 'META')
+      const response = await fetch(url, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${userStore.token}`,
@@ -191,7 +190,8 @@ const handleSubmit = async () => {
     // 创建标签
     creating.value = true
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/v1/article/tags', {
+      const url = buildUrl('/meta/tags', {}, {}, 'META')
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${userStore.token}`,
@@ -222,7 +222,8 @@ const handleDelete = async (tagId) => {
   
   deletingId.value = tagId
   try {
-    const response = await fetch(`http://127.0.0.1:8000/api/v1/article/tags/${tagId}`, {
+    const url = buildUrl('/meta/tags/:tag_id', { tag_id: tagId }, {}, 'META')
+    const response = await fetch(url, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${userStore.token}`
@@ -243,22 +244,15 @@ const handleDelete = async (tagId) => {
   deletingId.value = null
 }
 
+// 初始化
+onMounted(async () => {
+  await fetchTags()
+})
+
 // 返回上一页
 const handleBack = () => {
   router.go(-1)
 }
-
-// 初始化
-onMounted(async () => {
-  // 检查是否为管理员
-  if (!userStore.isAdmin) {
-    alert('权限不足：此功能仅限管理员使用')
-    window.history.back()
-    return
-  }
-  
-  await fetchTags()
-})
 </script>
 
 <style scoped>

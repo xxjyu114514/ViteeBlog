@@ -1,10 +1,12 @@
 import { createFetch } from '@vueuse/core'
 import { useUserStore } from '@/stores/user'
 import { useRouter } from 'vue-router'
+import { getBaseUrl } from '@/config/apiConfig'
+import { buildUrl } from '@/utils/apiUtils'
 
 // 创建一个预配置的 fetch 实例
 const useBaseFetch = createFetch({
-  baseUrl: 'http://127.0.0.1:8000/api/v1',
+  baseUrl: getBaseUrl(),
   options: {
     async beforeFetch({ options }) {
       const userStore = useUserStore()
@@ -95,7 +97,8 @@ export function useArticleAPI() {
 
   // 获取文章详情
   const getArticleDetail = async (articleId) => {
-    const { data, error } = await useBaseFetch(`/article/${articleId}`).get().json()
+    const url = buildUrl('/article/:id', { id: articleId })
+    const { data, error } = await useBaseFetch(url).get().json()
     
     if (!error.value) {
       return { success: true, data: data.value }
@@ -107,31 +110,33 @@ export function useArticleAPI() {
 
   // 发布文章
   const publishArticle = async (articleId) => {
-    const { data, error } = await useBaseFetch(`/article/${articleId}/publish`).put({}).json()
-    
-    if (!error.value) {
-      return { success: true }
+    try {
+      const url = buildUrl('/article/:id/publish', { id: articleId })
+      const { data, error } = await useBaseFetch(url).put({}).json()
+      
+      if (!error.value) {
+        return { success: true }
+      }
+      
+      const errorMessage = extractFriendlyErrorMessage(error.value, '发布文章')
+      console.error('🐛 发布文章详细错误:', error.value)
+      return { success: false, message: errorMessage }
+    } catch (err) {
+      console.error('🔥 发布文章异常:', err)
+      return { success: false, message: '发布失败：网络错误或服务器异常' }
     }
-    
-    const errorMessage = extractFriendlyErrorMessage(error.value, '发布文章')
-    return { success: false, message: errorMessage }
   }
 
   // 获取公开文章列表（支持分页和分类筛选）
   const getPublicArticles = async (categoryId = null, page = 1, size = 10) => {
-    let url = '/article/list'
-    const params = new URLSearchParams()
-    
+    const queryParams = {}
     if (categoryId) {
-      params.append('category_id', categoryId)
+      queryParams.category_id = categoryId
     }
-    params.append('page', page)
-    params.append('size', size)
+    queryParams.page = page
+    queryParams.size = size
     
-    if (params.toString()) {
-      url += `?${params.toString()}`
-    }
-    
+    const url = buildUrl('/article/public/list', {}, queryParams)
     const { data, error } = await useBaseFetch(url).get().json()
     
     if (!error.value) {
@@ -144,8 +149,12 @@ export function useArticleAPI() {
 
   // 获取用户自己的文章列表（支持分页）
   const getMyArticles = async (page = 1, size = 10) => {
-    const url = `/article/user/my-articles?page=${page}&size=${size}`
+    const queryParams = {
+      page: page,
+      size: size
+    }
     
+    const url = buildUrl('/article/my/list', {}, queryParams)
     const { data, error } = await useBaseFetch(url).get().json()
     
     if (!error.value) {
@@ -158,7 +167,8 @@ export function useArticleAPI() {
 
   // 软删除文章（移至回收站）
   const softDeleteArticle = async (articleId) => {
-    const { data, error } = await useBaseFetch(`/article/${articleId}`).delete().json()
+    const url = buildUrl('/article/:id', { id: articleId })
+    const { data, error } = await useBaseFetch(url).delete().json()
     
     if (!error.value) {
       return { success: true }
@@ -170,13 +180,39 @@ export function useArticleAPI() {
 
   // 恢复文章
   const restoreArticle = async (articleId) => {
-    const { data, error } = await useBaseFetch(`/article/${articleId}/restore`).post({}).json()
+    const url = buildUrl('/article/:id/restore', { id: articleId })
+    const { data, error } = await useBaseFetch(url).post({}).json()
     
     if (!error.value) {
       return { success: true }
     }
     
     const errorMessage = extractFriendlyErrorMessage(error.value, '恢复文章')
+    return { success: false, message: errorMessage }
+  }
+
+  // 管理员审核文章
+  const reviewArticle = async (articleId, passAudit, remark = '') => {
+    const url = buildUrl('/article/admin/articles/:id/review', { id: articleId })
+    const reviewData = {
+      pass_audit: passAudit
+    }
+    // 只有在驳回时才添加remark字段，且确保是非空字符串
+    if (!passAudit && remark && remark.trim()) {
+      reviewData.remark = remark.trim()
+    }
+    // 如果是驳回但没有提供有效的remark，返回错误
+    if (!passAudit && (!remark || !remark.trim())) {
+      return { success: false, message: '驳回文章必须填写原因' }
+    }
+    
+    const { data, error } = await useBaseFetch(url).post(reviewData).json()
+    
+    if (!error.value) {
+      return { success: true }
+    }
+    
+    const errorMessage = extractFriendlyErrorMessage(error.value, '审核文章')
     return { success: false, message: errorMessage }
   }
 
@@ -187,6 +223,7 @@ export function useArticleAPI() {
     getPublicArticles,
     getMyArticles,
     softDeleteArticle,
-    restoreArticle
+    restoreArticle,
+    reviewArticle
   }
 }
