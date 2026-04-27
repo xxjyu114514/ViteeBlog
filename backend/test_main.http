@@ -72,7 +72,7 @@ Authorization: Bearer {{user_token}}
 Content-Type: application/json
 
 {
-  "name": "Flask"
+  "name": "Vue"
 }
 
 > {% client.global.set("tag_id", response.body.id); %}
@@ -83,7 +83,7 @@ Content-Type: application/json
 # ==================== 文章管理核心流程 ====================
 
 # 7. 创建文章（草稿）- 使用 content 字段
-# ⚠️ 注意：必须先执行第52-60行"管理员创建分类"请求，否则 category_id 变量未定义
+# category_id 是可选字段，这里设置为 null 表示不指定分类
 POST http://127.0.0.1:8000/api/v1/article/autosave
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
@@ -92,7 +92,7 @@ Content-Type: application/json
   "title": "测试文章114",
   "summary": "这是测试摘要514",
   "content": "# 测试文章\n\n这是文章内容，使用 Markdown 格式。\n\n## 副标题\n\n一些测试内容...",
-  "category_id": {{category_id}},
+  "category_id": null,
   "tag_ids": []
 }
 
@@ -100,7 +100,7 @@ Content-Type: application/json
 
 ###
 
-# 8. 更新文章 - 修改内容和标题
+# 8. 更新文章 - 修改内容和标题（id 必须传入）
 POST http://127.0.0.1:8000/api/v1/article/autosave
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
@@ -110,13 +110,14 @@ Content-Type: application/json
   "title": "测试文章（已更新）",
   "summary": "更新后的摘要",
   "content": "# 更新后的文章\n\n这是更新后的内容。\n\n## 新章节\n\n添加了新的内容段落。",
-  "category_id": {{category_id}},
+  "category_id": null,
   "tag_ids": []
 }
 
+
 ###
 
-# 9. 获取文章详情（返回 Article 对象，不包含 content 字段）
+# 9. 获取文章详情（返回 Article 对象，包含所有字段包括审核信息）
 GET http://127.0.0.1:8000/api/v1/article/{{article_id}}
 
 ###
@@ -142,7 +143,7 @@ Authorization: Bearer {{admin_token}}
 # ==================== 普通用户提交流程 ====================
 
 # 13. 普通用户创建文章 - 使用 content 字段
-# ⚠️ 注意：必须先执行第52-60行"管理员创建分类"请求，否则 category_id 变量未定义
+# category_id 是可选字段，这里设置为 null 表示不指定分类
 POST http://127.0.0.1:8000/api/v1/article/autosave
 Authorization: Bearer {{user_token}}
 Content-Type: application/json
@@ -151,7 +152,7 @@ Content-Type: application/json
   "title": "普通用户的文章",
   "summary": "需要审核的文章",
   "content": "# 普通用户文章\n\n这是一篇需要审核的文章内容。\n\n## 正文\n\n详细内容在这里...",
-  "category_id": {{category_id}},
+  "category_id": null,
   "tag_ids": []
 }
 
@@ -181,6 +182,7 @@ Authorization: Bearer {{admin_token}}
 ###
 
 # 17. 管理员审核通过（注意：需要先执行第146-166行创建并提交文章）
+# 审核接口使用 POST 方法，传递 pass_audit 和 remark 参数
 POST http://127.0.0.1:8000/api/v1/article/admin/articles/{{user_article_id}}/review
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
@@ -199,7 +201,7 @@ Authorization: Bearer {{user_token}}
 
 ###
 
-# 然后管理员驳回
+# 然后管理员驳回（驳回时必须填写 remark）
 POST http://127.0.0.1:8000/api/v1/article/admin/articles/{{user_article_id}}/review
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
@@ -228,6 +230,18 @@ Authorization: Bearer {{admin_token}}
 
 # 21. 硬删除（彻底删除）
 DELETE http://127.0.0.1:8000/api/v1/article/{{article_id}}/hard
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 22. 管理员全站列表（默认不显示已删除文章）
+GET http://127.0.0.1:8000/api/v1/article/admin/all-articles?page=1&size=10&show_deleted=false
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 23. 管理员全站列表（显示已删除文章）
+GET http://127.0.0.1:8000/api/v1/article/admin/all-articles?page=1&size=10&show_deleted=true
 Authorization: Bearer {{admin_token}}
 
 ###

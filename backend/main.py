@@ -37,7 +37,7 @@ def create_app() -> FastAPI:
     app.include_router(api_meta.router, prefix="/api/v1/meta", tags=["分类与标签管理"])
 
     # 4. 挂载静态文件目录
-    app.mount("/static/storage", StaticFiles(directory="storage"), name="static_storage")
+    app.mount("/storage", StaticFiles(directory="storage"), name="storage")
 
     @app.get("/", tags=["Root"])
     async def root():

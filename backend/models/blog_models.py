@@ -56,7 +56,8 @@ class Article(Base):
     title: Mapped[str] = mapped_column(String(200), index=True)
     summary: Mapped[Optional[str]] = mapped_column(String(500))
     content_path: Mapped[str] = mapped_column(Text)
-
+    # 新增字段以支持方案 A
+    content_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     # 状态与审核字段
     status: Mapped[ArticleStatus] = mapped_column(Enum(ArticleStatus), default=ArticleStatus.DRAFT,
                                                   server_default="draft")

@@ -395,11 +395,11 @@ def downgrade():
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | id | int | ❌ | 新建时为 null，更新时必填 |
-| title | string | ✅ | 文章标题（1-200字符） |
+| title | string | ❌ | 文章标题（1-200字符），可选 |
 | summary | string | ❌ | 文章摘要（最多500字符） |
 | content | string | ❌ | 文章内容（Markdown格式），后端自动保存为文件 |
 | content_path | string | ❌ | 可选，如果提供则直接使用，否则根据 content 自动生成 |
-| category_id | int | ✅ | 分类ID |
+| category_id | int | ❌ | 分类ID，可选 |
 | tag_ids | int[] | ❌ | 标签ID数组 |
 
 **成功响应** (200):
@@ -681,19 +681,10 @@ def downgrade():
 | pass_audit | boolean | ✅ | `true`=通过，`false`=驳回 |
 | remark | string | 条件必填 | 驳回时必须填写理由（最多500字符） |
 
-**成功响应** (200) - 通过:
+**成功响应** (200):
 ```json
-{ "message": "审核通过，文章已发布" }
+{ "message": "审核操作成功" }
 ```
-
-**成功响应** (200) - 驳回:
-```json
-{ "message": "文章已驳回：内容需要进一步完善" }
-```
-
-**错误响应**:
-- `400`: 文章不存在或不在待审状态 / 驳回请填写理由
-- `403`: 权限不足
 
 **状态流转**:
 - 通过: `PENDING` → `PUBLISHED`（设置 `reviewed_at`, `reviewed_by`, `published_at`）
@@ -721,8 +712,7 @@ def downgrade():
 **成功响应** (200):
 ```json
 {
-  "url": "/static/storage/images/a1b2c3d4.jpg",
-  "filename": "example.jpg"
+  "url": "/storage/images/a1b2c3d4.jpg"
 }
 ```
 
@@ -733,7 +723,7 @@ def downgrade():
 **前端注意**:
 - ✅ 支持格式：jpg, jpeg, png, gif, webp 等
 - ✅ 文件大小限制：10MB
-- ✅ 返回的 URL 可直接用于 Markdown 插入：`![alt](http://127.0.0.1:8000/static/storage/images/a1b2c3d4.jpg)`
+- ✅ 返回的 URL 可直接用于 Markdown 插入：`![alt](http://127.0.0.1:8000/storage/images/a1b2c3d4.jpg)`
 
 ---
 
@@ -746,8 +736,13 @@ def downgrade():
 
 **成功响应** (200):
 ```json
-{ "message": "已删除" }
+{ "message": "已入回收站" }
 ```
+
+**错误响应**:
+- `400`: 文章已在回收站中
+- `403`: 无权删除此文章
+- `404`: 文章不存在
 
 ---
 
@@ -774,7 +769,7 @@ def downgrade():
 
 **成功响应** (200):
 ```json
-{ "message": "永久删除成功" }
+{ "message": "文章已永久删除" }
 ```
 
 **前端注意**:
@@ -1140,7 +1135,7 @@ const uploadResponse = await axios.post('/api/v1/article/upload-image', formData
 
 // 3. 获取图片 URL
 const imageUrl = uploadResponse.data.url
-// 例如: "/static/storage/images/a1b2c3d4.jpg"
+// 例如: "/storage/images/a1b2c3d4.jpg"
 
 // 4. 插入到 Markdown 编辑器
 const markdownImage = `![${file.name}](http://127.0.0.1:8000${imageUrl})`
@@ -1334,6 +1329,6 @@ axios.interceptors.response.use(
 
 ---
 
-**最后更新时间**: 2026-04-25  
-**文档版本**: v4.0  
+**最后更新时间**: 2026-04-19  
+**文档版本**: v4.1  
 **维护者**: Backend Team
