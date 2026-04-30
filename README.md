@@ -1316,6 +1316,464 @@ axios.interceptors.response.use(
 
 ---
 
+## 💬 评论管理模块
+
+### 权限说明
+- **公开接口**：查看文章评论列表
+- **登录用户**：发表评论、回复评论、删除自己的评论、举报评论
+- **管理员专属**：删除任意评论、查看待处理举报、处理举报、全站评论巡查
+
+### 核心功能概览
+- 💬 **发表评论**：支持一级评论和嵌套回复
+- 🗑️ **软删除**：作者或管理员可删除评论
+- 🚩 **举报系统**：用户可举报不当评论
+- 👮 **管理员审核**：查看和处理举报
+- 🔍 **全站巡查**：管理员可查看所有评论
+
+---
+
+### 1. 发表评论/回复
+
+**接口**: `POST /comments/articles/{article_id}/comments`  
+**权限**: 所有登录用户
+
+**请求体**:
+```json
+{
+  "content": "这是一篇很棒的文章！",
+  "parent_id": null
+}
+```
+
+**参数说明**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| content | string | ✅ | 评论内容（1-1000字符） |
+| parent_id | int | ❌ | 父评论ID，null表示一级评论 |
+
+**成功响应** (200):
+```json
+{
+  "id": 1,
+  "content": "这是一篇很棒的文章！",
+  "parent_id": null,
+  "user_id": 1,
+  "created_at": "2026-04-30T10:00:00",
+  "author": {
+    "id": 1,
+    "username": "BaoZi"
+  }
+}
+```
+
+**错误响应**:
+- `400`: 父评论不存在或不属于该文章
+- `404`: 文章不存在
+
+**前端注意**:
+- ✅ 后审模式：评论直接可见，无需审核
+- ✅ 回复评论时，`parent_id` 填写被回复评论的 ID
+- ✅ 返回的 `author` 对象包含评论者信息
+
+---
+
+### 2. 获取文章评论列表
+
+**接口**: `GET /comments/articles/{article_id}/comments`  
+**权限**: 公开
+
+**成功响应** (200):
+```json
+[
+  {
+    "id": 1,
+    "content": "沙发！前排支持作者！",
+    "parent_id": null,
+    "user_id": 1,
+    "created_at": "2026-04-30T10:00:00",
+    "author": {
+      "id": 1,
+      "username": "BaoZi"
+    }
+  },
+  {
+    "id": 2,
+    "content": "谢谢支持！",
+    "parent_id": 1,
+    "user_id": 2,
+    "created_at": "2026-04-30T10:05:00",
+    "author": {
+      "id": 2,
+      "username": "Admin"
+    }
+  }
+]
+```
+
+**前端注意**:
+- ✅ 仅返回已审核且未删除的评论（`is_audited=true AND deleted_at IS NULL`）
+- ✅ 按 `created_at` 升序排列（旧评论在前）
+- ✅ 扁平结构，前端需自行组装树形结构
+- ✅ 通过 `parent_id` 判断是否为回复
+
+---
+
+### 3. 删除评论
+
+**接口**: `DELETE /comments/{comment_id}`  
+**权限**: 评论作者或管理员
+
+**成功响应** (200):
+```json
+{
+  "message": "评论已删除"
+}
+```
+
+**错误响应**:
+- `403`: 无权删除他人评论
+- `404`: 评论不存在
+
+**前端注意**:
+- ✅ 普通用户只能删除自己的评论
+- ✅ 管理员可以删除任意评论
+- ✅ 采用软删除，数据仍保留在数据库中
+
+---
+
+### 4. 举报评论
+
+**接口**: `POST /comments/{comment_id}/report`  
+**权限**: 所有登录用户
+
+**请求体**:
+```json
+{
+  "reason": "评论内容包含不当言论"
+}
+```
+
+**参数说明**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| reason | string | ✅ | 举报原因（2-200字符） |
+
+**成功响应** (200):
+```json
+{
+  "message": "举报成功，感谢您的监督"
+}
+```
+
+**错误响应**:
+- `400`: 您已举报过该评论，请耐心等待处理
+- `404`: 被举报评论不存在
+
+**前端注意**:
+- ✅ 同一用户对同一评论只能举报一次（未处理前）
+- ✅ 举报后需等待管理员处理
+- ⚠️ 建议提供预设举报原因选项
+
+---
+
+### 5. 获取待处理举报列表（管理员）
+
+**接口**: `GET /comments/admin/reports`  
+**权限**: 仅管理员
+
+**成功响应** (200):
+```json
+[
+  {
+    "id": 1,
+    "reason": "评论内容包含不当言论",
+    "is_resolved": false,
+    "created_at": "2026-04-30T10:00:00",
+    "comment": {
+      "id": 5,
+      "content": "违规内容...",
+      "parent_id": null,
+      "user_id": 3,
+      "created_at": "2026-04-30T09:00:00",
+      "author": {
+        "id": 3,
+        "username": "testuser"
+      }
+    },
+    "reporter": {
+      "id": 1,
+      "username": "BaoZi"
+    }
+  }
+]
+```
+
+**前端注意**:
+- ✅ 仅返回未处理的举报（`is_resolved=false`）
+- ✅ 按 `created_at` 降序排列（最新举报在前）
+- ✅ 包含举报人、被举报评论的完整信息
+
+---
+
+### 6. 处理举报（管理员）
+
+**接口**: `PUT /comments/admin/reports/{report_id}/resolve`  
+**权限**: 仅管理员
+
+**功能**: 标记举报为已处理
+
+**成功响应** (200):
+```json
+{
+  "message": "举报已标记为已处理"
+}
+```
+
+**错误响应**:
+- `404`: 举报记录不存在
+
+**前端注意**:
+- ✅ 处理后举报状态变为 `is_resolved=true`
+- ✅ 处理后可选择是否删除被举报评论
+- ⚠️ 此接口仅标记举报状态，不自动删除评论
+
+---
+
+### 7. 全站评论巡查（管理员）
+
+**接口**: `GET /comments/admin/comments/all?page=1&size=20`  
+**权限**: 仅管理员
+
+**查询参数**:
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| page | int | 1 | 页码（从1开始） |
+| size | int | 20 | 每页数量 |
+
+**成功响应** (200):
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "content": "评论内容...",
+      "parent_id": null,
+      "user_id": 1,
+      "created_at": "2026-04-30T10:00:00",
+      "author": {
+        "id": 1,
+        "username": "BaoZi"
+      }
+    }
+  ],
+  "total": 100,
+  "page": 1,
+  "pages": 5
+}
+```
+
+**前端注意**:
+- ✅ 返回所有评论（包括已删除）
+- ✅ 按 `created_at` 降序排列
+- ✅ 统一分页格式 `{items, total, page, pages}`
+- ✅ 可用于内容审核和监控
+
+---
+
+## 💡 评论系统开发建议
+
+### 1. 前端评论树形结构组装
+
+```javascript
+// 将扁平评论列表转换为树形结构
+function buildCommentTree(comments) {
+  const commentMap = new Map()
+  const tree = []
+  
+  // 第一遍：建立映射
+  comments.forEach(comment => {
+    commentMap.set(comment.id, { ...comment, replies: [] })
+  })
+  
+  // 第二遍：构建树形结构
+  comments.forEach(comment => {
+    if (comment.parent_id === null) {
+      tree.push(commentMap.get(comment.id))
+    } else {
+      const parent = commentMap.get(comment.parent_id)
+      if (parent) {
+        parent.replies.push(commentMap.get(comment.id))
+      }
+    }
+  })
+  
+  return tree
+}
+
+// 使用示例
+const flatComments = await axios.get(`/api/v1/comments/articles/${articleId}/comments`)
+const commentTree = buildCommentTree(flatComments.data)
+```
+
+### 2. 评论组件示例（Vue3）
+
+```vue
+<template>
+  <div class="comments-section">
+    <!-- 发表评论 -->
+    <div class="comment-form">
+      <textarea v-model="newComment" placeholder="写下你的评论..."></textarea>
+      <button @click="submitComment" :disabled="loading">发表评论</button>
+    </div>
+    
+    <!-- 评论列表 -->
+    <div class="comment-list">
+      <CommentItem 
+        v-for="comment in commentTree" 
+        :key="comment.id"
+        :comment="comment"
+        @reply="handleReply"
+        @delete="handleDelete"
+        @report="handleReport"
+      />
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+
+const articleId = ref(1)
+const newComment = ref('')
+const commentTree = ref([])
+const loading = ref(false)
+
+// 加载评论
+const loadComments = async () => {
+  const response = await axios.get(
+    `/api/v1/comments/articles/${articleId.value}/comments`
+  )
+  commentTree.value = buildCommentTree(response.data)
+}
+
+// 发表评论
+const submitComment = async () => {
+  if (!newComment.value.trim()) return
+  
+  loading.value = true
+  try {
+    await axios.post(
+      `/api/v1/comments/articles/${articleId.value}/comments`,
+      {
+        content: newComment.value,
+        parent_id: null
+      },
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    )
+    newComment.value = ''
+    await loadComments() // 重新加载评论
+  } catch (error) {
+    console.error('评论失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadComments()
+})
+</script>
+```
+
+### 3. 举报功能实现
+
+```javascript
+// 举报评论
+const reportComment = async (commentId, reason) => {
+  try {
+    await axios.post(
+      `/api/v1/comments/${commentId}/report`,
+      { reason },
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    )
+    ElMessage.success('举报成功，感谢您的监督')
+  } catch (error) {
+    if (error.response?.status === 400) {
+      ElMessage.warning('您已举报过该评论')
+    } else {
+      ElMessage.error('举报失败')
+    }
+  }
+}
+
+// 显示举报对话框
+const showReportDialog = (commentId) => {
+  ElMessageBox.prompt('请输入举报原因', '举报评论', {
+    confirmButtonText: '提交',
+    cancelButtonText: '取消',
+    inputPattern: /.{2,200}/,
+    inputErrorMessage: '举报原因至少2个字符，最多200个字符'
+  }).then(({ value }) => {
+    reportComment(commentId, value)
+  })
+}
+```
+
+### 4. 管理员举报处理界面
+
+```javascript
+// 获取待处理举报
+const loadPendingReports = async () => {
+  const response = await axios.get('/api/v1/comments/admin/reports', {
+    headers: { 'Authorization': `Bearer ${adminToken}` }
+  })
+  pendingReports.value = response.data
+}
+
+// 处理举报
+const resolveReport = async (reportId) => {
+  await axios.put(
+    `/api/v1/comments/admin/reports/${reportId}/resolve`,
+    {},
+    {
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    }
+  )
+  ElMessage.success('举报已标记为已处理')
+  await loadPendingReports() // 刷新列表
+}
+
+// 同时删除被举报评论
+const resolveAndDelete = async (reportId, commentId) => {
+  // 先处理举报
+  await axios.put(
+    `/api/v1/comments/admin/reports/${reportId}/resolve`,
+    {},
+    {
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    }
+  )
+  
+  // 再删除评论
+  await axios.delete(
+    `/api/v1/comments/${commentId}`,
+    {
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    }
+  )
+  
+  ElMessage.success('举报已处理，评论已删除')
+  await loadPendingReports()
+}
+```
+
+---
+
 ## 🔄 后续更新计划
 
 - [ ] 文章搜索功能
@@ -1324,7 +1782,7 @@ axios.interceptors.response.use(
 - [x] 分类与标签管理（增删改查）
 - [x] 完整审核流程（提交/撤回/审核/驳回）
 - [x] 防灌水机制
-- [ ] 评论系统
+- [x] 评论系统（发表/回复/删除/举报）
 - [ ] 点赞与收藏
 
 ---
@@ -1332,3 +1790,4 @@ axios.interceptors.response.use(
 **最后更新时间**: 2026-04-19  
 **文档版本**: v4.1  
 **维护者**: Backend Team
+

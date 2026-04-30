@@ -41,3 +41,4 @@ def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None
 def generate_verification_code() -> str:
     """生成 6 位安全数字验证码"""
     return ''.join(secrets.choice(string.digits) for _ in range(6))
+
