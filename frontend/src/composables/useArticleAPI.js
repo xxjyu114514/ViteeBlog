@@ -1,6 +1,5 @@
 import { createFetch } from '@vueuse/core'
 import { useUserStore } from '@/stores/user'
-import { useRouter } from 'vue-router'
 import { getBaseUrl } from '@/config/apiConfig'
 import { buildUrl } from '@/utils/apiUtils'
 
@@ -22,10 +21,9 @@ const useBaseFetch = createFetch({
       // 全局处理：例如 401 自动登出
       if (ctx.response?.status === 401) {
         const userStore = useUserStore()
-        const router = useRouter()
         userStore.logout()
-        // 使用 Vue Router 跳转而不是 window.location
-        router.push('/login')
+        // 在composable中不能使用useRouter，改用window.location
+        window.location.href = '/login'
       }
       return ctx
     },
@@ -37,16 +35,6 @@ const useBaseFetch = createFetch({
 
 // 统一的错误信息提取函数
 const extractFriendlyErrorMessage = (error, context = '操作') => {
-  // 开发者调试信息（保留详细错误）
-  if (error) {
-    console.error(`🐛 ${context}错误详情:`, {
-      status: error.status,
-      message: error.message,
-      data: error.data,
-      url: error.url
-    })
-  }
-  
   // 用户友好提示
   if (!error) {
     return `${context}失败，请稍后重试`
@@ -119,10 +107,8 @@ export function useArticleAPI() {
       }
       
       const errorMessage = extractFriendlyErrorMessage(error.value, '发布文章')
-      console.error('🐛 发布文章详细错误:', error.value)
       return { success: false, message: errorMessage }
     } catch (err) {
-      console.error('🔥 发布文章异常:', err)
       return { success: false, message: '发布失败：网络错误或服务器异常' }
     }
   }
@@ -216,6 +202,41 @@ export function useArticleAPI() {
     return { success: false, message: errorMessage }
   }
 
+  // 获取全站文章列表（管理员专用）
+  const getAdminAllArticles = async (page = 1, size = 20, showDeleted = false) => {
+    const queryParams = {
+      page: page,
+      size: size,
+      show_deleted: showDeleted
+    }
+    
+    const url = buildUrl('/article/admin/all-articles', {}, queryParams)
+    const { data, error } = await useBaseFetch(url).get().json()
+    
+    if (!error.value) {
+      // 安全检查：确保data.value存在
+      const responseData = data.value || { items: [], total: 0, page: page, pages: 0 }
+      return { success: true, data: responseData }
+    }
+    
+    const errorMessage = extractFriendlyErrorMessage(error.value, '获取全站文章')
+    return { success: false, message: errorMessage }
+  }
+
+  // 撤回发布（从待审核状态撤回到草稿）
+  const withdrawArticle = async (articleId) => {
+    const url = buildUrl('/article/:id/withdraw', { id: articleId })
+    const { data, error } = await useBaseFetch(url).post({}).json()
+    
+    if (!error.value) {
+      // 撤回操作通常只返回message，不需要data
+      return { success: true }
+    }
+    
+    const errorMessage = extractFriendlyErrorMessage(error.value, '撤回发布')
+    return { success: false, message: errorMessage }
+  }
+
   return {
     autoSaveArticle,
     getArticleDetail,
@@ -224,6 +245,8 @@ export function useArticleAPI() {
     getMyArticles,
     softDeleteArticle,
     restoreArticle,
-    reviewArticle
+    reviewArticle,
+    getAdminAllArticles,
+    withdrawArticle
   }
 }

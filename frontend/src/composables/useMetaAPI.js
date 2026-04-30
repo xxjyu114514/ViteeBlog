@@ -1,6 +1,5 @@
 import { createFetch } from '@vueuse/core'
 import { useUserStore } from '@/stores/user'
-import { useRouter } from 'vue-router'
 import { getBaseUrl } from '@/config/apiConfig'
 import { buildUrl } from '@/utils/apiUtils'
 
@@ -36,6 +35,16 @@ const useBaseFetch = createFetch({
 
 // 统一的错误信息提取函数
 const extractFriendlyErrorMessage = (error, context = '操作') => {
+  // 开发者调试信息（保留详细错误）
+  if (error) {
+    console.error(`🐛 ${context}错误详情:`, {
+      status: error.status,
+      message: error.message,
+      data: error.data,
+      url: error.url
+    })
+  }
+  
   // 用户友好提示
   if (!error) {
     return `${context}失败，请稍后重试`
@@ -51,12 +60,9 @@ const extractFriendlyErrorMessage = (error, context = '操作') => {
     case 400:
       return '输入信息有误，请检查后重试'
     case 401:
-      return '身份验证失败，请检查用户名和密码'
+      return '身份验证失败，请重新登录'
     case 403:
-      if (error.data?.detail && error.data.detail.includes('锁定')) {
-        return error.data.detail // 保留具体的锁定时间信息
-      }
-      return '操作被拒绝，请稍后重试'
+      return '权限不足'
     case 404:
       return '请求的资源不存在'
     case 429:
@@ -72,60 +78,36 @@ const extractFriendlyErrorMessage = (error, context = '操作') => {
   }
 }
 
-export function useAuthAPI() {
+export function useMetaAPI() {
   const userStore = useUserStore()
-  const router = useRouter()
 
-  // 登录逻辑
-  const login = async (username, password) => {
-    const { data, error } = await useBaseFetch('/auth/login').post({
-      username,
-      password,
-    }).json()
-
-    if (!error.value && data.value) {
-      userStore.setAuth(data.value.access_token, data.value.user)
-      return { success: true }
+  // 获取分类列表
+  const getCategories = async () => {
+    const { data, error } = await useBaseFetch('/meta/categories').get().json()
+    
+    if (!error.value) {
+      // 安全检查：确保data.value存在，元数据接口通常返回数组
+      const categoriesData = Array.isArray(data.value) ? data.value : []
+      return { success: true, data: categoriesData }
     }
     
-    // 使用友好的错误信息
-    const errorMessage = extractFriendlyErrorMessage(error.value, '登录')
+    const errorMessage = extractFriendlyErrorMessage(error.value, '获取分类')
     return { success: false, message: errorMessage }
   }
 
-  // 注册逻辑
-  const register = async (userData) => {
-    const { data, error } = await useBaseFetch('/auth/register').post(userData).json()
+  // 获取标签列表
+  const getTags = async () => {
+    const { data, error } = await useBaseFetch('/meta/tags').get().json()
     
     if (!error.value) {
-      return { data, error }
+      // 安全检查：确保data.value存在，元数据接口通常返回数组
+      const tagsData = Array.isArray(data.value) ? data.value : []
+      return { success: true, data: tagsData }
     }
     
-    // 修改错误对象，添加友好的错误信息
-    error.value = {
-      ...error.value,
-      friendlyMessage: extractFriendlyErrorMessage(error.value, '注册')
-    }
-    
-    return { data, error }
+    const errorMessage = extractFriendlyErrorMessage(error.value, '获取标签')
+    return { success: false, message: errorMessage }
   }
 
-  // 发送注册验证码
-  const sendRegisterCode = async (email) => {
-    const { data, error } = await useBaseFetch('/auth/send-register-code').post({ email }).json()
-    
-    if (!error.value) {
-      return { data, error }
-    }
-    
-    // 修改错误对象，添加友好的错误信息
-    error.value = {
-      ...error.value,
-      friendlyMessage: extractFriendlyErrorMessage(error.value, '发送验证码')
-    }
-    
-    return { data, error }
-  }
-
-  return { login, register, sendRegisterCode }
+  return { getCategories, getTags }
 }

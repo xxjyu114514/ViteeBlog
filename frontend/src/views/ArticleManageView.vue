@@ -187,6 +187,7 @@ const router = useRouter()
 const userStore = useUserStore()
 const {
   getMyArticles,
+  getAdminAllArticles,
   publishArticle,
   softDeleteArticle,
   restoreArticle,
@@ -249,30 +250,6 @@ const canPublish = (article) => {
   return article.status === 'draft' && (userStore.isAdmin || article.user_id === userStore.userInfo?.id)
 }
 
-// 获取全站文章（管理员专用）
-const getAdminAllArticles = async (page = 1, size = 20) => {
-  try {
-    const url = `http://127.0.0.1:8000/api/v1/article/admin/all-articles?page=${page}&size=${size}`
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${userStore.token}`
-      }
-    })
-    
-    if (response.ok) {
-      const data = await response.json()
-      return { success: true, data }
-    } else {
-      const errorData = await response.json().catch(() => ({}))
-      const errorMessage = errorData.detail || '获取全站文章失败'
-      return { success: false, message: errorMessage }
-    }
-  } catch (error) {
-    console.error('获取全站文章异常:', error)
-    return { success: false, message: '网络错误，请稍后重试' }
-  }
-}
-
 // 获取文章列表
 const fetchArticles = async (page = 1) => {
   loading.value = true
@@ -281,7 +258,7 @@ const fetchArticles = async (page = 1) => {
     let result
     if (userStore.isAdmin && viewMode.value === 'all') {
       // 管理员查看全站文章
-      result = await getAdminAllArticles(page, pageSize.value)
+      result = await getAdminAllArticles(page, pageSize.value, false)
     } else {
       // 查看自己的文章（也支持分页）
       result = await getMyArticles(page, pageSize.value)

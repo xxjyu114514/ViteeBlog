@@ -86,6 +86,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useArticleAPI } from '@/composables/useArticleAPI'
+import { getBaseUrl } from '@/config/apiConfig'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 
@@ -154,29 +155,37 @@ const renderedTitle = computed(() => {
 // 从文件路径加载Markdown内容
 const loadArticleContent = async (contentPath) => {
   try {
-    // contentPath 格式: "storage/articles/xxx.md"
-    // 后端静态文件服务: /static/storage -> storage/
-    // 所以URL应该是: /static/storage/articles/xxx.md
+    const backendBaseUrl = getBaseUrl().replace('/api/v1', '')
+    
+    // 尝试标准化路径（统一使用正斜杠）
     let normalizedPath = contentPath.replace(/\\/g, '/')
     if (!normalizedPath.startsWith('/')) {
       normalizedPath = '/' + normalizedPath
     }
-    // 将 "/storage/" 替换为 "/static/storage/"
-    const urlPath = normalizedPath.replace(/^\/storage\//, '/static/storage/')
-    const url = `http://127.0.0.1:8000${urlPath}`
-    console.log('加载文章内容URL:', url)
+    const normalizedUrl = `${backendBaseUrl}${normalizedPath}`
     
-    const response = await fetch(url)
+    // 首先尝试标准化路径
+    let response = await fetch(normalizedUrl)
     if (response.ok) {
       const content = await response.text()
       articleContent.value = content
-    } else {
-      console.error('加载文章内容失败:', response.status, response.statusText)
-      articleContent.value = '# 文章内容加载失败'
+      return true
     }
+    
+    // 如果标准化路径失败，尝试原始路径（以防特殊情况）
+    const originalUrl = `${backendBaseUrl}/${contentPath.replace(/^\/+/, '')}`
+    response = await fetch(originalUrl)
+    if (response.ok) {
+      const content = await response.text()
+      articleContent.value = content
+      return true
+    }
+    
+    console.error('加载文章内容失败: 两种路径格式都尝试了但文件不存在')
+    return false
   } catch (err) {
     console.error('加载文章内容异常:', err)
-    articleContent.value = '# 文章内容加载失败'
+    return false
   }
 }
 
@@ -192,7 +201,12 @@ const loadArticle = async () => {
     article.value = result.data
     // 从 content_path 加载实际内容
     if (result.data.content_path) {
-      await loadArticleContent(result.data.content_path)
+      const loadedFromFile = await loadArticleContent(result.data.content_path)
+      if (!loadedFromFile) {
+        // 文件加载失败，回退到数据库content字段
+        articleContent.value = result.data.content || ''
+        console.log('⚠️ 文件加载失败，使用数据库content字段')
+      }
     } else {
       articleContent.value = result.data.content || ''
     }
