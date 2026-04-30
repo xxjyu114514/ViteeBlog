@@ -98,15 +98,40 @@ class Tag(Base):
 
 
 class Comment(Base):
-    """评论表"""
-    content: Mapped[str] = mapped_column(Text)
-    nickname: Mapped[str] = mapped_column(String(50))
-    email: Mapped[str] = mapped_column(String(100))
-    is_audited: Mapped[bool] = mapped_column(Boolean, server_default="0", index=True)
+    """评论表：支持多级嵌套与后审模式"""
+    content: Mapped[str] = mapped_column(Text, comment="评论内容")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    # 修改点 1：删除 nickname/email，关联 User
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), index=True)
+    author: Mapped["User"] = relationship(foreign_keys=[user_id])
+
+    # 修改点 2：审核状态默认设为 True (后审模式)
+    is_audited: Mapped[bool] = mapped_column(Boolean, server_default="1", index=True)
+
     article_id: Mapped[int] = mapped_column(ForeignKey("article.id", ondelete="CASCADE"), index=True)
     parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey("comment.id", ondelete="CASCADE"))
+
+    # 关系定义
     article: Mapped["Article"] = relationship(back_populates="comments")
     replies: Mapped[List["Comment"]] = relationship("Comment", backref="parent", remote_side="Comment.id")
+
+
+class CommentReport(Base):
+    """评论举报表"""
+    __tablename__ = "comment_report"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    comment_id: Mapped[int] = mapped_column(ForeignKey("comment.id", ondelete="CASCADE"), index=True)
+    reporter_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), index=True)
+    reason: Mapped[str] = mapped_column(String(200), comment="举报原因")
+    is_resolved: Mapped[bool] = mapped_column(Boolean, server_default="0", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    # 关系映射
+    comment: Mapped["Comment"] = relationship()
+    reporter: Mapped["User"] = relationship()
 
 
 class Message(Base):

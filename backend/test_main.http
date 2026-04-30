@@ -247,4 +247,152 @@ Authorization: Bearer {{admin_token}}
 ###
 
 
+# ==================== 评论管理核心流程 ====================
+
+# 24. 普通用户发表评论
+POST http://127.0.0.1:8000/api/v1/comments/articles/{{article_id}}/comments
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "content": "这是一篇很棒的文章！学到了很多知识。",
+  "parent_id": null
+}
+
+> {% client.global.set("comment_id", response.body.id); %}
+
+###
+
+# 25. 回复评论（二级评论）
+POST http://127.0.0.1:8000/api/v1/comments/articles/{{article_id}}/comments
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "content": "谢谢你的支持！很高兴能帮到你。",
+  "parent_id": {{comment_id}}
+}
+
+> {% client.global.set("reply_id", response.body.id); %}
+
+###
+
+# 26. 获取文章的所有评论
+GET http://127.0.0.1:8000/api/v1/comments/articles/{{article_id}}/comments
+
+###
+
+# 27. 用户删除自己的评论
+DELETE http://127.0.0.1:8000/api/v1/comments/{{comment_id}}
+Authorization: Bearer {{user_token}}
+
+###
+
+# 28. 管理员删除任意评论
+DELETE http://127.0.0.1:8000/api/v1/comments/{{reply_id}}
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 29. 举报评论
+POST http://127.0.0.1:8000/api/v1/comments/{{comment_id}}/report
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "reason": "评论内容包含不当言论"
+}
+
+> {% client.global.set("report_id", response.body.id); %}
+
+###
+
+# 30. 管理员查看待处理举报列表
+GET http://127.0.0.1:8000/api/v1/comments/admin/reports
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 31. 管理员处理举报（标记为已解决）
+PUT http://127.0.0.1:8000/api/v1/comments/admin/reports/{{report_id}}/resolve
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 32. 管理员全站评论巡查（分页）
+GET http://127.0.0.1:8000/api/v1/comments/admin/comments/all?page=1&size=20
+Authorization: Bearer {{admin_token}}
+
+###
+
+
+# ==================== 完整业务流程测试 ====================
+
+# 33. 创建新文章用于评论测试
+POST http://127.0.0.1:8000/api/v1/article/autosave
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "title": "评论功能测试文章",
+  "summary": "用于测试评论系统的文章",
+  "content": "# 评论功能测试\n\n这篇文章专门用来测试评论功能。\n\n## 测试内容\n\n1. 发表评论\n2. 回复评论\n3. 删除评论\n4. 举报评论",
+  "category_id": null,
+  "tag_ids": []
+}
+
+> {% client.global.set("comment_test_article_id", response.body.id); %}
+
+###
+
+# 34. 发布文章（管理员免审直发）
+PUT http://127.0.0.1:8000/api/v1/article/{{comment_test_article_id}}/publish
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 35. 多用户连续评论测试 - 用户A第一条评论
+POST http://127.0.0.1:8000/api/v1/comments/articles/{{comment_test_article_id}}/comments
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "content": "沙发！前排支持作者！",
+  "parent_id": null
+}
+
+###
+
+# 36. 多用户连续评论测试 - 管理员第二条
+POST http://127.0.0.1:8000/api/v1/comments/articles/{{comment_test_article_id}}/comments
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "content": "感谢大家的支持，有问题欢迎留言讨论。",
+  "parent_id": null
+}
+
+> {% client.global.set("admin_comment_id", response.body.id); %}
+
+###
+
+# 37. 嵌套回复测试 - 回复管理员的评论
+POST http://127.0.0.1:8000/api/v1/comments/articles/{{comment_test_article_id}}/comments
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "content": "管理员说得对，这个博客真的很棒！",
+  "parent_id": {{admin_comment_id}}
+}
+
+###
+
+# 38. 再次查看评论列表（应该包含所有评论）
+GET http://127.0.0.1:8000/api/v1/comments/articles/{{comment_test_article_id}}/comments
+
+###
+
+
 
