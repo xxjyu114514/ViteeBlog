@@ -5,6 +5,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import async_session_maker
+from core.config import settings
 from models.blog_models import User, UserRole
 
 # 1. 修改 oauth2_scheme，允许手动处理错误
@@ -25,8 +26,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
         raise HTTPException(status_code=401, detail="请先登录")
 
     try:
-        # 注意：这里的密钥应与 core.security 中的 SECRET_KEY 保持一致
-        payload = jwt.decode(token, "whdagm1966", algorithms=["HS256"])
+        # 使用配置文件中的 SECRET_KEY 进行解码
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id is None:
             raise HTTPException(status_code=401, detail="无效的认证凭据")
@@ -61,7 +62,7 @@ async def get_current_user_optional(
         return None
 
     try:
-        payload = jwt.decode(token, "whdagm1966", algorithms=["HS256"])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id is None:
             return None
@@ -71,3 +72,4 @@ async def get_current_user_optional(
     except Exception:
         # 解析失败不抛出异常，直接返回 None
         return None
+    ##
