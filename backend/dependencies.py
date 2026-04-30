@@ -72,3 +72,4 @@ async def get_current_user_optional(
     except Exception:
         # 解析失败不抛出异常，直接返回 None
         return None
+    ##
