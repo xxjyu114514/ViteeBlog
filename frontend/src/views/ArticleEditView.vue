@@ -25,9 +25,10 @@
           <button 
             v-if="editingArticle && editingArticle.status === 'pending'"
             class="btn-secondary"
-            disabled
+            @click="handleWithdraw"
+            :disabled="withdrawing"
           >
-            待审核中（无法编辑）
+            {{ withdrawing ? '撤回中...' : '撤回发布' }}
           </button>
         </div>
       </div>
@@ -40,7 +41,7 @@
       <div v-if="isPending" class="pending-notice">
         <div class="notice-content">
           <span class="notice-icon">⚠️</span>
-          <span>文章正在审核中，无法进行编辑。如需修改，请先撤回为草稿。</span>
+          <span>文章正在审核中，如需修改，请先撤回为草稿。</span>
         </div>
       </div>
 
@@ -147,20 +148,21 @@ import Vditor from 'vditor'
 import 'vditor/dist/index.css'
 import { useUserStore } from '@/stores/user'
 import { buildUrl } from '@/utils/apiUtils'
+import { getBaseUrl } from '@/config/apiConfig'
 import { useArticleAPI } from '@/composables/useArticleAPI'
+import { useMetaAPI } from '@/composables/useMetaAPI'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
-const { autoSaveArticle, publishArticle, getArticleDetail } = useArticleAPI()
-
-// 后端基础URL（从环境变量或配置中获取）
-const BACKEND_URL = process.env.NODE_ENV === 'production' ? '' : 'http://127.0.0.1:8000'
+const { autoSaveArticle, publishArticle, getArticleDetail, withdrawArticle } = useArticleAPI()
+const { getCategories, getTags } = useMetaAPI()
 
 // 响应式状态
 const currentArticle = ref({ title: '', summary: '', content: '', category_id: null, tag_ids: [] })
 const saving = ref(false)
 const publishing = ref(false)
+const withdrawing = ref(false)
 const statusMessage = ref('')
 const isError = ref(false)
 const editingArticle = ref(null)
@@ -216,14 +218,11 @@ const removeTag = (tagId) => {
 const fetchCategories = async () => {
   loadingCategories.value = true
   try {
-    const url = buildUrl('/meta/categories', {}, {}, 'META')
-    const response = await fetch(url)
-    
-    if (response.ok) {
-      const data = await response.json()
-      categories.value = data || []
+    const result = await getCategories()
+    if (result.success) {
+      categories.value = result.data || []
     } else {
-      console.error('获取分类列表失败:', await response.json().catch(() => ({})))
+      console.error('获取分类列表失败:', result.message)
     }
   } catch (error) {
     console.error('获取分类列表异常:', error)
@@ -235,14 +234,11 @@ const fetchCategories = async () => {
 const fetchTags = async () => {
   loadingTags.value = true
   try {
-    const url = buildUrl('/meta/tags', {}, {}, 'META')
-    const response = await fetch(url)
-    
-    if (response.ok) {
-      const data = await response.json()
-      tags.value = data || []
+    const result = await getTags()
+    if (result.success) {
+      tags.value = result.data || []
     } else {
-      console.error('获取标签列表失败:', await response.json().catch(() => ({})))
+      console.error('获取标签列表失败:', result.message)
     }
   } catch (error) {
     console.error('获取标签列表异常:', error)
@@ -258,6 +254,8 @@ const initVditor = (initialContent) => {
     vditorInstance.destroy()
   }
 
+  const BACKEND_URL = getBaseUrl()
+
   vditorInstance = new Vditor('vditor-editor', {
     mode: 'ir', // 所见即所得模式
     height: 600,
@@ -268,7 +266,7 @@ const initVditor = (initialContent) => {
     // 注意：如果你的网络环境无法访问官方 CDN，可以重新开启并配置本地 cdn: '/vditor'
     
     upload: {
-      url: `${BACKEND_URL}/api/v1/article/upload-image`,
+      url: buildUrl('/article/upload-image'),
       fieldName: 'file',
       max: 10 * 1024 * 1024,
       // 使用setHeaders函数动态获取token，每次上传前都会调用
@@ -283,13 +281,17 @@ const initVditor = (initialContent) => {
         try {
           const res = JSON.parse(responseText)
           const filename = res.filename || files[0].name
+          // 修复：静态资源应该使用后端基础URL，而不是前端origin
+          // 后端返回的 res.url 是 "/storage/images/xxx.jpg" 格式
+          // 获取后端基础URL（不含/api/v1前缀）
+          const backendBaseUrl = getBaseUrl().replace('/api/v1', '')
           return JSON.stringify({
             code: 0,
             msg: "",
             data: {
               errFiles: [],
               succMap: {
-                [filename]: `${BACKEND_URL}${res.url}`
+                [filename]: `${backendBaseUrl}${res.url}`
               }
             }
           })
@@ -347,15 +349,36 @@ const loadArticleData = async () => {
     let contentToLoad = ''
     if (info.content_path) {
       try {
-        const contentResponse = await fetch(`http://127.0.0.1:8000${info.content_path}`)
+        const backendBaseUrl = getBaseUrl().replace('/api/v1', '')
+        
+        // 尝试标准化路径
+        let normalizedPath = info.content_path.replace(/\\/g, '/')
+        if (!normalizedPath.startsWith('/')) {
+          normalizedPath = '/' + normalizedPath
+        }
+        const normalizedUrl = `${backendBaseUrl}${normalizedPath}`
+        
+        let contentResponse = await fetch(normalizedUrl)
         if (contentResponse.ok) {
           contentToLoad = await contentResponse.text()
+        } else {
+          // 尝试原始路径
+          const originalUrl = `${backendBaseUrl}/${info.content_path.replace(/^\/+/, '')}`
+          contentResponse = await fetch(originalUrl)
+          if (contentResponse.ok) {
+            contentToLoad = await contentResponse.text()
+          } else {
+            console.log('⚠️ 编辑页文件加载失败，两种路径都尝试了')
+            // 由于数据库没有content字段，只能显示空内容
+            contentToLoad = ''
+          }
         }
       } catch (err) {
         console.error('加载待审核文章内容失败:', err)
+        contentToLoad = ''
       }
     } else {
-      contentToLoad = result.data.content || ''
+      contentToLoad = '' // 数据库没有content字段
     }
     
     currentArticle.value = {
@@ -424,6 +447,23 @@ const handlePublish = async () => {
     showStatus(result.message, true)
   }
   publishing.value = false
+}
+
+// 撤回发布
+const handleWithdraw = async () => {
+  if (!editingArticle.value || withdrawing.value || editingArticle.value.status !== 'pending') return
+  
+  if (!confirm('确定要撤回这篇文章吗？撤回后将回到草稿状态。')) return
+  
+  withdrawing.value = true
+  const result = await withdrawArticle(editingArticle.value.id)
+  if (result.success) {
+    showStatus('已撤回至草稿状态')
+    editingArticle.value.status = 'draft'
+  } else {
+    showStatus(result.message, true)
+  }
+  withdrawing.value = false
 }
 
 const goBack = () => router.push('/personal')
