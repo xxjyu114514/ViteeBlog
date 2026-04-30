@@ -152,3 +152,4 @@ class VerificationCode(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=text("CURRENT_TIMESTAMP"), onupdate=text("CURRENT_TIMESTAMP"))
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
