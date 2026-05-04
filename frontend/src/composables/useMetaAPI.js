@@ -95,6 +95,42 @@ export function useMetaAPI() {
     return { success: false, message: errorMessage }
   }
 
+  // 创建分类
+  const createCategory = async (name) => {
+    const { data, error } = await useBaseFetch('/meta/categories').post({ name }).json()
+    
+    if (!error.value) {
+      return { success: true, data: data.value }
+    }
+    
+    const errorMessage = extractFriendlyErrorMessage(error.value, '创建分类')
+    return { success: false, message: errorMessage }
+  }
+
+  // 更新分类
+  const updateCategory = async (categoryId, name) => {
+    const { data, error } = await useBaseFetch(`/meta/categories/${categoryId}`).put({ name }).json()
+    
+    if (!error.value) {
+      return { success: true, data: data.value }
+    }
+    
+    const errorMessage = extractFriendlyErrorMessage(error.value, '更新分类')
+    return { success: false, message: errorMessage }
+  }
+
+  // 删除分类
+  const deleteCategory = async (categoryId) => {
+    const { data, error } = await useBaseFetch(`/meta/categories/${categoryId}`).delete().json()
+    
+    if (!error.value) {
+      return { success: true }
+    }
+    
+    const errorMessage = extractFriendlyErrorMessage(error.value, '删除分类')
+    return { success: false, message: errorMessage }
+  }
+
   // 获取标签列表
   const getTags = async () => {
     const { data, error } = await useBaseFetch('/meta/tags').get().json()
@@ -109,5 +145,50 @@ export function useMetaAPI() {
     return { success: false, message: errorMessage }
   }
 
-  return { getCategories, getTags }
+  // 创建标签
+  const createTag = async (name) => {
+    const { data, error } = await useBaseFetch('/meta/tags').post({ name }).json()
+    
+    if (!error.value) {
+      return { success: true, data: data.value }
+    }
+    
+    const errorMessage = extractFriendlyErrorMessage(error.value, '创建标签')
+    return { success: false, message: errorMessage }
+  }
+
+  // 更新标签
+  const updateTag = async (tagId, name) => {
+    const { data, error } = await useBaseFetch(`/meta/tags/${tagId}`).put({ name }).json()
+    
+    if (!error.value) {
+      return { success: true, data: data.value }
+    }
+    
+    const errorMessage = extractFriendlyErrorMessage(error.value, '更新标签')
+    return { success: false, message: errorMessage }
+  }
+
+  // 删除标签
+  const deleteTag = async (tagId) => {
+    const { data, error } = await useBaseFetch(`/meta/tags/${tagId}`).delete().json()
+    
+    if (!error.value) {
+      return { success: true }
+    }
+    
+    const errorMessage = extractFriendlyErrorMessage(error.value, '删除标签')
+    return { success: false, message: errorMessage }
+  }
+
+  return { 
+    getCategories, 
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    getTags,
+    createTag,
+    updateTag,
+    deleteTag
+  }
 }

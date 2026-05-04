@@ -117,6 +117,42 @@
             <button class="modal-close" @click="closeAuditDialog">&times;</button>
           </div>
           <div class="modal-body">
+            <!-- 文章预览区域 -->
+            <div class="article-preview-section mb-20">
+              <h4 class="preview-title">文章预览</h4>
+              
+              <!-- 加载状态 -->
+              <div v-if="auditDialog.loadingArticle" class="preview-loading">
+                <div class="loading-spinner"></div>
+                <p>加载文章内容中...</p>
+              </div>
+              
+              <!-- 预览内容 -->
+              <div v-else-if="auditDialog.articleData" class="preview-content">
+                <div class="preview-header">
+                  <h3 class="preview-article-title">{{ auditDialog.articleData.title || '[无标题]' }}</h3>
+                  <div class="preview-meta">
+                    <span v-if="auditDialog.articleData.author">作者：{{ auditDialog.articleData.author.username }}</span>
+                    <span>提交时间：{{ formatDate(auditDialog.articleData.submitted_at || auditDialog.articleData.created_at) }}</span>
+                    <span v-if="auditDialog.articleData.category">分类：{{ auditDialog.articleData.category.name }}</span>
+                  </div>
+                </div>
+                
+                <div class="preview-summary" v-if="auditDialog.articleData.summary">
+                  <strong>摘要：</strong>{{ auditDialog.articleData.summary }}
+                </div>
+                
+                <div class="preview-content-area">
+                  <h5>文章内容：</h5>
+                  <div class="markdown-content" v-html="renderMarkdown(auditDialog.articleData.content)"></div>
+                </div>
+              </div>
+              
+              <div v-else class="preview-error">
+                <p>无法加载文章预览</p>
+              </div>
+            </div>
+            
             <div class="form-group">
               <label class="form-label">审核结果:</label>
               <div class="radio-group">
@@ -182,6 +218,27 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useArticleAPI } from '@/composables/useArticleAPI'
+import { getBaseUrl } from '@/config/apiConfig'
+import MarkdownIt from 'markdown-it'
+import hljs from 'highlight.js'
+
+// 初始化Markdown解析器（用于预览）
+const mdPreview = new MarkdownIt({
+  html: true,
+  linkify: true,
+  highlight: function (str, lang) {
+    if (lang && hljs.getLanguage(lang)) {
+      return hljs.highlight(str, { language: lang }).value
+    }
+    return ''
+  }
+})
+
+// Markdown渲染函数
+const renderMarkdown = (content) => {
+  if (!content) return ''
+  return mdPreview.render(content)
+}
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -205,7 +262,9 @@ const auditDialog = ref({
   show: false,
   articleId: null,
   passAudit: true,
-  remark: ''
+  remark: '',
+  articleData: null, // 新增：存储文章详情数据
+  loadingArticle: false // 新增：加载状态
 })
 const viewMode = ref('all') // 'mine' | 'all'
 const currentPage = ref(1)
@@ -287,6 +346,17 @@ const handleCreateNew = () => {
 
 // 处理编辑文章
 const handleEdit = (articleId) => {
+  // 检查是否为无效的ID
+  const isInvalidId = !articleId || 
+    articleId === 'undefined' || 
+    articleId === 'null' || 
+    articleId === '';
+    
+  if (isInvalidId) {
+    console.error('编辑文章失败：缺少有效的文章ID', articleId)
+    alert('无法编辑此文章，请刷新页面重试')
+    return
+  }
   router.push(`/edit-article/${articleId}`)
 }
 
@@ -329,12 +399,67 @@ const handleRestore = async (articleId) => {
 }
 
 // 显示审核对话框
-const showAuditDialog = (articleId) => {
+const showAuditDialog = async (articleId) => {
   auditDialog.value = {
-    show: true,
-    articleId: articleId,
+    show: false,
+    articleId: null,
     passAudit: true,
-    remark: ''
+    remark: '',
+    articleData: null,
+    loadingArticle: true
+  }
+  
+  // 先加载文章详情
+  const { getArticleDetail } = useArticleAPI()
+  const result = await getArticleDetail(articleId)
+  
+  if (result.success) {
+    // 加载文章内容文件
+    let contentToLoad = ''
+    const info = result.data
+    if (info.content_path) {
+      try {
+        const backendBaseUrl = getBaseUrl().replace('/api/v1', '')
+        let normalizedPath = info.content_path.replace(/\\/g, '/')
+        if (!normalizedPath.startsWith('/')) {
+          normalizedPath = '/' + normalizedPath
+        }
+        const normalizedUrl = `${backendBaseUrl}${normalizedPath}`
+        
+        let contentResponse = await fetch(normalizedUrl)
+        if (contentResponse.ok) {
+          contentToLoad = await contentResponse.text()
+        } else {
+          // 尝试原始路径
+          const originalUrl = `${backendBaseUrl}/${info.content_path.replace(/^\/+/, '')}`
+          contentResponse = await fetch(originalUrl)
+          if (contentResponse.ok) {
+            contentToLoad = await contentResponse.text()
+          }
+        }
+      } catch (err) {
+        console.error('加载文章内容失败:', err)
+        contentToLoad = '[内容加载失败]'
+      }
+    }
+    
+    // 合并内容到文章数据
+    const articleWithContent = {
+      ...info,
+      content: contentToLoad || info.summary || '[无内容]'
+    }
+    
+    auditDialog.value = {
+      show: true,
+      articleId: articleId,
+      passAudit: true,
+      remark: '',
+      articleData: articleWithContent,
+      loadingArticle: false
+    }
+  } else {
+    alert('加载文章详情失败：' + result.message)
+    auditDialog.value.loadingArticle = false
   }
 }
 
