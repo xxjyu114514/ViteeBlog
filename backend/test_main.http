@@ -82,6 +82,20 @@ Content-Type: application/json
 
 # ==================== 文章管理核心流程 ====================
 
+# 6.5. 图片上传测试（注意：有频率限制，每小时最多15次）
+POST http://127.0.0.1:8000/api/v1/article/upload-image
+Authorization: Bearer {{admin_token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="test.jpg"
+Content-Type: image/jpeg
+
+< ./test_image.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
 # 7. 创建文章（草稿）- 使用 content 字段
 # category_id 是可选字段，这里设置为 null 表示不指定分类
 POST http://127.0.0.1:8000/api/v1/article/autosave
@@ -122,13 +136,15 @@ GET http://127.0.0.1:8000/api/v1/article/{{article_id}}
 
 ###
 
-# 10. 我的文章列表（新版分页接口）
+# 10. 我的文章列表（新版分页接口，返回包含 size 字段）
+# 返回格式: { "items": [...], "total": 10, "page": 1, "size": 10, "pages": 1 }
 GET http://127.0.0.1:8000/api/v1/article/my/list?page=1&size=10
 Authorization: Bearer {{admin_token}}
 
 ###
 
-# 11. 公开文章列表（新版分页接口，支持分类筛选）
+# 11. 公开文章列表（新版分页接口，支持分类筛选，返回包含 size 字段）
+# 返回格式: { "items": [...], "total": 10, "page": 1, "size": 10, "pages": 1 }
 GET http://127.0.0.1:8000/api/v1/article/public/list?page=1&size=10
 
 ###
@@ -175,7 +191,8 @@ Authorization: Bearer {{user_token}}
 
 # ==================== 管理员审核流程 ====================
 
-# 16. 查看待审核文章列表
+# 16. 查看待审核文章列表（返回包含 size 字段）
+# 返回格式: { "items": [...], "total": 5, "page": 1, "size": 20, "pages": 1 }
 GET http://127.0.0.1:8000/api/v1/article/admin/pending
 Authorization: Bearer {{admin_token}}
 
@@ -234,13 +251,15 @@ Authorization: Bearer {{admin_token}}
 
 ###
 
-# 22. 管理员全站列表（默认不显示已删除文章）
+# 22. 管理员全站列表（默认不显示已删除文章，返回包含 size 字段）
+# 返回格式: { "items": [...], "total": 10, "page": 1, "size": 10, "pages": 1 }
 GET http://127.0.0.1:8000/api/v1/article/admin/all-articles?page=1&size=10&show_deleted=false
 Authorization: Bearer {{admin_token}}
 
 ###
 
-# 23. 管理员全站列表（显示已删除文章）
+# 23. 管理员全站列表（显示已删除文章，返回包含 size 字段）
+# 返回格式: { "items": [...], "total": 12, "page": 1, "size": 10, "pages": 2 }
 GET http://127.0.0.1:8000/api/v1/article/admin/all-articles?page=1&size=10&show_deleted=true
 Authorization: Bearer {{admin_token}}
 
