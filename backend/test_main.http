@@ -19,8 +19,8 @@ POST http://127.0.0.1:8000/api/v1/auth/login
 Content-Type: application/json
 
 {
-  "username": "BaoZi",
-  "password": "123456"
+  "username": "xbz",
+  "password": "114514"
 }
 
 > {% client.global.set("admin_token", response.body.access_token); %}
@@ -32,8 +32,8 @@ POST http://127.0.0.1:8000/api/v1/auth/login
 Content-Type: application/json
 
 {
-  "username": "testuser",
-  "password": "123456"
+  "username": "user114514",
+  "password": "114514"
 }
 
 > {% client.global.set("user_token", response.body.access_token); %}
@@ -391,6 +391,77 @@ Content-Type: application/json
 
 # 38. 再次查看评论列表（应该包含所有评论）
 GET http://127.0.0.1:8000/api/v1/comments/articles/{{comment_test_article_id}}/comments
+
+###
+
+
+# ==================== 评论点赞功能测试 ====================
+
+# 39. 给评论点赞（首次点赞）
+POST http://127.0.0.1:8000/api/v1/comments/{{admin_comment_id}}/like
+Authorization: Bearer {{user_token}}
+
+###
+
+# 40. 再次点赞（取消点赞）
+POST http://127.0.0.1:8000/api/v1/comments/{{admin_comment_id}}/like
+Authorization: Bearer {{user_token}}
+
+###
+
+# 41. 第三次点赞（重新点赞）
+POST http://127.0.0.1:8000/api/v1/comments/{{admin_comment_id}}/like
+Authorization: Bearer {{user_token}}
+
+###
+
+# 42. 管理员给评论点赞
+POST http://127.0.0.1:8000/api/v1/comments/{{admin_comment_id}}/like
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 43. 查看点赞后的评论列表（应该显示点赞数和点赞状态）
+GET http://127.0.0.1:8000/api/v1/comments/articles/{{comment_test_article_id}}/comments
+Authorization: Bearer {{user_token}}
+
+###
+
+# 44. 未登录用户查看评论（is_liked 应该为 false）
+GET http://127.0.0.1:8000/api/v1/comments/articles/{{comment_test_article_id}}/comments
+
+###
+
+# 45. 给不存在的评论点赞（应该返回 404）
+POST http://127.0.0.1:8000/api/v1/comments/999999/like
+Authorization: Bearer {{user_token}}
+
+###
+
+# 46. 完整流程测试 - 创建新评论并点赞
+# 46.1 创建新评论
+POST http://127.0.0.1:8000/api/v1/comments/articles/{{comment_test_article_id}}/comments
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "content": "这是用来测试点赞功能的新评论",
+  "parent_id": null
+}
+
+> {% client.global.set("new_comment_for_like", response.body.id); %}
+
+###
+
+# 46.2 给新评论点赞
+POST http://127.0.0.1:8000/api/v1/comments/{{new_comment_for_like}}/like
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 46.3 验证点赞结果
+GET http://127.0.0.1:8000/api/v1/comments/articles/{{comment_test_article_id}}/comments
+Authorization: Bearer {{admin_token}}
 
 ###
 

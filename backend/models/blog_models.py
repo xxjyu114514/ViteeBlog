@@ -1,13 +1,13 @@
 import enum
 from typing import List, Optional
 import sqlalchemy as sa
-from sqlalchemy import String, Text, ForeignKey, Integer, Boolean, Table, Column, Enum, DateTime, text, func
+from sqlalchemy import String, Text, ForeignKey, Integer, Boolean, Table, Column, Enum, DateTime, text, func, \
+    UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from models.base import Base
 from datetime import datetime
 
 
-# 定义枚举类型
 class UserRole(str, enum.Enum):
     ADMIN = "admin"
     COMMON = "common"
@@ -16,10 +16,9 @@ class UserRole(str, enum.Enum):
 class ArticleStatus(str, enum.Enum):
     PUBLISHED = "published"
     DRAFT = "draft"
-    PENDING = "pending"  # 新增：待审核
+    PENDING = "pending"
 
 
-# 中间表：文章与标签的多对多关系
 article_tag = Table(
     "article_tag",
     Base.metadata,
@@ -33,15 +32,15 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(50), unique=True, index=True, comment="用户名")
     email: Mapped[str] = mapped_column(String(100), unique=True, index=True, comment="邮箱")
     password: Mapped[str] = mapped_column(String(255), comment="加密哈希密码")
-
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), server_default="common", comment="用户角色")
-
     avatar: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, comment="头像路径")
     is_active: Mapped[bool] = mapped_column(Boolean, server_default="1", comment="激活状态")
     login_attempts: Mapped[int] = mapped_column(Integer, server_default="0", comment="失败尝试次数")
     last_fail_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, comment="上次失败时间")
 
-    articles: Mapped[List["Article"]] = relationship(back_populates="author", cascade="all, delete-orphan", foreign_keys="Article.user_id")
+    articles: Mapped[List["Article"]] = relationship(back_populates="author", cascade="all, delete-orphan",
+                                                     foreign_keys="Article.user_id")
+    comment_likes: Mapped[List["CommentLike"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class Article(Base):
@@ -55,14 +54,10 @@ class Article(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(200), index=True)
     summary: Mapped[Optional[str]] = mapped_column(String(500))
-
     content: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="文章正文内容（Markdown 格式）")
     content_path: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     content_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-
-    # --- 任务一：新增版本字段 ---
     version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
-
     status: Mapped[ArticleStatus] = mapped_column(Enum(ArticleStatus), default=ArticleStatus.DRAFT,
                                                   server_default="draft")
     submitted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="提交审核时间")
@@ -70,7 +65,6 @@ class Article(Base):
     published_at: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="发布时间")
     reviewed_by: Mapped[Optional[int]] = mapped_column(ForeignKey("user.id"), comment="审核人ID")
     review_remark: Mapped[Optional[str]] = mapped_column(String(500), comment="驳回理由")
-
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"))
     category_id: Mapped[int] = mapped_column(ForeignKey("category.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
@@ -87,9 +81,7 @@ class Article(Base):
 class Category(Base):
     """分类表"""
     name: Mapped[str] = mapped_column(String(50), unique=True, comment="分类名称")
-    parent_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("category.id", ondelete="SET NULL"), index=True
-    )
+    parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey("category.id", ondelete="SET NULL"), index=True)
     articles: Mapped[List["Article"]] = relationship(back_populates="category")
 
 
@@ -101,29 +93,45 @@ class Tag(Base):
 
 class Comment(Base):
     """评论表：支持多级嵌套与后审模式"""
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     content: Mapped[str] = mapped_column(Text, comment="评论内容")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-
-    # 修改点 1：删除 nickname/email，关联 User
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), index=True)
-    author: Mapped["User"] = relationship(foreign_keys=[user_id])
-
-    # 修改点 2：审核状态默认设为 True (后审模式)
+    article_id: Mapped[int] = mapped_column(ForeignKey("article.id", ondelete="CASCADE"), index=True)
+    parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey("comment.id", ondelete="CASCADE"), index=True)
     is_audited: Mapped[bool] = mapped_column(Boolean, server_default="1", index=True)
 
-    article_id: Mapped[int] = mapped_column(ForeignKey("article.id", ondelete="CASCADE"), index=True)
-    parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey("comment.id", ondelete="CASCADE"))
-
-    # 关系定义
+    author: Mapped["User"] = relationship(foreign_keys=[user_id])
     article: Mapped["Article"] = relationship(back_populates="comments")
-    replies: Mapped[List["Comment"]] = relationship("Comment", backref="parent", remote_side="Comment.id")
+    parent: Mapped[Optional["Comment"]] = relationship("Comment", remote_side=[id], back_populates="replies")
+    replies: Mapped[List["Comment"]] = relationship("Comment", back_populates="parent", cascade="all, delete-orphan")
+    likes: Mapped[List["CommentLike"]] = relationship(back_populates="comment", cascade="all, delete-orphan")
+    
+    # 动态属性（用于 API 响应）
+    like_count: int = 0
+    is_liked: bool = False
+
+
+class CommentLike(Base):
+    """评论点赞表"""
+    __tablename__ = "comment_like"
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    comment_id: Mapped[int] = mapped_column(ForeignKey("comment.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    comment: Mapped["Comment"] = relationship(back_populates="likes")
+    user: Mapped["User"] = relationship(back_populates="comment_likes")
+
+    __table_args__ = (
+        UniqueConstraint("comment_id", "user_id", name="uq_comment_user_like"),
+    )
 
 
 class CommentReport(Base):
     """评论举报表"""
     __tablename__ = "comment_report"
-
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     comment_id: Mapped[int] = mapped_column(ForeignKey("comment.id", ondelete="CASCADE"), index=True)
     reporter_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), index=True)
@@ -131,7 +139,6 @@ class CommentReport(Base):
     is_resolved: Mapped[bool] = mapped_column(Boolean, server_default="0", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
-    # 关系映射
     comment: Mapped["Comment"] = relationship()
     reporter: Mapped["User"] = relationship()
 
@@ -152,7 +159,6 @@ class VerificationCode(Base):
     code: Mapped[str] = mapped_column(String(10))
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
     expires_at: Mapped[datetime] = mapped_column(DateTime)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=text("CURRENT_TIMESTAMP"), onupdate=text("CURRENT_TIMESTAMP"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=text("CURRENT_TIMESTAMP"),
+                                                 onupdate=text("CURRENT_TIMESTAMP"))
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-
-####
