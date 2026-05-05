@@ -20,11 +20,20 @@ router = APIRouter()
 
 IMAGE_STORAGE = "storage/images"
 ARTICLE_STORAGE = "storage/articles"
+_upload_counter: dict = {}
 
 
 # --- 接口 1：POST /upload-image (图片上传) ---
 @router.post("/upload-image", summary="图片上传接口")
 async def upload_article_image(file: UploadFile = File(...), user: User = Depends(get_current_user)):
+    now = datetime.now()
+    user_id = user.id
+    if user_id not in _upload_counter:
+        _upload_counter[user_id] = []
+    _upload_counter[user_id] = [t for t in _upload_counter[user_id] if (now - t).total_seconds() < 3600]
+    if len(_upload_counter[user_id]) >= 15:
+        raise HTTPException(status_code=429, detail="上传过于频繁，请1小时后再试")
+
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="只能上传图片文件")
     ext = os.path.splitext(file.filename)[1]
@@ -37,6 +46,7 @@ async def upload_article_image(file: UploadFile = File(...), user: User = Depend
             raise HTTPException(status_code=400, detail="文件大小不能超过10MB")
         async with aiofiles.open(file_path, "wb") as f:
             await f.write(content)
+        _upload_counter[user_id].append(now)
         return {"url": f"/storage/images/{unique_name}"}
     except Exception:
         raise HTTPException(status_code=500, detail="文件保存失败")
@@ -206,9 +216,27 @@ async def review_article(article_id: int, action: ArticleReviewAction, admin: Us
 
 # --- 接口 8：GET /admin/pending (待审核列表) ---
 @router.get("/admin/pending", summary="【管理员】待审核列表")
-async def list_pending_articles(admin: User = Depends(allow_admin_only), db: AsyncSession = Depends(get_db)):
-    res = await db.execute(select(Article).where(Article.status == ArticleStatus.PENDING))
-    return res.scalars().all()
+async def list_pending_articles(
+        page: int = Query(1, ge=1),
+        size: int = Query(20, ge=1),
+        admin: User = Depends(allow_admin_only),
+        db: AsyncSession = Depends(get_db)
+):
+    stmt = (
+        select(Article)
+        .where(Article.status == ArticleStatus.PENDING, Article.deleted_at == None)
+        .order_by(Article.submitted_at.asc())
+    )
+    total_res = await db.execute(select(func.count()).select_from(stmt.subquery()))
+    total = total_res.scalar() or 0
+    res = await db.execute(stmt.offset((page - 1) * size).limit(size))
+    return {
+        "items": res.scalars().all(),
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": math.ceil(total / size) if total > 0 else 0
+    }
 
 
 # --- 接口 9：DELETE /{article_id} (软删除) ---
@@ -263,7 +291,7 @@ async def get_my_articles(page: int = Query(1, ge=1), size: int = Query(10, ge=1
     total_res = await db.execute(select(func.count()).select_from(query.subquery()))
     total = total_res.scalar() or 0
     res = await db.execute(query.offset((page - 1) * size).limit(size))
-    return {"items": res.scalars().all(), "total": total, "page": page, "pages": math.ceil(total / size)}
+    return {"items": res.scalars().all(), "total": total, "page": page, "size": size, "pages": math.ceil(total / size)}
 
 
 # --- 接口 13：GET /public/list (公开文章列表) ---
@@ -276,7 +304,7 @@ async def list_public_articles(page: int = Query(1, ge=1), size: int = Query(10,
     total_res = await db.execute(select(func.count()).select_from(query.subquery()))
     total = total_res.scalar() or 0
     res = await db.execute(query.offset((page - 1) * size).limit(size))
-    return {"items": res.scalars().all(), "total": total, "page": page, "pages": math.ceil(total / size)}
+    return {"items": res.scalars().all(), "total": total, "page": page, "size": size, "pages": math.ceil(total / size)}
 
 
 # --- 接口 14：GET /admin/all-articles (全站文章列表) ---
@@ -292,5 +320,4 @@ async def list_all_articles_admin(page: int = Query(1, ge=1), size: int = Query(
     total_res = await db.execute(select(func.count()).select_from(query.subquery()))
     total = total_res.scalar() or 0
     res = await db.execute(query.offset((page - 1) * size).limit(size))
-    return {"items": res.scalars().all(), "total": total, "page": page, "pages": math.ceil(total / size)}
-####
+    return {"items": res.scalars().all(), "total": total, "page": page, "size": size, "pages": math.ceil(total / size)}
