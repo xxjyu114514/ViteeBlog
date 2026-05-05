@@ -96,13 +96,17 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '@/stores/user'
-import { buildUrl } from '@/utils/apiUtils'
+import { useMetaAPI } from '@/composables/useMetaAPI'
 
 const router = useRouter()
-const userStore = useUserStore()
+const {
+  getTags,
+  createTag,
+  updateTag,
+  deleteTag
+} = useMetaAPI()
 
-const loading = ref(true)
+const loading = ref(false)
 const tags = ref([])
 const creating = ref(false)
 const updatingId = ref(null)
@@ -112,23 +116,18 @@ const deletingId = ref(null)
 const fetchTags = async () => {
   loading.value = true
   try {
-    const url = buildUrl('/meta/tags', {}, {}, 'META')
-    const response = await fetch(url)
-    
-    if (response.ok) {
-      const data = await response.json()
-      // 后端返回的是直接的数组，不是分页格式
-      tags.value = data || []
+    const result = await getTags()
+    if (result.success) {
+      tags.value = result.data || []
     } else {
-      const errorData = await response.json().catch(() => ({}))
-      const errorMessage = errorData.detail || '获取标签列表失败'
-      alert(errorMessage)
+      alert(result.message || '获取标签列表失败')
     }
   } catch (error) {
     console.error('获取标签列表异常:', error)
-    alert('网络错误，请稍后重试')
+    alert('获取标签列表失败，请稍后重试')
+  } finally {
+    loading.value = false
   }
-  loading.value = false
 }
 
 // 打开模态框（用于创建或更新）
@@ -150,6 +149,8 @@ const openModalForEdit = (tag) => {
 
 const closeModal = () => {
   isModalOpen.value = false
+  tagName.value = ''
+  editingTag.value = null
 }
 
 // 处理创建或更新
@@ -163,56 +164,36 @@ const handleCreateOrUpdateTag = async () => {
     // 更新标签
     updatingId.value = editingTag.value.id
     try {
-      const url = buildUrl('/meta/tags/:tag_id', { tag_id: editingTag.value.id }, {}, 'META')
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${userStore.token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ name: tagName.value.trim() })
-      })
-      
-      if (response.ok) {
+      const result = await updateTag(editingTag.value.id, tagName.value.trim())
+      if (result.success) {
         await fetchTags()
         closeModal()
       } else {
-        const errorData = await response.json().catch(() => ({}))
-        const errorMessage = errorData.detail || '更新标签失败'
-        alert(errorMessage)
+        alert(result.message || '更新标签失败')
       }
     } catch (error) {
       console.error('更新标签异常:', error)
-      alert('网络错误，请稍后重试')
+      alert('更新标签失败，请稍后重试')
+    } finally {
+      updatingId.value = null
     }
-    updatingId.value = null
   } else {
     // 创建标签
     creating.value = true
     try {
-      const url = buildUrl('/meta/tags', {}, {}, 'META')
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${userStore.token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ name: tagName.value.trim() })
-      })
-      
-      if (response.ok) {
+      const result = await createTag(tagName.value.trim())
+      if (result.success) {
         await fetchTags()
         closeModal()
       } else {
-        const errorData = await response.json().catch(() => ({}))
-        const errorMessage = errorData.detail || '创建标签失败'
-        alert(errorMessage)
+        alert(result.message || '创建标签失败')
       }
     } catch (error) {
       console.error('创建标签异常:', error)
-      alert('网络错误，请稍后重试')
+      alert('创建标签失败，请稍后重试')
+    } finally {
+      creating.value = false
     }
-    creating.value = false
   }
 }
 
@@ -222,31 +203,23 @@ const handleDelete = async (tagId) => {
   
   deletingId.value = tagId
   try {
-    const url = buildUrl('/meta/tags/:tag_id', { tag_id: tagId }, {}, 'META')
-    const response = await fetch(url, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${userStore.token}`
-      }
-    })
-    
-    if (response.ok) {
+    const result = await deleteTag(tagId)
+    if (result.success) {
       await fetchTags()
     } else {
-      const errorData = await response.json().catch(() => ({}))
-      const errorMessage = errorData.detail || '删除标签失败'
-      alert(errorMessage)
+      alert(result.message || '删除标签失败')
     }
   } catch (error) {
     console.error('删除标签异常:', error)
-    alert('网络错误，请稍后重试')
+    alert('删除标签失败，请稍后重试')
+  } finally {
+    deletingId.value = null
   }
-  deletingId.value = null
 }
 
 // 初始化
-onMounted(async () => {
-  await fetchTags()
+onMounted(() => {
+  fetchTags()
 })
 
 // 返回上一页

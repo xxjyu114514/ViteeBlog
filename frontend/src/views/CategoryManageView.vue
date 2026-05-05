@@ -97,161 +97,121 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { buildUrl } from '@/utils/apiUtils'
+import { useMetaAPI } from '@/composables/useMetaAPI'
 
 const router = useRouter()
 const userStore = useUserStore()
+const {
+  getCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory
+} = useMetaAPI()
 
-// 状态管理
-const loading = ref(true)
 const categories = ref([])
-const showModal = ref(false)
-const categoryName = ref('')
+const loading = ref(false)
 const editingCategory = ref(null)
+const categoryName = ref('')
 const creating = ref(false)
 const updatingId = ref(null)
-const deletingId = ref(null)
 
 // 获取分类列表
 const fetchCategories = async () => {
   loading.value = true
   try {
-    const url = buildUrl('/meta/categories', {}, {}, 'META')
-    const response = await fetch(url)
-    
-    if (response.ok) {
-      const data = await response.json()
-      categories.value = data || []
+    const result = await getCategories()
+    if (result.success) {
+      categories.value = result.data || []
     } else {
-      const errorData = await response.json().catch(() => ({}))
-      const errorMessage = errorData.detail || '获取分类列表失败'
-      alert(errorMessage)
+      alert(result.message || '获取分类列表失败')
     }
   } catch (error) {
     console.error('获取分类列表异常:', error)
-    alert('网络错误，请稍后重试')
+    alert('获取分类列表失败，请稍后重试')
+  } finally {
+    loading.value = false
   }
-  loading.value = false
 }
 
-// 显示创建模态框
-const showCreateModal = () => {
-  editingCategory.value = null
-  categoryName.value = ''
-  showModal.value = true
-}
-
-// 显示编辑模态框
-const showEditModal = (category) => {
-  editingCategory.value = category
-  categoryName.value = category.name
-  showModal.value = true
-}
-
-// 关闭模态框
-const closeModal = () => {
-  showModal.value = false
-  editingCategory.value = null
-  categoryName.value = ''
-}
-
-// 处理提交（创建或更新）
-const handleSubmit = async () => {
-  if (!categoryName.value.trim()) return
+// 创建分类
+const createCategoryHandler = async () => {
+  if (!categoryName.value.trim()) {
+    alert('分类名称不能为空')
+    return
+  }
   
-  if (editingCategory.value) {
-    // 更新分类
-    updatingId.value = editingCategory.value.id
-    try {
-      const url = buildUrl('/meta/categories/:cat_id', { cat_id: editingCategory.value.id }, {}, 'META')
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${userStore.token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ name: categoryName.value.trim() })
-      })
-      
-      if (response.ok) {
-        await fetchCategories()
-        closeModal()
-      } else {
-        const errorData = await response.json().catch(() => ({}))
-        const errorMessage = errorData.detail || '更新分类失败'
-        alert(errorMessage)
-      }
-    } catch (error) {
-      console.error('更新分类异常:', error)
-      alert('网络错误，请稍后重试')
+  creating.value = true
+  try {
+    const result = await createCategory(categoryName.value.trim())
+    if (result.success) {
+      await fetchCategories()
+      categoryName.value = ''
+    } else {
+      alert(result.message || '创建分类失败')
     }
-    updatingId.value = null
-  } else {
-    // 创建分类
-    creating.value = true
-    try {
-      const url = buildUrl('/meta/categories', {}, {}, 'META')
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${userStore.token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ name: categoryName.value.trim() })
-      })
-      
-      if (response.ok) {
-        await fetchCategories()
-        closeModal()
-      } else {
-        const errorData = await response.json().catch(() => ({}))
-        const errorMessage = errorData.detail || '创建分类失败'
-        alert(errorMessage)
-      }
-    } catch (error) {
-      console.error('创建分类异常:', error)
-      alert('网络错误，请稍后重试')
-    }
+  } catch (error) {
+    console.error('创建分类异常:', error)
+    alert('创建分类失败，请稍后重试')
+  } finally {
     creating.value = false
   }
 }
 
-// 处理删除
-const handleDelete = async (categoryId) => {
-  if (!confirm('确定要删除此分类吗？删除后关联的文章将不再有分类！')) return
+// 更新分类
+const updateCategoryHandler = async () => {
+  if (!editingCategory.value || !categoryName.value.trim()) {
+    alert('分类信息不完整')
+    return
+  }
   
-  deletingId.value = categoryId
+  updatingId.value = editingCategory.value.id
   try {
-    const url = buildUrl('/meta/categories/:cat_id', { cat_id: categoryId }, {}, 'META')
-    const response = await fetch(url, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${userStore.token}`
-      }
-    })
-    
-    if (response.ok) {
+    const result = await updateCategory(editingCategory.value.id, categoryName.value.trim())
+    if (result.success) {
+      await fetchCategories()
+      cancelEdit()
+    } else {
+      alert(result.message || '更新分类失败')
+    }
+  } catch (error) {
+    console.error('更新分类异常:', error)
+    alert('更新分类失败，请稍后重试')
+  } finally {
+    updatingId.value = null
+  }
+}
+
+// 删除分类
+const deleteCategoryHandler = async (categoryId) => {
+  if (!confirm('确定要删除这个分类吗？这将影响使用该分类的所有文章。')) {
+    return
+  }
+  
+  try {
+    const result = await deleteCategory(categoryId)
+    if (result.success) {
       await fetchCategories()
     } else {
-      const errorData = await response.json().catch(() => ({}))
-      const errorMessage = errorData.detail || '删除分类失败'
-      alert(errorMessage)
+      alert(result.message || '删除分类失败')
     }
   } catch (error) {
     console.error('删除分类异常:', error)
-    alert('网络错误，请稍后重试')
+    alert('删除分类失败，请稍后重试')
   }
-  deletingId.value = null
 }
 
-// 返回上一页
-const handleBack = () => {
-  router.go(-1)
+const startEdit = (category) => {
+  editingCategory.value = { ...category }
+  categoryName.value = category.name
 }
 
-// 初始化
-onMounted(async () => {
-  await fetchCategories()
+const cancelEdit = () => {
+  editingCategory.value = null
+  categoryName.value = ''
+}
+
+onMounted(() => {
+  fetchCategories()
 })
 </script>
 

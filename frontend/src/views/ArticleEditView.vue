@@ -327,13 +327,19 @@ const showStatus = (msg, error = false) => {
 const loadArticleData = async () => {
   const articleId = route.params.id
   
+  // 检查是否为无效的ID（字符串'undefined'、'null'或空字符串）
+  const isInvalidId = !articleId || 
+    articleId === 'undefined' || 
+    articleId === 'null' || 
+    articleId === '';
+  
   // 先加载分类和标签
   await Promise.all([
     fetchCategories(),
     fetchTags()
   ])
 
-  if (!articleId) {
+  if (isInvalidId) {
     // 新建模式
     await nextTick()
     initVditor('')
@@ -343,7 +349,7 @@ const loadArticleData = async () => {
   // 编辑模式
   const result = await getArticleDetail(articleId)
   if (result.success) {
-    const info = result.data.info
+    const info = result.data
     editingArticle.value = info
     // 如果是待审核状态，从 content_path 加载内容；否则使用原有逻辑
     let contentToLoad = ''
