@@ -293,3 +293,4 @@ async def list_all_articles_admin(page: int = Query(1, ge=1), size: int = Query(
     total = total_res.scalar() or 0
     res = await db.execute(query.offset((page - 1) * size).limit(size))
     return {"items": res.scalars().all(), "total": total, "page": page, "pages": math.ceil(total / size)}
+####

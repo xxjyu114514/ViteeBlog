@@ -1837,3 +1837,4 @@ const resolveAndDelete = async (reportId, commentId) => {
 **文档版本**: v4.2  
 **维护者**: Backend Team
 
+##### 感谢所有贡献者！

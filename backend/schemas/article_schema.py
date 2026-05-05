@@ -21,3 +21,5 @@ class ArticleReviewAction(BaseModel):
     """管理员审核操作"""
     pass_audit: bool = Field(..., description="True为通过，False为驳回")
     remark: Optional[str] = Field(None, max_length=500, description="驳回理由")
+
+####
