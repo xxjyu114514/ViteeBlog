@@ -332,8 +332,8 @@ def downgrade():
 
 ---
 
-**最后更新时间**: 2026-04-19  
-**文档版本**: v3.1  
+**最后更新时间**: 2026-05-05  
+**文档版本**: v4.2  
 **维护者**: Backend Team
 
 ---
@@ -346,13 +346,15 @@ def downgrade():
 - **管理员专属**：审核文章、查看全站文章、调整用户权限、管理分类/标签
 
 ### 核心功能概览
-- ✍️ **自动保存**：实时同步草稿到服务器（文件 + 数据库）
+- ✍️ **自动保存**：实时同步草稿到服务器（数据库存储，支持乐观锁）
+- 🔒 **乐观锁机制**：防止多人同时编辑导致的内容覆盖
 - 📝 **审核流程**：普通用户提交 → 管理员审核 → 发布/驳回
 - 🔙 **撤回功能**：可撤回待审核文章重新编辑
 - 🛡️ **防灌水**：普通用户最多3篇待审核文章
 - 🗑️ **回收站机制**：软删除后数据保留
 - ♻️ **恢复功能**：可从回收站恢复误删文章
-- 💥 **硬删除**：永久粉碎文章及物理文件
+- 💥 **硬删除**：永久粉碎文章记录
+- 🖼️ **图片管理**：支持上传和删除图片
 
 ### 文章状态流转
 
@@ -387,7 +389,8 @@ def downgrade():
   "summary": "文章摘要",
   "content": "# Markdown 内容\n\n这是文章内容...",
   "category_id": 1,
-  "tag_ids": [1, 2]
+  "tag_ids": [1, 2],
+  "version": null
 }
 ```
 
@@ -397,37 +400,34 @@ def downgrade():
 | id | int | ❌ | 新建时为 null，更新时必填 |
 | title | string | ❌ | 文章标题（1-200字符），可选 |
 | summary | string | ❌ | 文章摘要（最多500字符） |
-| content | string | ❌ | 文章内容（Markdown格式），后端自动保存为文件 |
-| content_path | string | ❌ | 可选，如果提供则直接使用，否则根据 content 自动生成 |
+| content | string | ❌ | 文章内容（Markdown格式），直接存储到数据库 |
 | category_id | int | ❌ | 分类ID，可选 |
 | tag_ids | int[] | ❌ | 标签ID数组 |
+| version | int | ❌ | 版本号（更新时用于乐观锁校验，新建时可忽略） |
 
 **成功响应** (200):
 ```json
 {
   "id": 1,
-  "title": "文章标题",
-  "summary": "文章摘要",
-  "content_path": "storage/articles/a1b2c3d4.md",
-  "category_id": 1,
-  "user_id": 1,
-  "status": "draft",
-  "created_at": "2026-04-26T10:00:00",
-  "updated_at": "2026-04-26T10:00:00"
+  "version": 1,
+  "message": "已自动保存"
 }
 ```
 
 **错误响应**:
-- `400`: 分类不存在
+- `400`: 分类不存在 / 标题和内容不能同时为空
 - `403`: 无权操作此文章
 - `404`: 文章不存在
+- `409`: 文章已被他人修改，请刷新后重新编辑（乐观锁冲突）
 
 **前端注意**:
 - ✅ 建议实现防抖保存（停止输入后2秒自动调用）
-- ✅ 新建文章返回完整 Article 对象，使用 `response.body.id` 获取文章ID
-- ✅ 后端会自动将 `content` 保存为 Markdown 文件并生成 `content_path`
+- ✅ 返回简化格式 `{id, version, message}`，使用 `response.body.id` 获取文章ID
+- ✅ 文章内容直接存储在数据库 `content` 字段，无需单独读取文件
 - ⚠️ **待审核状态（PENDING）下禁止编辑**，必须先撤回为草稿
 - ⚠️ 保存草稿不会改变文章状态，状态由发布接口控制
+- 🔒 **乐观锁机制**：更新文章时必须携带当前 `version`，如果版本不匹配会返回 409 错误
+- ✅ 每次保存成功后，`version` 会自动递增，前端应更新本地缓存的版本号
 
 ---
 
@@ -442,7 +442,8 @@ def downgrade():
   "id": 1,
   "title": "文章标题",
   "summary": "摘要内容...",
-  "content_path": "storage/articles/a1b2c3d4.md",
+  "content": "# Markdown 内容\n\n这是文章内容...",
+  "version": 1,
   "status": "published",
   "submitted_at": null,
   "reviewed_at": null,
@@ -471,7 +472,8 @@ def downgrade():
 
 **前端注意**:
 - ✅ 返回 Article 对象，包含分类、标签等关联信息
-- ⚠️ **不包含文章内容**，需要通过 `content_path` 单独读取文件
+- ✅ **直接包含文章内容** (`content` 字段)，无需额外请求
+- ✅ 包含 `version` 字段，编辑时需携带用于乐观锁校验
 - ⚠️ 根据文章状态和用户身份进行权限判断
 - ⚠️ 已删除文章对普通用户不可见
 
@@ -488,8 +490,7 @@ def downgrade():
 
 **前置校验**:
 1. ✅ 标题不能为空
-2. ✅ 文章内容文件必须存在
-3. ✅ 文章内容不能为空
+2. ✅ 文章内容不能为空（检查数据库中的 content 字段）
 
 **成功响应** (200) - 管理员:
 ```json
@@ -502,7 +503,7 @@ def downgrade():
 ```
 
 **错误响应**:
-- `400`: 发布失败：标题不能为空 / 文章内容文件不存在 / 文章内容不能为空
+- `400`: 发布失败：标题不能为空 / 文章内容不能为空
 - `403`: 文章不存在或无权操作
 
 **状态流转**:
@@ -511,8 +512,9 @@ def downgrade():
 
 **前端注意**:
 - ⚠️ 发布前确保标题和内容不为空
-- ⚠️ 确保 autosave 已成功保存内容文件
+- ⚠️ 确保 autosave 已成功保存内容到数据库
 - ✅ 建议在提交前提示用户确认
+- ✅ 普通用户提交审核时，系统会自动清空之前的驳回理由
 
 ---
 
@@ -538,6 +540,7 @@ def downgrade():
 - ✅ 仅在文章状态为 `pending` 时显示撤回按钮
 - ✅ 撤回后可以重新编辑并提交
 - ⚠️ 撤回后需要重新提交才能再次进入审核队列
+- ✅ 撤回后可继续编辑，编辑时注意携带最新的 `version`
 
 ### 5. 获取公开文章列表（分页）
 
@@ -687,7 +690,7 @@ def downgrade():
 ```
 
 **状态流转**:
-- 通过: `PENDING` → `PUBLISHED`（设置 `reviewed_at`, `reviewed_by`, `published_at`）
+- 通过: `PENDING` → `PUBLISHED`（设置 `reviewed_at`, `reviewed_by`, `published_at`，清空 `review_remark`）
 - 驳回: `PENDING` → `DRAFT`（设置 `reviewed_at`, `reviewed_by`, `review_remark`）
 
 **前端注意**:
@@ -717,8 +720,8 @@ def downgrade():
 ```
 
 **错误响应**:
-- `400`: 只能上传图片文件 / 图片太大了（超过10MB）
-- `500`: 图片保存失败
+- `400`: 只能上传图片文件 / 文件大小不能超过10MB
+- `500`: 文件保存失败
 
 **前端注意**:
 - ✅ 支持格式：jpg, jpeg, png, gif, webp 等
@@ -727,7 +730,34 @@ def downgrade():
 
 ---
 
-### 10. 移至回收站（软删除）
+### 10. 删除图片
+
+**接口**: `DELETE /article/upload-image?filename=a1b2c3d4.jpg`  
+**权限**: 所有登录用户
+
+**查询参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| filename | string | ✅ | 要删除的图片文件名 |
+
+**成功响应** (200):
+```json
+{
+  "message": "图片已删除"
+}
+```
+
+**错误响应**:
+- `404`: 图片不存在
+- `500`: 删除文件时出错
+
+**前端注意**:
+- ⚠️ 删除图片前请确认该图片未被其他文章引用
+- ⚠️ 此操作不可逆
+
+---
+
+### 11. 移至回收站（软删除）
 
 **接口**: `DELETE /article/{article_id}`  
 **权限**: 文章作者或管理员
@@ -746,7 +776,7 @@ def downgrade():
 
 ---
 
-### 11. 恢复文章
+### 12. 恢复文章
 
 **接口**: `POST /article/{article_id}/restore`  
 **权限**: 文章作者或管理员
@@ -760,12 +790,12 @@ def downgrade():
 
 ---
 
-### 12. 彻底删除（硬删除）
+### 13. 彻底删除（硬删除）
 
 **接口**: `DELETE /article/{article_id}/hard`  
 **权限**: 文章作者或管理员
 
-**⚠️ 警告**: 此操作不可逆！会删除数据库记录和物理文件
+**⚠️ 警告**: 此操作不可逆！会永久删除数据库记录
 
 **成功响应** (200):
 ```json
@@ -775,6 +805,7 @@ def downgrade():
 **前端注意**:
 - ⚠️ 执行前必须二次确认
 - ⚠️ 删除后无法撤销
+- ℹ️ 硬删除仅删除数据库记录，不再处理物理文件
 
 ---
 
@@ -961,31 +992,27 @@ def downgrade():
 ### 场景1: 普通用户创建并提交审核文章
 
 ```javascript
-// Step 1: 自动保存草稿（使用 content 字段）
+// Step 1: 自动保存草稿（使用 content 字段，支持乐观锁）
 const saveResponse = await axios.post('/api/v1/article/autosave', {
   id: null,  // 新建文章
   title: '我的新文章',
   summary: '这是一篇测试文章',
   content: '# 我的新文章\n\n这是文章内容...',
   category_id: 1,
-  tag_ids: [1, 2]
+  tag_ids: [1, 2],
+  version: null  // 新建时为 null
 }, {
   headers: { 'Authorization': `Bearer ${token}` }
 })
 
-const articleId = saveResponse.data.id  // 注意：返回的是完整 Article 对象
+const articleId = saveResponse.data.id  // 获取文章ID
+let currentVersion = saveResponse.data.version  // 保存当前版本号
 
 // Step 2: 用户点击提交审核
 await axios.put(`/api/v1/article/${articleId}/publish`, {}, {
   headers: { 'Authorization': `Bearer ${token}` }
 })
 // 响应: { "message": "已提交审核" }
-
-// Step 3: 查看我的待审核文章
-const myPending = await axios.get('/api/v1/article/my/list?status=pending&page=1&size=10', {
-  headers: { 'Authorization': `Bearer ${token}` }
-})
-// 响应格式: { items: [...], total: 5, page: 1, pages: 1 }
 ```
 
 ### 场景2: 管理员审核文章
@@ -1025,16 +1052,20 @@ await axios.post(`/api/v1/article/${articleId}/withdraw`, {}, {
 })
 // 响应: { "message": "已撤回为草稿状态" }
 
-// Step 2: 修改文章内容（使用 content 字段）
+// Step 2: 修改文章内容（使用 content 字段，携带版本号）
 await axios.post('/api/v1/article/autosave', {
   id: articleId,  // 携带ID表示更新
   title: '修改后的标题',
   summary: '修改后的摘要',
   content: '# 修改后的文章\n\n这是更新后的内容...',
   category_id: 1,
-  tag_ids: [1, 2, 3]
+  tag_ids: [1, 2, 3],
+  version: currentVersion  // 携带当前版本号进行乐观锁校验
 }, {
   headers: { 'Authorization': `Bearer ${token}` }
+}).then(response => {
+  // 更新本地版本号
+  currentVersion = response.data.version
 })
 
 // Step 3: 重新提交审核
@@ -1072,10 +1103,11 @@ import { ref, watch } from 'vue'
 
 const title = ref('')
 const summary = ref('')
-const content = ref('')  // 使用 content 而非 content_path
+const content = ref('')  // 使用 content 字段
 const categoryId = ref(1)
 const tagIds = ref([1, 2])
 const articleId = ref(null)
+const currentVersion = ref(null)  // 当前版本号
 let saveTimer = null
 
 // 监听内容变化，防抖保存
@@ -1089,20 +1121,27 @@ watch([title, summary, content], async () => {
         summary: summary.value,
         content: content.value,  // 直接发送 Markdown 内容
         category_id: categoryId.value,
-        tag_ids: tagIds.value
+        tag_ids: tagIds.value,
+        version: currentVersion.value  // 携带版本号
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       
-      // 新建文章时保存返回的 ID
+      // 新建文章时保存返回的 ID 和 version
       if (!articleId.value) {
-        articleId.value = response.data.id  // 注意：返回完整 Article 对象
+        articleId.value = response.data.id
       }
+      currentVersion.value = response.data.version  // 更新版本号
       
       console.log('自动保存成功')
     } catch (error) {
-      console.error('保存失败:', error)
-      ElMessage.error('自动保存失败，请手动保存')
+      if (error.response?.status === 409) {
+        ElMessage.warning('文章已被他人修改，请刷新后重新编辑')
+        // 这里可以触发重新加载文章逻辑
+      } else {
+        console.error('保存失败:', error)
+        ElMessage.error('自动保存失败，请手动保存')
+      }
     }
   }, 2000)  // 停止输入2秒后保存
 })
@@ -1140,6 +1179,12 @@ const imageUrl = uploadResponse.data.url
 // 4. 插入到 Markdown 编辑器
 const markdownImage = `![${file.name}](http://127.0.0.1:8000${imageUrl})`
 editor.insertText(markdownImage)
+
+// 5. 如需删除图片
+await axios.delete('/api/v1/article/upload-image', {
+  params: { filename: 'a1b2c3d4.jpg' },
+  headers: { 'Authorization': `Bearer ${token}` }
+})
 ```
 
 ### 场景7: 管理分类和标签
@@ -1169,7 +1214,7 @@ await axios.put('/api/v1/meta/tags/1', {
 })
 
 // 5. 创建文章时绑定分类和标签（使用 content 字段）
-await axios.post('/api/v1/article/autosave', {
+const response = await axios.post('/api/v1/article/autosave', {
   title: '我的文章',
   summary: '文章摘要',
   content: '# 内容...',
@@ -1178,6 +1223,7 @@ await axios.post('/api/v1/article/autosave', {
 }, {
   headers: { 'Authorization': `Bearer ${token}` }
 })
+currentVersion = response.data.version  // 保存版本号
 ```
 
 ### 场景8: 管理员完整操作流程
@@ -1787,7 +1833,7 @@ const resolveAndDelete = async (reportId, commentId) => {
 
 ---
 
-**最后更新时间**: 2026-04-19  
-**文档版本**: v4.1  
+**最后更新时间**: 2026-05-05  
+**文档版本**: v4.2  
 **维护者**: Backend Team
 

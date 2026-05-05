@@ -1,5 +1,6 @@
 import enum
 from typing import List, Optional
+import sqlalchemy as sa
 from sqlalchemy import String, Text, ForeignKey, Integer, Boolean, Table, Column, Enum, DateTime, text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from models.base import Base
@@ -16,11 +17,6 @@ class ArticleStatus(str, enum.Enum):
     PUBLISHED = "published"
     DRAFT = "draft"
     PENDING = "pending"  # 新增：待审核
-
-
-class EditorType(str, enum.Enum):
-    MARKDOWN = "markdown"
-    RICHTEXT = "richtext"
 
 
 # 中间表：文章与标签的多对多关系
@@ -51,14 +47,22 @@ class User(Base):
 class Article(Base):
     """文章表：升级审核逻辑"""
     __tablename__ = "article"
+    __table_args__ = (
+        sa.Index('ix_article_category_id', 'category_id'),
+        sa.Index('ix_article_user_id', 'user_id'),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(200), index=True)
     summary: Mapped[Optional[str]] = mapped_column(String(500))
-    content_path: Mapped[str] = mapped_column(Text)
-    # 新增字段以支持方案 A
+
+    content: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="文章正文内容（Markdown 格式）")
+    content_path: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     content_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    # 状态与审核字段
+
+    # --- 任务一：新增版本字段 ---
+    version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+
     status: Mapped[ArticleStatus] = mapped_column(Enum(ArticleStatus), default=ArticleStatus.DRAFT,
                                                   server_default="draft")
     submitted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="提交审核时间")
@@ -67,18 +71,16 @@ class Article(Base):
     reviewed_by: Mapped[Optional[int]] = mapped_column(ForeignKey("user.id"), comment="审核人ID")
     review_remark: Mapped[Optional[str]] = mapped_column(String(500), comment="驳回理由")
 
-    # 基础字段
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"))
     category_id: Mapped[int] = mapped_column(ForeignKey("category.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
-    # 关系映射
     author: Mapped["User"] = relationship(back_populates="articles", foreign_keys=[user_id])
     reviewer: Mapped[Optional["User"]] = relationship(foreign_keys=[reviewed_by])
     category: Mapped[Optional["Category"]] = relationship(back_populates="articles")
-    tags: Mapped[List["Tag"]] = relationship(secondary=article_tag, back_populates="articles")
+    tags: Mapped[List["Tag"]] = relationship(secondary=article_tag, back_populates="tags")
     comments: Mapped[List["Comment"]] = relationship(back_populates="article", cascade="all, delete-orphan")
 
 
