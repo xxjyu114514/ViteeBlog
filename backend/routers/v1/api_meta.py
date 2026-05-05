@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Body, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete, update
+from sqlalchemy import select, delete, update, func
 from dependencies import get_db, get_current_user, allow_admin_only
-from models.blog_models import Category, Tag, User
+from models.blog_models import Category, Tag, User, Article, article_tag
 
 router = APIRouter()
 
@@ -53,6 +53,18 @@ async def update_category(
 
 @router.delete("/categories/{cat_id}", summary="【管理员专用】删除分类")
 async def delete_category(cat_id: int, admin: User = Depends(allow_admin_only), db: AsyncSession = Depends(get_db)):
+    # 级联检查：查询该分类下未删除的文章数量[cite: 11]
+    count_res = await db.execute(
+        select(func.count(Article.id)).where(Article.category_id == cat_id, Article.deleted_at == None)
+    )
+    count = count_res.scalar() or 0
+
+    if count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"该分类下有 {count} 篇文章，请先将文章转移至其他分类后再删除"
+        )
+
     await db.execute(delete(Category).where(Category.id == cat_id))
     await db.commit()
     return {"message": "分类已删除"}
@@ -124,12 +136,25 @@ async def delete_tag(
 ):
     """
     仅限管理员删除标签。
-    注意：由于中间表设置了 ON DELETE CASCADE，删除标签会解除所有文章的关联。
     """
-    # 先检查是否存在
+    # 先检查是否存在[cite: 11]
     res = await db.execute(select(Tag).where(Tag.id == tag_id))
     if not res.scalars().first():
         raise HTTPException(status_code=404, detail="标签不存在")
+
+    # 关联检查：通过中间表查询该标签下未删除的文章数量[cite: 11]
+    count_res = await db.execute(
+        select(func.count(Article.id))
+        .join(article_tag, Article.id == article_tag.c.article_id)
+        .where(article_tag.c.tag_id == tag_id, Article.deleted_at == None)
+    )
+    count = count_res.scalar() or 0
+
+    if count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"该标签下有 {count} 篇文章正在使用，请先解除关联后再删除"
+        )
 
     await db.execute(delete(Tag).where(Tag.id == tag_id))
     await db.commit()

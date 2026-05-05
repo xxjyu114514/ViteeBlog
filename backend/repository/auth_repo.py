@@ -37,7 +37,7 @@ class AuthRepository:
                 if datetime.now() < lock_time:
                     remaining_time = int((lock_time - datetime.now()).total_seconds() / 60)
                     raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
+                        status_code=423,
                         detail=f"由于连续登录失败，账号已锁定，请在 {remaining_time} 分钟后再试"
                     )
                 else:
@@ -45,7 +45,7 @@ class AuthRepository:
                     user.login_attempts = 0
                     await db.commit()
 
-                    # 3. 验证密码
+            # 3. 验证密码
             if not verify_password(password, user.password):
                 # 增加失败计数
                 user.login_attempts += 1
@@ -63,7 +63,7 @@ class AuthRepository:
                     detail=detail
                 )
 
-                # 4. 登录成功，重置失败统计
+            # 4. 登录成功，重置失败统计
             user.login_attempts = 0
             user.last_fail_time = None
             await db.commit()
@@ -112,7 +112,7 @@ class AuthRepository:
                     detail=f"注册失败：该{field}已被占用"
                 )
 
-                # 2. 创建新用户对象
+            # 2. 创建新用户对象
             new_user = User(
                 username=user_data['username'],
                 email=user_data['email'],
@@ -152,7 +152,7 @@ class AuthRepository:
             if user_exists.scalars().first():
                 raise HTTPException(status_code=400, detail="该邮箱已注册，请直接登录")
 
-                # 2. 频率限制与清理旧码：将该邮箱下所有存活的验证码标记为删除（软删除）
+            # 2. 频率限制与清理旧码：将该邮箱下所有存活的验证码标记为删除（软删除）
             await db.execute(
                 update(VerificationCode)
                 .where(
@@ -212,7 +212,7 @@ class AuthRepository:
                 await db.commit()
                 return False
 
-                # 校验通过，立即“消耗”掉（软删除），确保该验证码只能使用一次
+            # 校验通过，立即“消耗”掉（软删除），确保该验证码只能使用一次
             await db.execute(
                 update(VerificationCode)
                 .where(VerificationCode.id == record.id)
