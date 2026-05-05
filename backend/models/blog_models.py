@@ -80,7 +80,7 @@ class Article(Base):
     author: Mapped["User"] = relationship(back_populates="articles", foreign_keys=[user_id])
     reviewer: Mapped[Optional["User"]] = relationship(foreign_keys=[reviewed_by])
     category: Mapped[Optional["Category"]] = relationship(back_populates="articles")
-    tags: Mapped[List["Tag"]] = relationship(secondary=article_tag, back_populates="tags")
+    tags: Mapped[List["Tag"]] = relationship(secondary=article_tag, back_populates="articles")
     comments: Mapped[List["Comment"]] = relationship(back_populates="article", cascade="all, delete-orphan")
 
 
