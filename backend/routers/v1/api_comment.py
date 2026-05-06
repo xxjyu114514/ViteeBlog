@@ -202,9 +202,14 @@ async def report_comment(
     return {"message": "举报成功，感谢您的监督"}
 
 
-# 6. 管理员：获取待处理举报
-@router.get("/admin/reports", response_model=List[ReportResponse])
-async def list_reports(admin: User = Depends(allow_admin_only), db: AsyncSession = Depends(get_db)):
+# 6. 管理员：获取待处理举报（分页）
+@router.get("/admin/reports")  # ✅ 删除了错误的 response_model
+async def list_reports(
+        page: int = Query(1, ge=1),
+        size: int = Query(20, ge=1),
+        admin: User = Depends(allow_admin_only),
+        db: AsyncSession = Depends(get_db)
+):
     stmt = (
         select(CommentReport)
         .where(CommentReport.is_resolved == False)
@@ -214,8 +219,21 @@ async def list_reports(admin: User = Depends(allow_admin_only), db: AsyncSession
         )
         .order_by(CommentReport.created_at.desc())
     )
-    res = await db.execute(stmt)
-    return res.scalars().all()
+
+    # 统计总数
+    total_res = await db.execute(select(func.count()).select_from(stmt.subquery()))
+    total = total_res.scalar() or 0
+
+    # 分页查询
+    res = await db.execute(stmt.offset((page - 1) * size).limit(size))
+
+    return {
+        "items": res.scalars().all(),
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": math.ceil(total / size) if total > 0 else 0
+    }
 
 
 # 7. 管理员：处理举报
@@ -253,5 +271,6 @@ async def get_all_comments_admin(
         "items": items,
         "total": total,
         "page": page,
-        "pages": math.ceil(total / size)
+        "size": size,
+        "pages": math.ceil(total / size) if total > 0 else 0  # ✅ 统一写法
     }

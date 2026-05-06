@@ -1366,15 +1366,57 @@ axios.interceptors.response.use(
 
 ### 权限说明
 - **公开接口**：查看文章评论列表
-- **登录用户**：发表评论、回复评论、删除自己的评论、举报评论
+- **登录用户**：发表评论、回复评论、删除自己的评论、举报评论、点赞/取消点赞
 - **管理员专属**：删除任意评论、查看待处理举报、处理举报、全站评论巡查
 
 ### 核心功能概览
 - 💬 **发表评论**：支持一级评论和嵌套回复
+- 👍 **点赞功能**：用户可点赞/取消点赞评论
 - 🗑️ **软删除**：作者或管理员可删除评论
 - 🚩 **举报系统**：用户可举报不当评论
 - 👮 **管理员审核**：查看和处理举报
 - 🔍 **全站巡查**：管理员可查看所有评论
+
+### 数据模型
+
+#### Comment（评论表）
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | int | 评论ID（主键） |
+| content | text | 评论内容 |
+| user_id | int | 评论者ID（外键关联User） |
+| article_id | int | 文章ID（外键关联Article） |
+| parent_id | int/null | 父评论ID，null表示一级评论 |
+| is_audited | bool | 是否已审核（默认true） |
+| created_at | datetime | 创建时间 |
+| deleted_at | datetime/null | 删除时间（软删除） |
+
+**关系**:
+- `author`: 关联 User 表（评论者）
+- `article`: 关联 Article 表（所属文章）
+- `parent`: 自关联父评论
+- `replies`: 自关联子评论列表
+- `likes`: 关联 CommentLike 表（点赞记录）
+
+#### CommentLike（评论点赞表）
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | int | 点赞ID（主键） |
+| comment_id | int | 评论ID（外键） |
+| user_id | int | 用户ID（外键） |
+| created_at | datetime | 点赞时间 |
+
+**约束**: `(comment_id, user_id)` 唯一约束，防止重复点赞
+
+#### CommentReport（评论举报表）
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | int | 举报ID（主键） |
+| comment_id | int | 被举报评论ID |
+| reporter_id | int | 举报人ID |
+| reason | string | 举报原因（2-200字符） |
+| is_resolved | bool | 是否已处理（默认false） |
+| created_at | datetime | 举报时间 |
 
 ---
 
@@ -1408,9 +1450,23 @@ axios.interceptors.response.use(
   "author": {
     "id": 1,
     "username": "BaoZi"
-  }
+  },
+  "like_count": 0,
+  "is_liked": false
 }
 ```
+
+**响应字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | int | 评论ID |
+| content | string | 评论内容 |
+| parent_id | int/null | 父评论ID，null表示一级评论 |
+| user_id | int | 评论者ID |
+| created_at | datetime | 创建时间 |
+| author | object | 评论者信息（id, username） |
+| like_count | int | 点赞数 |
+| is_liked | bool | 当前用户是否已点赞（未登录时为false） |
 
 **错误响应**:
 - `400`: 父评论不存在或不属于该文章
@@ -1440,7 +1496,9 @@ axios.interceptors.response.use(
     "author": {
       "id": 1,
       "username": "BaoZi"
-    }
+    },
+    "like_count": 5,
+    "is_liked": true
   },
   {
     "id": 2,
@@ -1451,7 +1509,9 @@ axios.interceptors.response.use(
     "author": {
       "id": 2,
       "username": "Admin"
-    }
+    },
+    "like_count": 2,
+    "is_liked": false
   }
 ]
 ```
@@ -1461,6 +1521,8 @@ axios.interceptors.response.use(
 - ✅ 按 `created_at` 升序排列（旧评论在前）
 - ✅ 扁平结构，前端需自行组装树形结构
 - ✅ 通过 `parent_id` 判断是否为回复
+- ✅ 包含点赞数 `like_count` 和当前用户点赞状态 `is_liked`
+- ✅ 未登录用户 `is_liked` 始终为 false
 
 ---
 
@@ -1487,7 +1549,40 @@ axios.interceptors.response.use(
 
 ---
 
-### 4. 举报评论
+### 4. 点赞/取消点赞
+
+**接口**: `POST /comments/{comment_id}/like`  
+**权限**: 所有登录用户
+
+**功能**: 切换点赞状态（已点赞则取消，未点赞则添加）
+
+**成功响应** (200):
+```json
+{
+  "liked": true,
+  "like_count": 6
+}
+```
+
+**响应字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| liked | bool | 当前操作后的点赞状态（true=已点赞，false=已取消） |
+| like_count | int | 最新的点赞总数 |
+
+**错误响应**:
+- `404`: 评论不存在或已被删除
+
+**前端注意**:
+- ✅ 点击点赞按钮时调用此接口，无需区分点赞/取消
+- ✅ 后端自动判断当前状态并切换
+- ✅ 返回最新的点赞数和状态，前端直接更新UI
+- ✅ 使用唯一约束防止重复点赞
+- ⚠️ 需要登录才能点赞
+
+---
+
+### 5. 举报评论
 
 **接口**: `POST /comments/{comment_id}/report`  
 **权限**: 所有登录用户
@@ -1522,7 +1617,7 @@ axios.interceptors.response.use(
 
 ---
 
-### 5. 获取待处理举报列表（管理员）
+### 6. 获取待处理举报列表（管理员）
 
 **接口**: `GET /comments/admin/reports`  
 **权限**: 仅管理员
@@ -1561,7 +1656,7 @@ axios.interceptors.response.use(
 
 ---
 
-### 6. 处理举报（管理员）
+### 7. 处理举报（管理员）
 
 **接口**: `PUT /comments/admin/reports/{report_id}/resolve`  
 **权限**: 仅管理员
@@ -1585,7 +1680,7 @@ axios.interceptors.response.use(
 
 ---
 
-### 7. 全站评论巡查（管理员）
+### 8. 全站评论巡查（管理员）
 
 **接口**: `GET /comments/admin/comments/all?page=1&size=20`  
 **权限**: 仅管理员
@@ -1681,6 +1776,7 @@ const commentTree = buildCommentTree(flatComments.data)
         @reply="handleReply"
         @delete="handleDelete"
         @report="handleReport"
+        @like="handleLike"
       />
     </div>
   </div>
@@ -1728,13 +1824,104 @@ const submitComment = async () => {
   }
 }
 
+// 点赞/取消点赞
+const handleLike = async (commentId) => {
+  try {
+    const response = await axios.post(
+      `/api/v1/comments/${commentId}/like`,
+      {},
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    )
+    
+    // 更新本地状态
+    const { liked, like_count } = response.data
+    updateCommentLikeStatus(commentId, liked, like_count)
+  } catch (error) {
+    if (error.response?.status === 404) {
+      ElMessage.error('评论不存在')
+    } else if (error.response?.status === 401) {
+      ElMessage.warning('请先登录')
+    } else {
+      ElMessage.error('操作失败')
+    }
+  }
+}
+
+// 更新评论点赞状态（递归查找）
+const updateCommentLikeStatus = (commentId, isLiked, likeCount) => {
+  const updateNode = (nodes) => {
+    for (let node of nodes) {
+      if (node.id === commentId) {
+        node.is_liked = isLiked
+        node.like_count = likeCount
+        return true
+      }
+      if (node.replies && node.replies.length > 0) {
+        if (updateNode(node.replies)) return true
+      }
+    }
+    return false
+  }
+  updateNode(commentTree.value)
+}
+
 onMounted(() => {
   loadComments()
 })
 </script>
 ```
 
-### 3. 举报功能实现
+### 3. 点赞功能实现
+
+```javascript
+// 点赞按钮组件
+const LikeButton = {
+  template: `
+    <button 
+      class="like-btn" 
+      :class="{ 'liked': comment.is_liked }"
+      @click="handleLike"
+    >
+      <span class="icon">{{ comment.is_liked ? '❤️' : '🤍' }}</span>
+      <span class="count">{{ comment.like_count }}</span>
+    </button>
+  `,
+  props: ['comment'],
+  emits: ['like'],
+  setup(props, { emit }) {
+    const handleLike = () => {
+      emit('like', props.comment.id)
+    }
+    return { handleLike }
+  }
+}
+
+// 父组件中的处理函数
+const handleLike = async (commentId) => {
+  try {
+    const response = await axios.post(
+      `/api/v1/comments/${commentId}/like`,
+      {},
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    )
+    
+    const { liked, like_count } = response.data
+    // 更新UI状态
+    updateCommentLikeStatus(commentId, liked, like_count)
+  } catch (error) {
+    if (error.response?.status === 401) {
+      ElMessage.warning('请先登录')
+      // 跳转到登录页
+    }
+  }
+}
+```
+
+### 4. 举报功能实现
 
 ```javascript
 // 举报评论
@@ -1770,7 +1957,7 @@ const showReportDialog = (commentId) => {
 }
 ```
 
-### 4. 管理员举报处理界面
+### 5. 管理员举报处理界面
 
 ```javascript
 // 获取待处理举报
