@@ -78,6 +78,27 @@ class Article(Base):
     comments: Mapped[List["Comment"]] = relationship(back_populates="article", cascade="all, delete-orphan")
 
 
+class ArticleFavorite(Base):
+    """文章收藏表"""
+    __tablename__ = "article_favorite"
+
+    # 主键
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    # 关联用户
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), index=True)
+    # 关联文章
+    article_id: Mapped[int] = mapped_column(ForeignKey("article.id", ondelete="CASCADE"), index=True)
+    # 收藏时间
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    # 关系（可选，方便联表查询）
+    user: Mapped["User"] = relationship()
+    article: Mapped["Article"] = relationship()
+
+    # 确保一个用户不能重复收藏同一篇文章
+    __table_args__ = (
+        UniqueConstraint("user_id", "article_id", name="uq_user_article_favorite"),
+    )
+
 class Category(Base):
     """分类表"""
     name: Mapped[str] = mapped_column(String(50), unique=True, comment="分类名称")

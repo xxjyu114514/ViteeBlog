@@ -2007,6 +2007,403 @@ const resolveAndDelete = async (reportId, commentId) => {
 
 ---
 
+## ⭐ 文章收藏模块
+
+### 权限说明
+- **登录用户**：收藏/取消收藏文章、查看我的收藏列表、检查收藏状态
+- **公开接口**：无（所有收藏相关接口均需登录）
+
+### 核心功能概览
+- ⭐ **收藏切换**：一键收藏/取消收藏，自动判断当前状态
+- 📋 **收藏列表**：分页查看我收藏的所有文章
+- ✅ **状态检查**：快速检查是否已收藏某篇文章
+
+---
+
+### 1. 收藏/取消收藏文章
+
+**接口**: `POST /favorites/{article_id}/favorite`  
+**权限**: 所有登录用户
+
+**功能**: 智能切换收藏状态（未收藏则收藏，已收藏则取消）
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| article_id | int | ✅ | 文章ID |
+
+**成功响应** (200) - 首次收藏:
+```json
+{
+  "favorited": true,
+  "message": "收藏成功"
+}
+```
+
+**成功响应** (200) - 取消收藏:
+```json
+{
+  "favorited": false,
+  "message": "已取消收藏"
+}
+```
+
+**错误响应**:
+- `404`: 文章不存在或未公开发布（草稿、待审核、已删除的文章无法收藏）
+- `401`: 未登录
+
+**前端注意**:
+- ✅ 接口自动判断当前收藏状态并切换
+- ✅ 只能收藏已发布且未删除的文章
+- ✅ 返回 `favorited` 字段表示操作后的状态
+- ⚠️ 需要携带 Token 认证
+
+---
+
+### 2. 获取我的收藏列表
+
+**接口**: `GET /favorites/my?page=1&size=10`  
+**权限**: 所有登录用户
+
+**查询参数**:
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| page | int | 1 | 页码（从1开始） |
+| size | int | 10 | 每页数量 |
+
+**成功响应** (200):
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "created_at": "2026-05-08T10:00:00",
+      "article": {
+        "id": 28,
+        "title": "收藏的文章标题",
+        "summary": "文章摘要...",
+        "status": "published",
+        "created_at": "2026-05-07T09:00:00"
+      }
+    }
+  ],
+  "total": 15,
+  "page": 1,
+  "size": 10,
+  "pages": 2
+}
+```
+
+**响应字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| items | array | 收藏记录列表 |
+| items[].id | int | 收藏记录ID |
+| items[].created_at | datetime | 收藏时间 |
+| items[].article | object | 被收藏的文章信息 |
+| items[].article.id | int | 文章ID |
+| items[].article.title | string | 文章标题 |
+| items[].article.summary | string | 文章摘要 |
+| items[].article.status | string | 文章状态 |
+| items[].article.created_at | datetime | 文章创建时间 |
+| total | int | 总记录数 |
+| page | int | 当前页码 |
+| size | int | 每页数量 |
+| pages | int | 总页数 |
+
+**前端注意**:
+- ✅ 按收藏时间降序排列（最新收藏在前）
+- ✅ 统一分页格式 `{items, total, page, size, pages}`
+- ✅ 包含文章的简化信息（不包含正文内容）
+- ⚠️ 如果文章被删除，可能仍会出现在收藏列表中
+
+---
+
+### 3. 检查收藏状态
+
+**接口**: `GET /favorites/check/{article_id}`  
+**权限**: 所有登录用户
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| article_id | int | ✅ | 文章ID |
+
+**成功响应** (200):
+```json
+{
+  "favorited": true
+}
+```
+
+**响应字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| favorited | bool | 当前用户是否已收藏该文章 |
+
+**前端注意**:
+- ✅ 用于在文章详情页显示收藏按钮状态
+- ✅ 返回简单的布尔值，便于UI更新
+- ⚠️ 需要登录才能调用
+
+---
+
+## 💡 收藏功能开发建议
+
+### 1. 收藏按钮组件（Vue3）
+
+```vue
+<template>
+  <button 
+    class="favorite-btn" 
+    :class="{ 'favorited': isFavorited }"
+    @click="toggleFavorite"
+    :disabled="loading"
+  >
+    <span class="icon">{{ isFavorited ? '⭐' : '☆' }}</span>
+    <span class="text">{{ isFavorited ? '已收藏' : '收藏' }}</span>
+  </button>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+
+const props = defineProps({
+  articleId: {
+    type: Number,
+    required: true
+  }
+})
+
+const isFavorited = ref(false)
+const loading = ref(false)
+
+// 检查收藏状态
+const checkFavoriteStatus = async () => {
+  try {
+    const response = await axios.get(
+      `/api/v1/favorites/check/${props.articleId}`,
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    )
+    isFavorited.value = response.data.favorited
+  } catch (error) {
+    console.error('检查收藏状态失败:', error)
+  }
+}
+
+// 切换收藏状态
+const toggleFavorite = async () => {
+  if (!token) {
+    ElMessage.warning('请先登录')
+    return
+  }
+  
+  loading.value = true
+  try {
+    const response = await axios.post(
+      `/api/v1/favorites/${props.articleId}/favorite`,
+      {},
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    )
+    
+    // 更新本地状态
+    isFavorited.value = response.data.favorited
+    ElMessage.success(response.data.message)
+  } catch (error) {
+    if (error.response?.status === 404) {
+      ElMessage.error('文章不存在或未发布')
+    } else if (error.response?.status === 401) {
+      ElMessage.warning('请先登录')
+    } else {
+      ElMessage.error('操作失败')
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  if (token) {
+    checkFavoriteStatus()
+  }
+})
+</script>
+
+<style scoped>
+.favorite-btn {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.favorite-btn.favorited {
+  background: #fff3cd;
+  border-color: #ffc107;
+  color: #856404;
+}
+
+.favorite-btn:hover:not(:disabled) {
+  background: #f8f9fa;
+}
+
+.favorite-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+</style>
+```
+
+### 2. 我的收藏页面
+
+```vue
+<template>
+  <div class="my-favorites">
+    <h2>我的收藏</h2>
+    
+    <div v-if="loading" class="loading">加载中...</div>
+    
+    <div v-else-if="favorites.length === 0" class="empty">
+      暂无收藏文章
+    </div>
+    
+    <div v-else class="favorite-list">
+      <div 
+        v-for="item in favorites" 
+        :key="item.id"
+        class="favorite-item"
+      >
+        <router-link :to="`/article/${item.article.id}`">
+          <h3>{{ item.article.title }}</h3>
+          <p>{{ item.article.summary }}</p>
+        </router-link>
+        <div class="meta">
+          <span class="time">收藏于 {{ formatDate(item.created_at) }}</span>
+          <button @click="removeFavorite(item.article.id)">取消收藏</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 分页 -->
+    <div v-if="totalPages > 1" class="pagination">
+      <button 
+        @click="loadPage(currentPage - 1)"
+        :disabled="currentPage === 1"
+      >上一页</button>
+      <span>{{ currentPage }} / {{ totalPages }}</span>
+      <button 
+        @click="loadPage(currentPage + 1)"
+        :disabled="currentPage === totalPages"
+      >下一页</button>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
+
+const favorites = ref([])
+const loading = ref(false)
+const currentPage = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+
+const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
+
+// 加载收藏列表
+const loadFavorites = async (page = 1) => {
+  loading.value = true
+  try {
+    const response = await axios.get('/api/v1/favorites/my', {
+      params: { page, size: pageSize.value },
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    
+    favorites.value = response.data.items
+    total.value = response.data.total
+    currentPage.value = response.data.page
+  } catch (error) {
+    console.error('加载收藏列表失败:', error)
+    ElMessage.error('加载失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 翻页
+const loadPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    loadFavorites(page)
+  }
+}
+
+// 取消收藏
+const removeFavorite = async (articleId) => {
+  try {
+    await axios.post(
+      `/api/v1/favorites/${articleId}/favorite`,
+      {},
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    )
+    ElMessage.success('已取消收藏')
+    // 重新加载列表
+    await loadFavorites(currentPage.value)
+  } catch (error) {
+    ElMessage.error('操作失败')
+  }
+}
+
+// 格式化日期
+const formatDate = (dateStr) => {
+  return new Date(dateStr).toLocaleDateString('zh-CN')
+}
+
+onMounted(() => {
+  loadFavorites()
+})
+</script>
+```
+
+### 3. Axios 拦截器处理未登录
+
+```javascript
+// 在文章详情页自动检查登录状态
+axios.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401) {
+      // 收藏相关接口的401错误
+      if (error.config.url.includes('/favorites/')) {
+        ElMessageBox.confirm(
+          '您需要登录才能使用收藏功能',
+          '提示',
+          {
+            confirmButtonText: '去登录',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        ).then(() => {
+          router.push('/login')
+        })
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+```
+
+---
+
 ## 🔄 后续更新计划
 
 - [ ] 文章搜索功能
@@ -2016,7 +2413,7 @@ const resolveAndDelete = async (reportId, commentId) => {
 - [x] 完整审核流程（提交/撤回/审核/驳回）
 - [x] 防灌水机制
 - [x] 评论系统（发表/回复/删除/举报）
-- [ ] 点赞与收藏
+- [x] 点赞与收藏
 
 ---
 
