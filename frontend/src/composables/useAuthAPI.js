@@ -1,131 +1,64 @@
-import { createFetch } from '@vueuse/core'
 import { useUserStore } from '@/stores/user'
-import { useRouter } from 'vue-router'
-import { getBaseUrl } from '@/config/apiConfig'
+import { useBaseFetch, handleFriendlyError } from '@/api/client'
 import { buildUrl } from '@/utils/apiUtils'
-
-// 创建一个预配置的 fetch 实例
-const useBaseFetch = createFetch({
-  baseUrl: getBaseUrl(),
-  options: {
-    async beforeFetch({ options }) {
-      const userStore = useUserStore()
-      if (userStore.token) {
-        options.headers = {
-          ...options.headers,
-          Authorization: `Bearer ${userStore.token}`,
-        }
-      }
-      return { options }
-    },
-    onFetchError(ctx) {
-      // 全局处理：例如 401 自动登出
-      if (ctx.response?.status === 401) {
-        const userStore = useUserStore()
-        userStore.logout()
-        // 在composable中不能使用useRouter，改用window.location
-        window.location.href = '/login'
-      }
-      return ctx
-    },
-  },
-  fetchOptions: {
-    mode: 'cors',
-  },
-})
-
-// 统一的错误信息提取函数
-const extractFriendlyErrorMessage = (error, context = '操作') => {
-  // 用户友好提示
-  if (!error) {
-    return `${context}失败，请稍后重试`
-  }
-  
-  // 优先使用后端返回的具体错误详情
-  if (error.data?.detail) {
-    return error.data.detail
-  }
-  
-  // 根据HTTP状态码提供友好提示
-  switch (error.status) {
-    case 400:
-      return '输入信息有误，请检查后重试'
-    case 401:
-      return '身份验证失败，请检查用户名和密码'
-    case 403:
-      if (error.data?.detail && error.data.detail.includes('锁定')) {
-        return error.data.detail // 保留具体的锁定时间信息
-      }
-      return '操作被拒绝，请稍后重试'
-    case 404:
-      return '请求的资源不存在'
-    case 429:
-      return '操作太频繁，请稍后再试'
-    case 500:
-      return '系统繁忙，请稍后重试'
-    case 502:
-    case 503:
-    case 504:
-      return '服务暂时不可用，请稍后重试'
-    default:
-      return `${context}失败，请稍后重试`
-  }
-}
 
 export function useAuthAPI() {
   const userStore = useUserStore()
-  const router = useRouter()
 
-  // 登录逻辑
   const login = async (username, password) => {
-    const { data, error } = await useBaseFetch('/auth/login').post({
-      username,
-      password,
-    }).json()
+    const url = buildUrl('/auth/login')
+    // 发送 FormData (假设后端使用 OAuth2 Password 模式)
+    const formData = new URLSearchParams()
+    formData.append('username', username)
+    formData.append('password', password)
 
-    if (!error.value && data.value) {
+    const { data, error } = await useBaseFetch(url).post(formData).json()
+
+    if (error.value) {
+      return { success: false, message: handleFriendlyError(error.value, '登录') }
+    }
+    
+    // 登录成功后更新 Store
+    if (data.value) {
       userStore.setAuth(data.value.access_token, data.value.user)
-      return { success: true }
     }
     
-    // 使用友好的错误信息
-    const errorMessage = extractFriendlyErrorMessage(error.value, '登录')
-    return { success: false, message: errorMessage }
+    return { success: true, data: data.value }
   }
 
-  // 注册逻辑
   const register = async (userData) => {
-    const { data, error } = await useBaseFetch('/auth/register').post(userData).json()
-    
-    if (!error.value) {
-      return { data, error }
+    const url = buildUrl('/auth/register')
+    const { data, error } = await useBaseFetch(url).post(userData).json()
+
+    if (error.value) {
+      return { success: false, message: handleFriendlyError(error.value, '注册') }
     }
-    
-    // 修改错误对象，添加友好的错误信息
-    error.value = {
-      ...error.value,
-      friendlyMessage: extractFriendlyErrorMessage(error.value, '注册')
-    }
-    
-    return { data, error }
+    return { success: true, data: data.value }
   }
 
-  // 发送注册验证码
-  const sendRegisterCode = async (email) => {
-    const { data, error } = await useBaseFetch('/auth/send-register-code').post({ email }).json()
-    
-    if (!error.value) {
-      return { data, error }
+  const getCurrentUser = async () => {
+    const url = buildUrl('/auth/me')
+    const { data, error } = await useBaseFetch(url).get().json()
+
+    if (error.value) {
+      return { success: false, message: handleFriendlyError(error.value, '获取用户信息') }
     }
-    
-    // 修改错误对象，添加友好的错误信息
-    error.value = {
-      ...error.value,
-      friendlyMessage: extractFriendlyErrorMessage(error.value, '发送验证码')
-    }
-    
-    return { data, error }
+    return { success: true, data: data.value }
   }
 
-  return { login, register, sendRegisterCode }
+  const logout = async () => {
+    const url = buildUrl('/auth/logout')
+    const { data, error } = await useBaseFetch(url).post().json()
+
+    // 无论后端是否成功，前端都执行登出逻辑
+    userStore.logout()
+
+    if (error.value) {
+      // 可以选择忽略登出接口的错误，或者返回提示
+      return { success: false, message: handleFriendlyError(error.value, '登出') }
+    }
+    return { success: true, data: data.value }
+  }
+
+  return { login, register, getCurrentUser, logout }
 }

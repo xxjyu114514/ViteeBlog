@@ -8,33 +8,29 @@
  */
 import { getBaseUrl } from '@/config/apiConfig'
 
-export function buildUrl(path, pathParams = {}, queryParams = {}, apiType = 'ARTICLE') {
-  // 获取基础URL
-  const baseUrl = getBaseUrl()
-  
-  // 根据API类型确定前缀
-  let fullUrl = baseUrl + path
-  
-  // 替换路径参数占位符
-  Object.keys(pathParams).forEach(key => {
-    const placeholder = `:${key}`
-    if (fullUrl.includes(placeholder)) {
-      fullUrl = fullUrl.replace(placeholder, encodeURIComponent(pathParams[key]))
-    }
-  })
-  
-  // 拼接查询参数
+/**
+ * 动态构建 URL：处理 RESTful 路径参数和 Query 字符串
+ * @example buildUrl('/article/:id', { id: 123 }, { page: 1 }) => '/article/123?page=1'
+ */
+export const buildUrl = (path, pathParams = {}, queryParams = {}) => {
+  let finalPath = path
+
+  // 1. 替换路径参数 (如 :id)
+  for (const [key, value] of Object.entries(pathParams)) {
+    finalPath = finalPath.replace(`:${key}`, encodeURIComponent(value))
+  }
+
+  // 2. 拼接 Query 参数
   if (Object.keys(queryParams).length > 0) {
-    const params = new URLSearchParams()
-    Object.keys(queryParams).forEach(key => {
-      if (queryParams[key] !== null && queryParams[key] !== undefined) {
-        params.append(key, queryParams[key])
-      }
-    })
-    if (params.toString()) {
-      fullUrl += `?${params.toString()}`
+    // 过滤掉 undefined 或 null 的参数
+    const cleanQuery = Object.fromEntries(
+      Object.entries(queryParams).filter(([_, v]) => v != null && v !== '')
+    )
+    const queryString = new URLSearchParams(cleanQuery).toString()
+    if (queryString) {
+      finalPath += `?${queryString}`
     }
   }
-  
-  return fullUrl
+
+  return finalPath
 }

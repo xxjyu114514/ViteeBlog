@@ -1,86 +1,18 @@
-import { createFetch } from '@vueuse/core'
-import { useUserStore } from '@/stores/user'
-import { getBaseUrl } from '@/config/apiConfig'
+import { useBaseFetch, handleFriendlyError } from '@/api/client'
 import { buildUrl } from '@/utils/apiUtils'
 
-// 创建一个预配置的 fetch 实例
-const useBaseFetch = createFetch({
-  baseUrl: getBaseUrl(),
-  options: {
-    async beforeFetch({ options }) {
-      const userStore = useUserStore()
-      if (userStore.token) {
-        options.headers = {
-          ...options.headers,
-          Authorization: `Bearer ${userStore.token}`,
-        }
-      }
-      return { options }
-    },
-    onFetchError(ctx) {
-      // 全局处理：例如 401 自动登出
-      if (ctx.response?.status === 401) {
-        const userStore = useUserStore()
-        userStore.logout()
-        // 在composable中不能使用useRouter，改用window.location
-        window.location.href = '/login'
-      }
-      return ctx
-    },
-  },
-  fetchOptions: {
-    mode: 'cors',
-  },
-})
-
-// 统一的错误信息提取函数
-const extractFriendlyErrorMessage = (error, context = '操作') => {
-  // 用户友好提示
-  if (!error) {
-    return `${context}失败，请稍后重试`
-  }
-  
-  // 优先使用后端返回的具体错误详情
-  if (error.data?.detail) {
-    return error.data.detail
-  }
-  
-  // 根据HTTP状态码提供友好提示
-  switch (error.status) {
-    case 400:
-      return '输入信息有误，请检查后重试'
-    case 401:
-      return '身份验证失败，请重新登录'
-    case 403:
-      return '权限不足，仅博主可操作'
-    case 404:
-      return '文章不存在或已被删除'
-    case 429:
-      return '操作太频繁，请稍后再试'
-    case 500:
-      return '系统繁忙，请稍后重试'
-    case 502:
-    case 503:
-    case 504:
-      return '服务暂时不可用，请稍后重试'
-    default:
-      return `${context}失败，请稍后重试`
-  }
-}
-
 export function useArticleAPI() {
-  const userStore = useUserStore()
 
   // 自动保存/创建文章
   const autoSaveArticle = async (articleData) => {
-    const { data, error } = await useBaseFetch('/article/autosave').post(articleData).json()
+    const url = buildUrl('/article/autosave')
+    const { data, error } = await useBaseFetch(url).post(articleData).json()
     
-    if (!error.value) {
-      return { success: true, data: data.value }
+    if (error.value) {
+      return { success: false, message: handleFriendlyError(error.value, '保存文章') }
     }
     
-    const errorMessage = extractFriendlyErrorMessage(error.value, '保存文章')
-    return { success: false, message: errorMessage }
+    return { success: true, data: data.value }
   }
 
   // 获取文章详情
@@ -88,29 +20,23 @@ export function useArticleAPI() {
     const url = buildUrl('/article/:id', { id: articleId })
     const { data, error } = await useBaseFetch(url).get().json()
     
-    if (!error.value) {
-      return { success: true, data: data.value }
+    if (error.value) {
+      return { success: false, message: handleFriendlyError(error.value, '获取文章') }
     }
     
-    const errorMessage = extractFriendlyErrorMessage(error.value, '获取文章')
-    return { success: false, message: errorMessage }
+    return { success: true, data: data.value }
   }
 
   // 发布文章
   const publishArticle = async (articleId) => {
-    try {
-      const url = buildUrl('/article/:id/publish', { id: articleId })
-      const { data, error } = await useBaseFetch(url).put({}).json()
-      
-      if (!error.value) {
-        return { success: true }
-      }
-      
-      const errorMessage = extractFriendlyErrorMessage(error.value, '发布文章')
-      return { success: false, message: errorMessage }
-    } catch (err) {
-      return { success: false, message: '发布失败：网络错误或服务器异常' }
+    const url = buildUrl('/article/:id/publish', { id: articleId })
+    const { data, error } = await useBaseFetch(url).put({}).json()
+    
+    if (error.value) {
+      return { success: false, message: handleFriendlyError(error.value, '发布文章') }
     }
+    
+    return { success: true }
   }
 
   // 获取公开文章列表（支持分页和分类筛选）
@@ -125,12 +51,19 @@ export function useArticleAPI() {
     const url = buildUrl('/article/public/list', {}, queryParams)
     const { data, error } = await useBaseFetch(url).get().json()
     
-    if (!error.value) {
-      return { success: true, data: data.value }
+    if (error.value) {
+      return { success: false, message: handleFriendlyError(error.value, '获取文章列表') }
+    }
+
+    // 防御性编程：确保返回的结构安全
+    const safeData = {
+      items: Array.isArray(data.value?.items) ? data.value.items : [],
+      total: data.value?.total || 0,
+      page: data.value?.page || page,
+      pages: data.value?.pages || 0
     }
     
-    const errorMessage = extractFriendlyErrorMessage(error.value, '获取文章列表')
-    return { success: false, message: errorMessage }
+    return { success: true, data: safeData }
   }
 
   // 获取用户自己的文章列表（支持分页）
@@ -143,12 +76,19 @@ export function useArticleAPI() {
     const url = buildUrl('/article/my/list', {}, queryParams)
     const { data, error } = await useBaseFetch(url).get().json()
     
-    if (!error.value) {
-      return { success: true, data: data.value }
+    if (error.value) {
+      return { success: false, message: handleFriendlyError(error.value, '获取我的文章') }
+    }
+
+    // 防御性编程：确保返回的结构安全
+    const safeData = {
+      items: Array.isArray(data.value?.items) ? data.value.items : [],
+      total: data.value?.total || 0,
+      page: data.value?.page || page,
+      pages: data.value?.pages || 0
     }
     
-    const errorMessage = extractFriendlyErrorMessage(error.value, '获取我的文章')
-    return { success: false, message: errorMessage }
+    return { success: true, data: safeData }
   }
 
   // 软删除文章（移至回收站）
@@ -156,12 +96,11 @@ export function useArticleAPI() {
     const url = buildUrl('/article/:id', { id: articleId })
     const { data, error } = await useBaseFetch(url).delete().json()
     
-    if (!error.value) {
-      return { success: true }
+    if (error.value) {
+      return { success: false, message: handleFriendlyError(error.value, '删除文章') }
     }
     
-    const errorMessage = extractFriendlyErrorMessage(error.value, '删除文章')
-    return { success: false, message: errorMessage }
+    return { success: true }
   }
 
   // 恢复文章
@@ -169,16 +108,20 @@ export function useArticleAPI() {
     const url = buildUrl('/article/:id/restore', { id: articleId })
     const { data, error } = await useBaseFetch(url).post({}).json()
     
-    if (!error.value) {
-      return { success: true }
+    if (error.value) {
+      return { success: false, message: handleFriendlyError(error.value, '恢复文章') }
     }
     
-    const errorMessage = extractFriendlyErrorMessage(error.value, '恢复文章')
-    return { success: false, message: errorMessage }
+    return { success: true }
   }
 
   // 管理员审核文章
   const reviewArticle = async (articleId, passAudit, remark = '') => {
+    // 如果是驳回但没有提供有效的remark，返回错误
+    if (!passAudit && (!remark || !remark.trim())) {
+      return { success: false, message: '驳回文章必须填写原因' }
+    }
+
     const url = buildUrl('/article/admin/articles/:id/review', { id: articleId })
     const reviewData = {
       pass_audit: passAudit
@@ -187,19 +130,14 @@ export function useArticleAPI() {
     if (!passAudit && remark && remark.trim()) {
       reviewData.remark = remark.trim()
     }
-    // 如果是驳回但没有提供有效的remark，返回错误
-    if (!passAudit && (!remark || !remark.trim())) {
-      return { success: false, message: '驳回文章必须填写原因' }
-    }
     
     const { data, error } = await useBaseFetch(url).post(reviewData).json()
     
-    if (!error.value) {
-      return { success: true }
+    if (error.value) {
+      return { success: false, message: handleFriendlyError(error.value, '审核文章') }
     }
     
-    const errorMessage = extractFriendlyErrorMessage(error.value, '审核文章')
-    return { success: false, message: errorMessage }
+    return { success: true }
   }
 
   // 获取全站文章列表（管理员专用）
@@ -213,14 +151,19 @@ export function useArticleAPI() {
     const url = buildUrl('/article/admin/all-articles', {}, queryParams)
     const { data, error } = await useBaseFetch(url).get().json()
     
-    if (!error.value) {
-      // 安全检查：确保data.value存在
-      const responseData = data.value || { items: [], total: 0, page: page, pages: 0 }
-      return { success: true, data: responseData }
+    if (error.value) {
+      return { success: false, message: handleFriendlyError(error.value, '获取全站文章') }
+    }
+
+    // 防御性编程：确保返回的结构安全
+    const safeData = {
+      items: Array.isArray(data.value?.items) ? data.value.items : [],
+      total: data.value?.total || 0,
+      page: data.value?.page || page,
+      pages: data.value?.pages || 0
     }
     
-    const errorMessage = extractFriendlyErrorMessage(error.value, '获取全站文章')
-    return { success: false, message: errorMessage }
+    return { success: true, data: safeData }
   }
 
   // 撤回发布（从待审核状态撤回到草稿）
@@ -228,13 +171,11 @@ export function useArticleAPI() {
     const url = buildUrl('/article/:id/withdraw', { id: articleId })
     const { data, error } = await useBaseFetch(url).post({}).json()
     
-    if (!error.value) {
-      // 撤回操作通常只返回message，不需要data
-      return { success: true }
+    if (error.value) {
+      return { success: false, message: handleFriendlyError(error.value, '撤回发布') }
     }
     
-    const errorMessage = extractFriendlyErrorMessage(error.value, '撤回发布')
-    return { success: false, message: errorMessage }
+    return { success: true }
   }
 
   return {
