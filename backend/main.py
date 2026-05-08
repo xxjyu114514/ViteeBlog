@@ -56,5 +56,5 @@ if __name__ == "__main__":
         "main:app",
         host="127.0.0.1",
         port=8000,
-        reload=True if not IS_LITE else False  # Lite 模式通常用于临时测试，可根据需要调整 reload
+        reload=True if not IS_LITE else False  ## Lite 模式通常用于临时测试，可根据需要调整 reload
     )

@@ -99,3 +99,4 @@ async def check_favorite(
     res = await db.execute(stmt)
     is_favorited = res.scalars().first() is not None
     return {"favorited": is_favorited}
+
