@@ -390,6 +390,7 @@ def downgrade():
   "content": "# Markdown 内容\n\n这是文章内容...",
   "category_id": 1,
   "tag_ids": [1, 2],
+  "cover_image": "/storage/images/abc123.jpg",
   "version": null
 }
 ```
@@ -403,6 +404,7 @@ def downgrade():
 | content | string | ❌ | 文章内容（Markdown格式），直接存储到数据库 |
 | category_id | int | ❌ | 分类ID，可选 |
 | tag_ids | int[] | ❌ | 标签ID数组 |
+| cover_image | string | ❌ | 封面图片URL（可选） |
 | version | int | ❌ | 版本号（更新时用于乐观锁校验，新建时可忽略） |
 
 **成功响应** (200):
@@ -443,7 +445,9 @@ def downgrade():
   "title": "文章标题",
   "summary": "摘要内容...",
   "content": "# Markdown 内容\n\n这是文章内容...",
+  "cover_image": "/storage/images/abc123.jpg",
   "version": 1,
+  "view_count": 100,
   "status": "published",
   "submitted_at": null,
   "reviewed_at": null,
@@ -453,6 +457,10 @@ def downgrade():
   "deleted_at": null,
   "user_id": 1,
   "category_id": 1,
+  "author": {
+    "id": 1,
+    "username": "BaoZi"
+  },
   "category": { 
     "id": 1, 
     "name": "技术分享" 
@@ -462,6 +470,13 @@ def downgrade():
   ]
 }
 ```
+
+**新增字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| cover_image | string | 封面图片URL，可为 null |
+| view_count | int | 文章阅读量，每次访问自动+1 |
+| author | object | 作者信息（id, username） |
 
 **权限说明**:
 - ✅ **已发布文章**：所有人可查看
@@ -562,7 +577,8 @@ def downgrade():
       "id": 1,
       "title": "文章标题",
       "summary": "摘要...",
-      "content_path": "storage/articles/a1b2c3d4.md",
+      "cover_image": "/storage/images/abc123.jpg",
+      "view_count": 150,
       "status": "published",
       "published_at": "2026-04-25T10:00:00",
       "created_at": "2026-04-25T09:00:00",
@@ -572,6 +588,7 @@ def downgrade():
   ],
   "total": 50,
   "page": 1,
+  "size": 10,
   "pages": 5
 }
 ```
@@ -579,8 +596,11 @@ def downgrade():
 **前端注意**:
 - ✅ 仅返回已发布且未删除的文章（`status='published' AND deleted_at IS NULL`）
 - ✅ 按 `created_at` 降序排列
-- ✅ 返回统一的分页格式 `{items, total, page, pages}`
+- ✅ 返回统一的分页格式 `{items, total, page, size, pages}`
 - ✅ 支持按分类筛选
+- ✅ **新增字段**：
+  - `cover_image`: 封面图片URL，可用于文章卡片展示
+  - `view_count`: 阅读量统计，实时递增
 
 ---
 
@@ -604,6 +624,8 @@ def downgrade():
       "id": 1,
       "title": "我的草稿",
       "summary": "摘要...",
+      "cover_image": "/storage/images/abc123.jpg",
+      "view_count": 50,
       "status": "draft",
       "submitted_at": null,
       "reviewed_at": null,
@@ -616,6 +638,7 @@ def downgrade():
   ],
   "total": 10,
   "page": 1,
+  "size": 10,
   "pages": 1
 }
 ```
@@ -624,7 +647,8 @@ def downgrade():
 - ✅ 返回当前用户的所有文章（不包括已删除）
 - ✅ 按 `created_at` 降序排列
 - ✅ 可通过 `status` 参数筛选特定状态的文章
-- ✅ 返回统一的分页格式 `{items, total, page, pages}`
+- ✅ 返回统一的分页格式 `{items, total, page, size, pages}`
+- ✅ **新增字段**：`cover_image`（封面图）、`view_count`（阅读量）
 
 ---
 
@@ -637,30 +661,39 @@ def downgrade():
 
 **成功响应** (200):
 ```json
-[
-  {
-    "id": 1,
-    "title": "待审核文章",
-    "summary": "摘要...",
-    "status": "pending",
-    "submitted_at": "2026-04-25T10:00:00",
-    "created_at": "2026-04-25T09:00:00",
-    "author": { 
-      "id": 2, 
-      "username": "testuser" 
-    },
-    "category": { 
-      "id": 1, 
-      "name": "技术分享" 
+{
+  "items": [
+    {
+      "id": 1,
+      "title": "待审核文章",
+      "summary": "摘要...",
+      "cover_image": "/storage/images/abc123.jpg",
+      "view_count": 10,
+      "status": "pending",
+      "submitted_at": "2026-04-25T10:00:00",
+      "created_at": "2026-04-25T09:00:00",
+      "author": { 
+        "id": 2, 
+        "username": "testuser" 
+      },
+      "category": { 
+        "id": 1, 
+        "name": "技术分享" 
+      }
     }
-  }
-]
+  ],
+  "total": 5,
+  "page": 1,
+  "size": 20,
+  "pages": 1
+}
 ```
 
 **前端注意**:
 - ✅ 仅返回待审核状态的文章（`status='pending'`）
 - ✅ 按 `submitted_at` 升序排列（先提交先处理）
 - ✅ 预加载作者和分类信息
+- ✅ 返回分页格式 `{items, total, page, size, pages}`
 - ⚠️ 普通用户调用返回 403
 
 ---
