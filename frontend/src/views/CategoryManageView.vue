@@ -114,6 +114,8 @@ const editingCategory = ref(null)
 const categoryName = ref('')
 const creating = ref(false)
 const updatingId = ref(null)
+const deletingId = ref(null)
+const showModal = ref(false)
 
 // 获取分类列表
 const fetchCategories = async () => {
@@ -133,6 +135,32 @@ const fetchCategories = async () => {
   }
 }
 
+// 显示创建模态框
+const showCreateModal = () => {
+  editingCategory.value = null
+  categoryName.value = ''
+  showModal.value = true
+}
+
+// 显示编辑模态框
+const showEditModal = (category) => {
+  editingCategory.value = { ...category }
+  categoryName.value = category.name
+  showModal.value = true
+}
+
+// 关闭模态框
+const closeModal = () => {
+  showModal.value = false
+  editingCategory.value = null
+  categoryName.value = ''
+}
+
+// 返回上一页
+const handleBack = () => {
+  router.go(-1)
+}
+
 // 创建分类
 const createCategoryHandler = async () => {
   if (!categoryName.value.trim()) {
@@ -145,7 +173,7 @@ const createCategoryHandler = async () => {
     const result = await createCategory(categoryName.value.trim())
     if (result.success) {
       await fetchCategories()
-      categoryName.value = ''
+      closeModal()
     } else {
       alert(result.message || '创建分类失败')
     }
@@ -169,7 +197,7 @@ const updateCategoryHandler = async () => {
     const result = await updateCategory(editingCategory.value.id, categoryName.value.trim())
     if (result.success) {
       await fetchCategories()
-      cancelEdit()
+      closeModal()
     } else {
       alert(result.message || '更新分类失败')
     }
@@ -187,6 +215,7 @@ const deleteCategoryHandler = async (categoryId) => {
     return
   }
   
+  deletingId.value = categoryId
   try {
     const result = await deleteCategory(categoryId)
     if (result.success) {
@@ -197,17 +226,23 @@ const deleteCategoryHandler = async (categoryId) => {
   } catch (error) {
     console.error('删除分类异常:', error)
     alert('删除分类失败，请稍后重试')
+  } finally {
+    deletingId.value = null
   }
 }
 
-const startEdit = (category) => {
-  editingCategory.value = { ...category }
-  categoryName.value = category.name
+// 处理表单提交
+const handleSubmit = () => {
+  if (editingCategory.value) {
+    updateCategoryHandler()
+  } else {
+    createCategoryHandler()
+  }
 }
 
-const cancelEdit = () => {
-  editingCategory.value = null
-  categoryName.value = ''
+// 处理删除按钮点击
+const handleDelete = (categoryId) => {
+  deleteCategoryHandler(categoryId)
 }
 
 onMounted(() => {
