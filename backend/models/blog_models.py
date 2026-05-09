@@ -57,7 +57,9 @@ class Article(Base):
     content: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="文章正文内容（Markdown 格式）")
     content_path: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     content_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    cover_image: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, comment="封面图片URL")
     version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    view_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0", comment="阅读量")
     status: Mapped[ArticleStatus] = mapped_column(Enum(ArticleStatus), default=ArticleStatus.DRAFT,
                                                   server_default="draft")
     submitted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="提交审核时间")
@@ -76,6 +78,24 @@ class Article(Base):
     category: Mapped[Optional["Category"]] = relationship(back_populates="articles")
     tags: Mapped[List["Tag"]] = relationship(secondary=article_tag, back_populates="articles")
     comments: Mapped[List["Comment"]] = relationship(back_populates="article", cascade="all, delete-orphan")
+    favorites: Mapped[List["ArticleFavorite"]] = relationship(back_populates="article", cascade="all, delete-orphan")
+
+
+class ArticleFavorite(Base):
+    """文章收藏表"""
+    __tablename__ = "article_favorite"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), index=True)
+    article_id: Mapped[int] = mapped_column(ForeignKey("article.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    user: Mapped["User"] = relationship()
+    article: Mapped["Article"] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "article_id", name="uq_user_article_favorite"),
+    )
 
 
 class Category(Base):
@@ -107,8 +127,7 @@ class Comment(Base):
     parent: Mapped[Optional["Comment"]] = relationship("Comment", remote_side=[id], back_populates="replies")
     replies: Mapped[List["Comment"]] = relationship("Comment", back_populates="parent", cascade="all, delete-orphan")
     likes: Mapped[List["CommentLike"]] = relationship(back_populates="comment", cascade="all, delete-orphan")
-    
-    # 动态属性（用于 API 响应）
+
     like_count: int = 0
     is_liked: bool = False
 

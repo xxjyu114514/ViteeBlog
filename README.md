@@ -48,9 +48,10 @@ Authorization: Bearer <Your_Token>
 ### 核心流程
 **注册采用两步验证机制：**
 1. 调用 `/auth/send-register-code` 获取邮箱验证码
-2. 调用 `/auth/register` 携带验证码完成注册
+2. 调用 `/auth/register` 携带验证码完成注册（注意请求体嵌套结构）
 
 > ⚠️ 验证码一次性有效，校验后立即销毁
+> ⚠️ **重要**：注册接口的请求体需要使用嵌套结构，因为后端使用了 `Body(embed=True)`
 
 ### 1. 发送注册验证码
 
@@ -85,7 +86,7 @@ Authorization: Bearer <Your_Token>
 
 **接口**: `POST /auth/register`
 
-**请求体**:
+**请求体**（注意嵌套结构）:
 ```json
 {
   "user_in": {
@@ -95,6 +96,12 @@ Authorization: Bearer <Your_Token>
   },
   "email_code": "123456"
 }
+```
+
+**⚠️ 重要说明**:
+- 由于后端使用了 `Body(embed=True)`，请求体必须是嵌套结构
+- `user_in` 对象包含用户注册信息
+- `email_code` 与 `user_in` 同级
 ```
 
 **参数约束**:
@@ -114,8 +121,219 @@ Authorization: Bearer <Your_Token>
 ```
 
 **错误响应**:
-- `400`: 验证码错误或已失效 / 用户名或邮箱已存在
+- `400`: 验证码错误或已失效 / 用户名或邮箱已存在 / 该邮箱已注册
 - `422`: 参数验证失败（查看具体字段错误）
+- `500`: 服务器内部错误
+
+---
+
+### 4. 修改个人密码
+
+**接口**: `PUT /auth/change-password`  
+**权限**: 所有登录用户
+
+**请求头**:
+```
+Authorization: Bearer <Your_Token>
+```
+
+**请求体**:
+```json
+{
+  "old_password": "123456",
+  "new_password": "newpassword123"
+}
+```
+
+**成功响应** (200):
+```json
+{
+  "message": "密码修改成功"
+}
+```
+
+**错误响应**:
+- `400`: 旧密码错误
+- `401`: 未授权（Token无效或过期）
+
+**前端注意**:
+- ✅ 需要用户输入旧密码进行验证
+- ✅ 新密码长度要求：6-128个字符
+- ✅ 修改成功后建议提示用户重新登录
+
+---
+
+### 5. 发送找回密码验证码
+
+**接口**: `POST /auth/forgot-password/send-code`
+
+**请求体**:
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**成功响应** (200):
+```json
+{
+  "message": "验证码已发送至您的邮箱，请查收"
+}
+```
+
+**错误响应**:
+- `400`: 该邮箱未注册
+- `500`: 邮件发送失败
+
+**前端注意**:
+- ✅ 只有已注册的邮箱才能发送重置验证码
+- ✅ 验证码有效期10分钟
+- ✅ 点击后禁用按钮，开启60秒倒计时
+
+---
+
+### 6. 重置密码
+
+**接口**: `POST /auth/forgot-password/reset`
+
+**请求体**:
+```json
+{
+  "email": "user@example.com",
+  "code": "123456",
+  "new_password": "newpassword123"
+}
+```
+
+**参数约束**:
+- `email`: 必须是已注册的邮箱
+- `code`: 6位数字验证码
+- `new_password`: 6-128个字符
+
+**成功响应** (200):
+```json
+{
+  "message": "密码重置成功，请使用新密码登录"
+}
+```
+
+**错误响应**:
+- `400`: 验证码错误、已失效或已被使用过
+- `404`: 用户不存在
+- `422`: 参数验证失败
+
+**前端注意**:
+- ✅ 需要先执行步骤5获取验证码
+- ✅ 验证码一次性有效，使用后失效
+- ✅ 重置成功后跳转到登录页
+
+---
+
+### 7. 注销个人账号
+
+**接口**: `DELETE /auth/delete-account`  
+**权限**: 所有登录用户（管理员除外）
+
+**请求头**:
+```
+Authorization: Bearer <Your_Token>
+```
+
+**成功响应** (200):
+```json
+{
+  "message": "账号已注销，感谢您的使用"
+}
+```
+
+**错误响应**:
+- `400`: 管理员账号不能注销，请先转让管理员权限
+- `401`: 未授权
+
+**前端注意**:
+- ⚠️ **此操作不可逆**，必须二次确认
+- ⚠️ 注销后 `is_active=False`，`deleted_at` 设置为当前时间
+- ⚠️ 管理员账号不能直接注销，需先转移权限
+- ℹ️ 注销后可以联系管理员恢复账号
+
+---
+
+### 8. 【超级管理员】修改用户角色
+
+**接口**: `PUT /auth/admin/users/{user_id}/role`  
+**权限**: 仅管理员
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_id | int | ✅ | 目标用户ID |
+
+**请求头**:
+```
+Authorization: Bearer <Admin_Token>
+```
+
+**请求体**:
+```json
+{
+  "new_role": "admin"
+}
+```
+
+**可选值**:
+- `"admin"`: 提升为管理员
+- `"common"`: 降级为普通用户
+
+**成功响应** (200):
+```json
+{
+  "message": "成功将用户角色更新为 admin"
+}
+```
+
+**错误响应**:
+- `400`: 不能修改自己的角色 / 全站必须至少保留一名管理员
+- `404`: 目标用户不存在
+- `403`: 权限不足
+
+**前端注意**:
+- ⚠️ 不能修改自己的角色
+- ⚠️ 降级最后一个管理员时会失败
+- ✅ 枚举值是小写字符串（`"admin"` 而非 `"ADMIN"`）
+
+---
+
+### 9. 【管理员】恢复已注销账号
+
+**接口**: `PUT /auth/admin/users/{user_id}/restore`  
+**权限**: 仅管理员
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_id | int | ✅ | 被注销的用户ID |
+
+**请求头**:
+```
+Authorization: Bearer <Admin_Token>
+```
+
+**成功响应** (200):
+```json
+{
+  "message": "账号 BaoZi 已恢复"
+}
+```
+
+**错误响应**:
+- `400`: 该账号未被注销，无需恢复
+- `404`: 用户不存在
+- `403`: 权限不足
+
+**前端注意**:
+- ✅ 恢复后会设置 `is_active=True`，`deleted_at=None`
+- ✅ 用户可以重新登录
+- ⚠️ 只能恢复已注销的账号（`deleted_at` 不为 null）
 
 ---
 
@@ -390,6 +608,7 @@ def downgrade():
   "content": "# Markdown 内容\n\n这是文章内容...",
   "category_id": 1,
   "tag_ids": [1, 2],
+  "cover_image": "/storage/images/abc123.jpg",
   "version": null
 }
 ```
@@ -403,6 +622,7 @@ def downgrade():
 | content | string | ❌ | 文章内容（Markdown格式），直接存储到数据库 |
 | category_id | int | ❌ | 分类ID，可选 |
 | tag_ids | int[] | ❌ | 标签ID数组 |
+| cover_image | string | ❌ | 封面图片URL（可选） |
 | version | int | ❌ | 版本号（更新时用于乐观锁校验，新建时可忽略） |
 
 **成功响应** (200):
@@ -443,7 +663,9 @@ def downgrade():
   "title": "文章标题",
   "summary": "摘要内容...",
   "content": "# Markdown 内容\n\n这是文章内容...",
+  "cover_image": "/storage/images/abc123.jpg",
   "version": 1,
+  "view_count": 100,
   "status": "published",
   "submitted_at": null,
   "reviewed_at": null,
@@ -453,6 +675,10 @@ def downgrade():
   "deleted_at": null,
   "user_id": 1,
   "category_id": 1,
+  "author": {
+    "id": 1,
+    "username": "BaoZi"
+  },
   "category": { 
     "id": 1, 
     "name": "技术分享" 
@@ -462,6 +688,13 @@ def downgrade():
   ]
 }
 ```
+
+**新增字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| cover_image | string | 封面图片URL，可为 null |
+| view_count | int | 文章阅读量，每次访问自动+1 |
+| author | object | 作者信息（id, username） |
 
 **权限说明**:
 - ✅ **已发布文章**：所有人可查看
@@ -562,7 +795,8 @@ def downgrade():
       "id": 1,
       "title": "文章标题",
       "summary": "摘要...",
-      "content_path": "storage/articles/a1b2c3d4.md",
+      "cover_image": "/storage/images/abc123.jpg",
+      "view_count": 150,
       "status": "published",
       "published_at": "2026-04-25T10:00:00",
       "created_at": "2026-04-25T09:00:00",
@@ -572,6 +806,7 @@ def downgrade():
   ],
   "total": 50,
   "page": 1,
+  "size": 10,
   "pages": 5
 }
 ```
@@ -579,8 +814,11 @@ def downgrade():
 **前端注意**:
 - ✅ 仅返回已发布且未删除的文章（`status='published' AND deleted_at IS NULL`）
 - ✅ 按 `created_at` 降序排列
-- ✅ 返回统一的分页格式 `{items, total, page, pages}`
+- ✅ 返回统一的分页格式 `{items, total, page, size, pages}`
 - ✅ 支持按分类筛选
+- ✅ **新增字段**：
+  - `cover_image`: 封面图片URL，可用于文章卡片展示
+  - `view_count`: 阅读量统计，实时递增
 
 ---
 
@@ -604,6 +842,8 @@ def downgrade():
       "id": 1,
       "title": "我的草稿",
       "summary": "摘要...",
+      "cover_image": "/storage/images/abc123.jpg",
+      "view_count": 50,
       "status": "draft",
       "submitted_at": null,
       "reviewed_at": null,
@@ -616,6 +856,7 @@ def downgrade():
   ],
   "total": 10,
   "page": 1,
+  "size": 10,
   "pages": 1
 }
 ```
@@ -624,7 +865,8 @@ def downgrade():
 - ✅ 返回当前用户的所有文章（不包括已删除）
 - ✅ 按 `created_at` 降序排列
 - ✅ 可通过 `status` 参数筛选特定状态的文章
-- ✅ 返回统一的分页格式 `{items, total, page, pages}`
+- ✅ 返回统一的分页格式 `{items, total, page, size, pages}`
+- ✅ **新增字段**：`cover_image`（封面图）、`view_count`（阅读量）
 
 ---
 
@@ -637,30 +879,39 @@ def downgrade():
 
 **成功响应** (200):
 ```json
-[
-  {
-    "id": 1,
-    "title": "待审核文章",
-    "summary": "摘要...",
-    "status": "pending",
-    "submitted_at": "2026-04-25T10:00:00",
-    "created_at": "2026-04-25T09:00:00",
-    "author": { 
-      "id": 2, 
-      "username": "testuser" 
-    },
-    "category": { 
-      "id": 1, 
-      "name": "技术分享" 
+{
+  "items": [
+    {
+      "id": 1,
+      "title": "待审核文章",
+      "summary": "摘要...",
+      "cover_image": "/storage/images/abc123.jpg",
+      "view_count": 10,
+      "status": "pending",
+      "submitted_at": "2026-04-25T10:00:00",
+      "created_at": "2026-04-25T09:00:00",
+      "author": { 
+        "id": 2, 
+        "username": "testuser" 
+      },
+      "category": { 
+        "id": 1, 
+        "name": "技术分享" 
+      }
     }
-  }
-]
+  ],
+  "total": 5,
+  "page": 1,
+  "size": 20,
+  "pages": 1
+}
 ```
 
 **前端注意**:
 - ✅ 仅返回待审核状态的文章（`status='pending'`）
 - ✅ 按 `submitted_at` 升序排列（先提交先处理）
 - ✅ 预加载作者和分类信息
+- ✅ 返回分页格式 `{items, total, page, size, pages}`
 - ⚠️ 普通用户调用返回 403
 
 ---
@@ -2007,6 +2258,403 @@ const resolveAndDelete = async (reportId, commentId) => {
 
 ---
 
+## ⭐ 文章收藏模块
+
+### 权限说明
+- **登录用户**：收藏/取消收藏文章、查看我的收藏列表、检查收藏状态
+- **公开接口**：无（所有收藏相关接口均需登录）
+
+### 核心功能概览
+- ⭐ **收藏切换**：一键收藏/取消收藏，自动判断当前状态
+- 📋 **收藏列表**：分页查看我收藏的所有文章
+- ✅ **状态检查**：快速检查是否已收藏某篇文章
+
+---
+
+### 1. 收藏/取消收藏文章
+
+**接口**: `POST /favorites/{article_id}/favorite`  
+**权限**: 所有登录用户
+
+**功能**: 智能切换收藏状态（未收藏则收藏，已收藏则取消）
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| article_id | int | ✅ | 文章ID |
+
+**成功响应** (200) - 首次收藏:
+```json
+{
+  "favorited": true,
+  "message": "收藏成功"
+}
+```
+
+**成功响应** (200) - 取消收藏:
+```json
+{
+  "favorited": false,
+  "message": "已取消收藏"
+}
+```
+
+**错误响应**:
+- `404`: 文章不存在或未公开发布（草稿、待审核、已删除的文章无法收藏）
+- `401`: 未登录
+
+**前端注意**:
+- ✅ 接口自动判断当前收藏状态并切换
+- ✅ 只能收藏已发布且未删除的文章
+- ✅ 返回 `favorited` 字段表示操作后的状态
+- ⚠️ 需要携带 Token 认证
+
+---
+
+### 2. 获取我的收藏列表
+
+**接口**: `GET /favorites/my?page=1&size=10`  
+**权限**: 所有登录用户
+
+**查询参数**:
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| page | int | 1 | 页码（从1开始） |
+| size | int | 10 | 每页数量 |
+
+**成功响应** (200):
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "created_at": "2026-05-08T10:00:00",
+      "article": {
+        "id": 28,
+        "title": "收藏的文章标题",
+        "summary": "文章摘要...",
+        "status": "published",
+        "created_at": "2026-05-07T09:00:00"
+      }
+    }
+  ],
+  "total": 15,
+  "page": 1,
+  "size": 10,
+  "pages": 2
+}
+```
+
+**响应字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| items | array | 收藏记录列表 |
+| items[].id | int | 收藏记录ID |
+| items[].created_at | datetime | 收藏时间 |
+| items[].article | object | 被收藏的文章信息 |
+| items[].article.id | int | 文章ID |
+| items[].article.title | string | 文章标题 |
+| items[].article.summary | string | 文章摘要 |
+| items[].article.status | string | 文章状态 |
+| items[].article.created_at | datetime | 文章创建时间 |
+| total | int | 总记录数 |
+| page | int | 当前页码 |
+| size | int | 每页数量 |
+| pages | int | 总页数 |
+
+**前端注意**:
+- ✅ 按收藏时间降序排列（最新收藏在前）
+- ✅ 统一分页格式 `{items, total, page, size, pages}`
+- ✅ 包含文章的简化信息（不包含正文内容）
+- ⚠️ 如果文章被删除，可能仍会出现在收藏列表中
+
+---
+
+### 3. 检查收藏状态
+
+**接口**: `GET /favorites/check/{article_id}`  
+**权限**: 所有登录用户
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| article_id | int | ✅ | 文章ID |
+
+**成功响应** (200):
+```json
+{
+  "favorited": true
+}
+```
+
+**响应字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| favorited | bool | 当前用户是否已收藏该文章 |
+
+**前端注意**:
+- ✅ 用于在文章详情页显示收藏按钮状态
+- ✅ 返回简单的布尔值，便于UI更新
+- ⚠️ 需要登录才能调用
+
+---
+
+## 💡 收藏功能开发建议
+
+### 1. 收藏按钮组件（Vue3）
+
+```vue
+<template>
+  <button 
+    class="favorite-btn" 
+    :class="{ 'favorited': isFavorited }"
+    @click="toggleFavorite"
+    :disabled="loading"
+  >
+    <span class="icon">{{ isFavorited ? '⭐' : '☆' }}</span>
+    <span class="text">{{ isFavorited ? '已收藏' : '收藏' }}</span>
+  </button>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+
+const props = defineProps({
+  articleId: {
+    type: Number,
+    required: true
+  }
+})
+
+const isFavorited = ref(false)
+const loading = ref(false)
+
+// 检查收藏状态
+const checkFavoriteStatus = async () => {
+  try {
+    const response = await axios.get(
+      `/api/v1/favorites/check/${props.articleId}`,
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    )
+    isFavorited.value = response.data.favorited
+  } catch (error) {
+    console.error('检查收藏状态失败:', error)
+  }
+}
+
+// 切换收藏状态
+const toggleFavorite = async () => {
+  if (!token) {
+    ElMessage.warning('请先登录')
+    return
+  }
+  
+  loading.value = true
+  try {
+    const response = await axios.post(
+      `/api/v1/favorites/${props.articleId}/favorite`,
+      {},
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    )
+    
+    // 更新本地状态
+    isFavorited.value = response.data.favorited
+    ElMessage.success(response.data.message)
+  } catch (error) {
+    if (error.response?.status === 404) {
+      ElMessage.error('文章不存在或未发布')
+    } else if (error.response?.status === 401) {
+      ElMessage.warning('请先登录')
+    } else {
+      ElMessage.error('操作失败')
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  if (token) {
+    checkFavoriteStatus()
+  }
+})
+</script>
+
+<style scoped>
+.favorite-btn {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.favorite-btn.favorited {
+  background: #fff3cd;
+  border-color: #ffc107;
+  color: #856404;
+}
+
+.favorite-btn:hover:not(:disabled) {
+  background: #f8f9fa;
+}
+
+.favorite-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+</style>
+```
+
+### 2. 我的收藏页面
+
+```vue
+<template>
+  <div class="my-favorites">
+    <h2>我的收藏</h2>
+    
+    <div v-if="loading" class="loading">加载中...</div>
+    
+    <div v-else-if="favorites.length === 0" class="empty">
+      暂无收藏文章
+    </div>
+    
+    <div v-else class="favorite-list">
+      <div 
+        v-for="item in favorites" 
+        :key="item.id"
+        class="favorite-item"
+      >
+        <router-link :to="`/article/${item.article.id}`">
+          <h3>{{ item.article.title }}</h3>
+          <p>{{ item.article.summary }}</p>
+        </router-link>
+        <div class="meta">
+          <span class="time">收藏于 {{ formatDate(item.created_at) }}</span>
+          <button @click="removeFavorite(item.article.id)">取消收藏</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 分页 -->
+    <div v-if="totalPages > 1" class="pagination">
+      <button 
+        @click="loadPage(currentPage - 1)"
+        :disabled="currentPage === 1"
+      >上一页</button>
+      <span>{{ currentPage }} / {{ totalPages }}</span>
+      <button 
+        @click="loadPage(currentPage + 1)"
+        :disabled="currentPage === totalPages"
+      >下一页</button>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
+
+const favorites = ref([])
+const loading = ref(false)
+const currentPage = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+
+const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
+
+// 加载收藏列表
+const loadFavorites = async (page = 1) => {
+  loading.value = true
+  try {
+    const response = await axios.get('/api/v1/favorites/my', {
+      params: { page, size: pageSize.value },
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    
+    favorites.value = response.data.items
+    total.value = response.data.total
+    currentPage.value = response.data.page
+  } catch (error) {
+    console.error('加载收藏列表失败:', error)
+    ElMessage.error('加载失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 翻页
+const loadPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    loadFavorites(page)
+  }
+}
+
+// 取消收藏
+const removeFavorite = async (articleId) => {
+  try {
+    await axios.post(
+      `/api/v1/favorites/${articleId}/favorite`,
+      {},
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    )
+    ElMessage.success('已取消收藏')
+    // 重新加载列表
+    await loadFavorites(currentPage.value)
+  } catch (error) {
+    ElMessage.error('操作失败')
+  }
+}
+
+// 格式化日期
+const formatDate = (dateStr) => {
+  return new Date(dateStr).toLocaleDateString('zh-CN')
+}
+
+onMounted(() => {
+  loadFavorites()
+})
+</script>
+```
+
+### 3. Axios 拦截器处理未登录
+
+```javascript
+// 在文章详情页自动检查登录状态
+axios.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401) {
+      // 收藏相关接口的401错误
+      if (error.config.url.includes('/favorites/')) {
+        ElMessageBox.confirm(
+          '您需要登录才能使用收藏功能',
+          '提示',
+          {
+            confirmButtonText: '去登录',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        ).then(() => {
+          router.push('/login')
+        })
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+```
+
+---
+
 ## 🔄 后续更新计划
 
 - [ ] 文章搜索功能
@@ -2016,7 +2664,7 @@ const resolveAndDelete = async (reportId, commentId) => {
 - [x] 完整审核流程（提交/撤回/审核/驳回）
 - [x] 防灌水机制
 - [x] 评论系统（发表/回复/删除/举报）
-- [ ] 点赞与收藏
+- [x] 点赞与收藏
 
 ---
 
@@ -2025,3 +2673,5 @@ const resolveAndDelete = async (reportId, commentId) => {
 **维护者**: Backend Team
 
 ##### 感谢所有贡献者！
+
+##

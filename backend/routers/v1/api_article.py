@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 
 from dependencies import get_db, get_current_user, allow_admin_only, get_current_user_optional
 from models.blog_models import Article, ArticleStatus, User, Category, Tag, UserRole, article_tag
-from schemas.article_schema import ArticleCreate, ArticleReviewAction
+from schemas.article_schema import ArticleCreate, ArticleReviewAction, ArticleDetailOut
 
 router = APIRouter()
 
@@ -86,6 +86,8 @@ async def autosave(article_in: ArticleCreate, user: User = Depends(get_current_u
 
         article.title = article_in.title
         article.summary = article_in.summary
+        if article_in.cover_image is not None:
+            article.cover_image = article_in.cover_image
         article.category_id = article_in.category_id
         article.updated_at = datetime.now()
         article.tags = tags
@@ -104,6 +106,7 @@ async def autosave(article_in: ArticleCreate, user: User = Depends(get_current_u
         article = Article(
             title=article_in.title, summary=article_in.summary, content=article_in.content,
             content_hash=content_hash, category_id=article_in.category_id, user_id=user.id,
+            cover_image=article_in.cover_image,
             status=ArticleStatus.DRAFT, tags=tags, version=1
         )
         db.add(article)
@@ -141,7 +144,7 @@ async def publish_article(article_id: int, user: User = Depends(get_current_user
 
 
 # --- 接口 5：GET /{article_id} (获取详情) ---
-@router.get("/{article_id}", summary="获取文章详情")
+@router.get("/{article_id}", response_model=ArticleDetailOut, summary="获取文章详情")
 async def get_article_detail(article_id: int, user: Optional[User] = Depends(get_current_user_optional),
                              db: AsyncSession = Depends(get_db)):
     res = await db.execute(
@@ -164,6 +167,14 @@ async def get_article_detail(article_id: int, user: Optional[User] = Depends(get
             raise HTTPException(status_code=401, detail="请登录后查看私有文章")
         if not (is_author or is_admin):
             raise HTTPException(status_code=403, detail="无权访问该文章")
+
+    # 使用原子操作增加阅读量，避免并发问题
+    await db.execute(
+        update(Article)
+        .where(Article.id == article_id)
+        .values(view_count=Article.view_count + 1)
+    )
+    await db.commit()
 
     return article
 
