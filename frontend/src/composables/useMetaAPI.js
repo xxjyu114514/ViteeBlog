@@ -17,9 +17,11 @@ export function useMetaAPI() {
   }
 
   // 创建分类
-  const createCategory = async (categoryData) => {
+  const createCategory = async (categoryName) => {
     const url = buildUrl('/meta/categories')
-    const { data, error } = await useBaseFetch(url).post(categoryData).json()
+    // 后端期望 {name: "分类名"} 格式
+    const requestData = { name: categoryName }
+    const { data, error } = await useBaseFetch(url).post(requestData).json()
 
     if (error.value) {
       return { success: false, message: handleFriendlyError(error.value, '创建分类') }
@@ -28,9 +30,11 @@ export function useMetaAPI() {
   }
 
   // 更新分类
-  const updateCategory = async (id, categoryData) => {
+  const updateCategory = async (id, categoryName) => {
     const url = buildUrl('/meta/categories/:id', { id })
-    const { data, error } = await useBaseFetch(url).put(categoryData).json()
+    // 后端期望 {name: "分类名"} 格式
+    const requestData = { name: categoryName }
+    const { data, error } = await useBaseFetch(url).put(requestData).json()
 
     if (error.value) {
       return { success: false, message: handleFriendlyError(error.value, '更新分类') }
@@ -63,9 +67,11 @@ export function useMetaAPI() {
   }
 
   // 创建标签
-  const createTag = async (tagData) => {
+  const createTag = async (tagName) => {
     const url = buildUrl('/meta/tags')
-    const { data, error } = await useBaseFetch(url).post(tagData).json()
+    // 后端期望 {name: "标签名"} 格式
+    const requestData = { name: tagName }
+    const { data, error } = await useBaseFetch(url).post(requestData).json()
 
     if (error.value) {
       return { success: false, message: handleFriendlyError(error.value, '创建标签') }
@@ -74,9 +80,11 @@ export function useMetaAPI() {
   }
 
   // 更新标签
-  const updateTag = async (id, tagData) => {
+  const updateTag = async (id, tagName) => {
     const url = buildUrl('/meta/tags/:id', { id })
-    const { data, error } = await useBaseFetch(url).put(tagData).json()
+    // 后端期望 {name: "标签名"} 格式
+    const requestData = { name: tagName }
+    const { data, error } = await useBaseFetch(url).put(requestData).json()
 
     if (error.value) {
       return { success: false, message: handleFriendlyError(error.value, '更新标签') }

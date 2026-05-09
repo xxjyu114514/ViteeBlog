@@ -7,12 +7,13 @@ export function useAuthAPI() {
 
   const login = async (username, password) => {
     const url = buildUrl('/auth/login')
-    // 发送 FormData (假设后端使用 OAuth2 Password 模式)
-    const formData = new URLSearchParams()
-    formData.append('username', username)
-    formData.append('password', password)
+    // 发送 JSON 格式数据，匹配后端 Pydantic UserLogin 模型
+    const loginData = {
+      username: username,
+      password: password
+    }
 
-    const { data, error } = await useBaseFetch(url).post(formData).json()
+    const { data, error } = await useBaseFetch(url).post(loginData).json()
 
     if (error.value) {
       return { success: false, message: handleFriendlyError(error.value, '登录') }
