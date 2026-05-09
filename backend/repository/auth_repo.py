@@ -31,6 +31,10 @@ class AuthRepository:
                     detail=f"登录失败：用户 '{username}' 不存在"
                 )
 
+            # 新增：检查账号是否已注销
+            if not user.is_active:
+                raise HTTPException(status_code=403, detail="该账号已注销，无法登录")
+
             # 2. 检查锁定状态 (需求：连续3次失败锁定15分钟)
             if user.login_attempts >= 3 and user.last_fail_time:
                 lock_time = user.last_fail_time + timedelta(minutes=15)
@@ -226,3 +230,45 @@ class AuthRepository:
             print(f"❌ [AuthRepo] 验证码验证逻辑出错: {str(e)}")
             traceback.print_exc()
             return False
+
+    @staticmethod
+    async def save_password_reset_code(db: AsyncSession, email: str, code: str):
+        """找回密码验证逻辑"""
+        try:
+            # 1. 检查该邮箱是否有注册用户
+            result = await db.execute(select(User).where(User.email == email))
+            user = result.scalars().first()
+            if not user:
+                raise HTTPException(status_code=400, detail="该邮箱未注册")
+
+            # 2. 将该邮箱下所有存活的验证码标记为软删除
+            await db.execute(
+                update(VerificationCode)
+                .where(
+                    VerificationCode.email == email,
+                    VerificationCode.deleted_at.is_(None)
+                )
+                .values(deleted_at=datetime.now())
+            )
+
+            # 3. 存入新验证码（有效期10分钟）
+            new_code = VerificationCode(
+                email=email,
+                code=code,
+                expires_at=datetime.now() + timedelta(minutes=10)
+            )
+
+            db.add(new_code)
+            await db.commit()
+            return True
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            await db.rollback()
+            print(f"❌ [AuthRepo] 保存找回密码验证码失败: {str(e)}")
+            traceback.print_exc()
+            raise HTTPException(
+                status_code=500,
+                detail=f"验证码系统异常，暂时无法发送"
+            )
