@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 
 from dependencies import get_db, get_current_user, allow_admin_only, get_current_user_optional
-from models.blog_models import Article, ArticleStatus, User, Category, Tag, UserRole, article_tag
+from models.blog_models import Article, ArticleStatus, User, Category, Tag, UserRole, article_tag, ArticleLike
 from schemas.article_schema import ArticleCreate, ArticleReviewAction, ArticleDetailOut
 
 router = APIRouter()
@@ -175,6 +175,28 @@ async def get_article_detail(article_id: int, user: Optional[User] = Depends(get
         .values(view_count=Article.view_count + 1)
     )
     await db.commit()
+    
+    # 刷新对象以获取最新的 view_count
+    await db.refresh(article)
+
+    # 查询点赞信息
+    # 1. 查询总点赞数
+    like_count_res = await db.execute(
+        select(func.count(ArticleLike.id)).where(ArticleLike.article_id == article_id)
+    )
+    article.like_count = like_count_res.scalar() or 0
+
+    # 2. 查询当前用户是否已点赞
+    if user:
+        like_check = await db.execute(
+            select(ArticleLike).where(
+                ArticleLike.article_id == article_id,
+                ArticleLike.user_id == user.id
+            )
+        )
+        article.is_liked = like_check.scalars().first() is not None
+    else:
+        article.is_liked = False
 
     return article
 
@@ -298,7 +320,7 @@ async def get_my_articles(page: int = Query(1, ge=1), size: int = Query(10, ge=1
                           db: AsyncSession = Depends(get_db)):
     filters = [Article.user_id == user.id, Article.deleted_at == None]
     if status: filters.append(Article.status == status)
-    query = select(Article).where(and_(*filters)).order_by(Article.created_at.desc())
+    query = select(Article).where(and_(*filters)).order_by(Article.is_pinned.desc(), Article.created_at.desc())
     total_res = await db.execute(select(func.count()).select_from(query.subquery()))
     total = total_res.scalar() or 0
     res = await db.execute(query.offset((page - 1) * size).limit(size))
@@ -311,7 +333,7 @@ async def list_public_articles(page: int = Query(1, ge=1), size: int = Query(10,
                                category_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
     filters = [Article.status == ArticleStatus.PUBLISHED, Article.deleted_at == None]
     if category_id: filters.append(Article.category_id == category_id)
-    query = select(Article).where(and_(*filters)).order_by(Article.created_at.desc())
+    query = select(Article).where(and_(*filters)).order_by(Article.is_pinned.desc(), Article.created_at.desc())
     total_res = await db.execute(select(func.count()).select_from(query.subquery()))
     total = total_res.scalar() or 0
     res = await db.execute(query.offset((page - 1) * size).limit(size))
@@ -327,8 +349,93 @@ async def list_all_articles_admin(page: int = Query(1, ge=1), size: int = Query(
     if not show_deleted:
         filters.append(Article.deleted_at == None)
 
-    query = select(Article).where(and_(*filters)).order_by(Article.created_at.desc())
+    query = select(Article).where(and_(*filters)).order_by(Article.is_pinned.desc(), Article.created_at.desc())
     total_res = await db.execute(select(func.count()).select_from(query.subquery()))
     total = total_res.scalar() or 0
     res = await db.execute(query.offset((page - 1) * size).limit(size))
     return {"items": res.scalars().all(), "total": total, "page": page, "size": size, "pages": math.ceil(total / size)}
+
+
+# --- 接口 15：PUT /admin/articles/{article_id}/pin (管理员置顶/取消置顶) ---
+@router.put("/admin/articles/{article_id}/pin", summary="【管理员】置顶/取消置顶文章")
+async def toggle_pin_article(
+    article_id: int,
+    admin: User = Depends(allow_admin_only),
+    db: AsyncSession = Depends(get_db)
+):
+    res = await db.execute(select(Article).where(Article.id == article_id))
+    article = res.scalars().first()
+    if not article:
+        raise HTTPException(status_code=404, detail="文章不存在")
+    article.is_pinned = not article.is_pinned
+    await db.commit()
+    return {"message": "已置顶" if article.is_pinned else "已取消置顶", "is_pinned": article.is_pinned}
+
+
+# --- 接口 16：GET /public/archive (公开文章归档) ---
+@router.get("/public/archive", summary="文章归档（按年月统计）")
+async def get_article_archive(db: AsyncSession = Depends(get_db)):
+    # 只统计已发布且未删除的文章
+    stmt = (
+        select(
+            func.YEAR(Article.published_at).label("year"),
+            func.MONTH(Article.published_at).label("month"),
+            func.count(Article.id).label("count")
+        )
+        .where(Article.status == ArticleStatus.PUBLISHED, Article.deleted_at == None)
+        .group_by("year", "month")
+        .order_by("year", "month")
+    )
+    res = await db.execute(stmt)
+    rows = res.all()
+    return [
+        {"year": row.year, "month": row.month, "count": row.count}
+        for row in rows
+    ]
+
+
+# --- 接口 17：POST /{article_id}/like (文章点赞/取消点赞) ---
+@router.post("/{article_id}/like", summary="文章点赞/取消点赞")
+async def toggle_article_like(
+        article_id: int,
+        user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db)
+):
+    # 校验文章是否存在
+    article_res = await db.execute(select(Article).where(Article.id == article_id))
+    if not article_res.scalars().first():
+        raise HTTPException(status_code=404, detail="文章不存在")
+
+    # 检查是否已点赞
+    stmt = select(ArticleLike).where(
+        and_(ArticleLike.article_id == article_id, ArticleLike.user_id == user.id)
+    )
+    res = await db.execute(stmt)
+    existing_like = res.scalars().first()
+
+    if existing_like:
+        await db.delete(existing_like)
+        liked = False
+    else:
+        new_like = ArticleLike(article_id=article_id, user_id=user.id)
+        db.add(new_like)
+        liked = True
+
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail="操作过于频繁")
+
+    # 获取最新点赞数
+    count_res = await db.execute(select(func.count(ArticleLike.id)).where(ArticleLike.article_id == article_id))
+    return {"liked": liked, "like_count": count_res.scalar() or 0}
+
+
+# --- 接口 18：GET /{article_id}/like/count (获取文章点赞数) ---
+@router.get("/{article_id}/like/count", summary="获取文章点赞数")
+async def get_article_like_count(article_id: int, db: AsyncSession = Depends(get_db)):
+    count_res = await db.execute(
+        select(func.count(ArticleLike.id)).where(ArticleLike.article_id == article_id)
+    )
+    return {"article_id": article_id, "like_count": count_res.scalar() or 0}

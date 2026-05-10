@@ -66,10 +66,12 @@ class ArticleDetailOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     deleted_at: Optional[datetime] = None
-    
+    like_count: int = 0
+    is_liked: bool = False
+
     # 关联对象
     author: Optional[UserSimpleOut] = None
     category: Optional[CategorySimpleOut] = None
     tags: List[TagSimpleOut] = []
-    
+
     model_config = ConfigDict(from_attributes=True)

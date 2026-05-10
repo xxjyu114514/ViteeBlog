@@ -573,6 +573,9 @@ def downgrade():
 - ♻️ **恢复功能**：可从回收站恢复误删文章
 - 💥 **硬删除**：永久粉碎文章记录
 - 🖼️ **图片管理**：支持上传和删除图片
+- ⭐ **文章点赞**：用户可点赞/取消点赞文章
+- 📌 **文章置顶**：管理员可置顶重要文章
+- 📅 **文章归档**：按年月统计文章数量
 
 ### 文章状态流转
 
@@ -694,6 +697,8 @@ def downgrade():
 |------|------|------|
 | cover_image | string | 封面图片URL，可为 null |
 | view_count | int | 文章阅读量，每次访问自动+1 |
+| like_count | int | 文章点赞数 |
+| is_liked | bool | 当前用户是否已点赞（未登录时为false） |
 | author | object | 作者信息（id, username） |
 
 **权限说明**:
@@ -1057,6 +1062,148 @@ def downgrade():
 - ⚠️ 执行前必须二次确认
 - ⚠️ 删除后无法撤销
 - ℹ️ 硬删除仅删除数据库记录，不再处理物理文件
+
+---
+
+### 14. 文章点赞/取消点赞
+
+**接口**: `POST /article/{article_id}/like`  
+**权限**: 所有登录用户
+
+**功能**: 智能切换点赞状态（未点赞则点赞，已点赞则取消）
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| article_id | int | ✅ | 文章ID |
+
+**成功响应** (200) - 首次点赞:
+```json
+{
+  "liked": true,
+  "like_count": 1
+}
+```
+
+**成功响应** (200) - 取消点赞:
+```json
+{
+  "liked": false,
+  "like_count": 0
+}
+```
+
+**响应字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| liked | bool | 当前操作后的点赞状态（true=已点赞，false=已取消） |
+| like_count | int | 最新的点赞总数 |
+
+**错误响应**:
+- `404`: 文章不存在
+- `401`: 未登录
+
+**前端注意**:
+- ✅ 接口自动判断当前点赞状态并切换
+- ✅ 返回最新的点赞数和状态，前端直接更新UI
+- ✅ 使用唯一约束防止重复点赞
+- ⚠️ 需要携带 Token 认证
+
+---
+
+### 15. 获取文章点赞数
+
+**接口**: `GET /article/{article_id}/like/count`  
+**权限**: 公开
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| article_id | int | ✅ | 文章ID |
+
+**成功响应** (200):
+```json
+{
+  "article_id": 1,
+  "like_count": 10
+}
+```
+
+**前端注意**:
+- ✅ 无需登录即可获取点赞数
+- ✅ 用于在文章列表页显示点赞统计
+
+---
+
+### 16. 【管理员】置顶/取消置顶文章
+
+**接口**: `PUT /article/admin/articles/{article_id}/pin`  
+**权限**: 仅管理员
+
+**功能**: 切换文章置顶状态
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| article_id | int | ✅ | 文章ID |
+
+**成功响应** (200) - 置顶:
+```json
+{
+  "message": "已置顶",
+  "is_pinned": true
+}
+```
+
+**成功响应** (200) - 取消置顶:
+```json
+{
+  "message": "已取消置顶",
+  "is_pinned": false
+}
+```
+
+**前端注意**:
+- ✅ 置顶文章会在列表顶部显示（按 `is_pinned` 降序排列）
+- ✅ 可在公开列表、我的文章列表、全站列表中看到置顶效果
+- ⚠️ 仅管理员可操作
+
+---
+
+### 17. 获取文章归档（按年月统计）
+
+**接口**: `GET /article/public/archive`  
+**权限**: 公开
+
+**功能**: 获取已发布文章的年月统计数据
+
+**成功响应** (200):
+```json
+[
+  {
+    "year": 2026,
+    "month": 4,
+    "count": 15
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "count": 8
+  }
+]
+```
+
+**响应字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| year | int | 年份 |
+| month | int | 月份（1-12） |
+| count | int | 该月发布的文章数量 |
+
+**前端注意**:
+- ✅ 仅统计已发布且未删除的文章
+- ✅ 按年月升序排列
+- ✅ 可用于生成归档页面或侧边栏统计
 
 ---
 
@@ -1718,15 +1865,6 @@ axios.interceptors.response.use(
 | author | object | 评论者信息（id, username） |
 | like_count | int | 点赞数 |
 | is_liked | bool | 当前用户是否已点赞（未登录时为false） |
-
-**错误响应**:
-- `400`: 父评论不存在或不属于该文章
-- `404`: 文章不存在
-
-**前端注意**:
-- ✅ 后审模式：评论直接可见，无需审核
-- ✅ 回复评论时，`parent_id` 填写被回复评论的 ID
-- ✅ 返回的 `author` 对象包含评论者信息
 
 ---
 
@@ -2653,6 +2791,120 @@ axios.interceptors.response.use(
 )
 ```
 
+### 场景9: 文章点赞功能
+
+```javascript
+// 点赞按钮组件逻辑
+const handleLike = async (articleId) => {
+  try {
+    const response = await axios.post(
+      `/api/v1/article/${articleId}/like`,
+      {},
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    )
+    
+    // 更新本地状态
+    const { liked, like_count } = response.data
+    updateArticleLikeStatus(articleId, liked, like_count)
+    ElMessage.success(liked ? '点赞成功' : '已取消点赞')
+  } catch (error) {
+    if (error.response?.status === 401) {
+      ElMessage.warning('请先登录')
+    } else if (error.response?.status === 404) {
+      ElMessage.error('文章不存在')
+    } else {
+      ElMessage.error('操作失败')
+    }
+  }
+}
+
+// 获取文章详情时检查点赞状态
+const loadArticleDetail = async (articleId) => {
+  const response = await axios.get(`/api/v1/article/${articleId}`, {
+    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+  })
+  
+  // 直接使用返回的 like_count 和 is_liked
+  articleData.value = response.data
+  isLiked.value = response.data.is_liked
+  likeCount.value = response.data.like_count
+}
+
+// 在文章详情页初始化时加载
+onMounted(() => {
+  loadArticleDetail(articleId)
+})
+```
+
+### 场景10: 文章置顶功能（管理员）
+
+```javascript
+// 管理员置顶/取消置顶文章
+const togglePin = async (articleId) => {
+  try {
+    const response = await axios.put(
+      `/api/v1/article/admin/articles/${articleId}/pin`,
+      {},
+      {
+        headers: { 'Authorization': `Bearer ${adminToken}` }
+      }
+    )
+    
+    ElMessage.success(response.data.message)
+    // 更新本地状态
+    articleData.value.is_pinned = response.data.is_pinned
+    // 重新加载列表以更新排序
+    await loadArticleList()
+  } catch (error) {
+    ElMessage.error('操作失败')
+  }
+}
+```
+
+**在文章列表中显示置顶标记：**
+
+```vue
+<template>
+  <div class="article-item" :class="{ 'pinned': article.is_pinned }">
+    <span v-if="article.is_pinned" class="pin-badge">📌 置顶</span>
+    <h3>{{ article.title }}</h3>
+    <!-- 其他内容 -->
+  </div>
+</template>
+```
+
+### 场景11: 文章归档页面
+
+```javascript
+// 获取文章归档数据
+const loadArchive = async () => {
+  const response = await axios.get('/api/v1/article/public/archive')
+  archiveData.value = response.data
+  // 格式: [{ year: 2026, month: 4, count: 15 }, ...]
+}
+
+onMounted(() => {
+  loadArchive()
+})
+```
+
+**渲染归档列表：**
+
+```vue
+<template>
+  <div class="archive-section">
+    <h2>文章归档</h2>
+    <div v-for="item in archiveData" :key="`${item.year}-${item.month}`" class="archive-item">
+      <router-link :to="`/archive/${item.year}/${item.month}`">
+        {{ item.year }}年{{ item.month }}月 ({{ item.count }}篇)
+      </router-link>
+    </div>
+  </div>
+</template>
+```
+
 ---
 
 ## 🔄 后续更新计划
@@ -2665,6 +2917,10 @@ axios.interceptors.response.use(
 - [x] 防灌水机制
 - [x] 评论系统（发表/回复/删除/举报）
 - [x] 点赞与收藏
+- [x] 文章点赞功能
+- [x] 评论点赞功能
+- [x] 文章置顶功能
+- [x] 文章归档功能
 
 ---
 

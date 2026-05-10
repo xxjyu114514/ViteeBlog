@@ -60,6 +60,7 @@ class Article(Base):
     cover_image: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, comment="封面图片URL")
     version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     view_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0", comment="阅读量")
+    is_pinned: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", comment="是否置顶")
     status: Mapped[ArticleStatus] = mapped_column(Enum(ArticleStatus), default=ArticleStatus.DRAFT,
                                                   server_default="draft")
     submitted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="提交审核时间")
@@ -79,6 +80,10 @@ class Article(Base):
     tags: Mapped[List["Tag"]] = relationship(secondary=article_tag, back_populates="articles")
     comments: Mapped[List["Comment"]] = relationship(back_populates="article", cascade="all, delete-orphan")
     favorites: Mapped[List["ArticleFavorite"]] = relationship(back_populates="article", cascade="all, delete-orphan")
+    likes: Mapped[List["ArticleLike"]] = relationship(back_populates="article", cascade="all, delete-orphan")
+
+    like_count: int = 0
+    is_liked: bool = False
 
 
 class ArticleFavorite(Base):
@@ -145,6 +150,22 @@ class CommentLike(Base):
 
     __table_args__ = (
         UniqueConstraint("comment_id", "user_id", name="uq_comment_user_like"),
+    )
+
+
+class ArticleLike(Base):
+    """文章点赞表"""
+    __tablename__ = "article_like"
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    article_id: Mapped[int] = mapped_column(ForeignKey("article.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    article: Mapped["Article"] = relationship(back_populates="likes")
+    user: Mapped["User"] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint("article_id", "user_id", name="uq_article_user_like"),
     )
 
 
