@@ -52,3 +52,17 @@ class EmailCodeRequest(BaseModel):
 class VerifyCodeRequest(BaseModel):
     email: EmailStr
     code: str = Field(..., min_length=6, max_length=6)
+
+class PasswordChange(BaseModel):
+    old_password: str = Field(..., min_length=6, max_length=128, description="旧密码")
+    new_password: str = Field(..., min_length=6, max_length=128, description="新密码")
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr = Field(..., description="用于接收验证码的邮箱")
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr = Field(..., description="邮箱")
+    code: str = Field(..., min_length=6, max_length=6, description="验证码")
+    new_password: str = Field(..., min_length=6, max_length=128, description="新密码")
