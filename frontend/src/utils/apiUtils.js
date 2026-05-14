@@ -6,7 +6,6 @@
  * @param {string} apiType - API类型，如 'ARTICLE', 'META'，默认为 'ARTICLE'
  * @returns {string} 完整的URL
  */
-import { getBaseUrl } from '@/config/apiConfig'
 
 /**
  * 动态构建 URL：处理 RESTful 路径参数和 Query 字符串
