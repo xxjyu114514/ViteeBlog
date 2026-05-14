@@ -28,8 +28,18 @@ export function useAuthAPI() {
   }
 
   const register = async (userData) => {
+    // 后端期望嵌套结构: { user_in: {...}, email_code: "..." }
+    const requestData = {
+      user_in: {
+        username: userData.username,
+        email: userData.email,
+        password: userData.password
+      },
+      email_code: userData.email_code
+    }
+    
     const url = buildUrl('/auth/register')
-    const { data, error } = await useBaseFetch(url).post(userData).json()
+    const { data, error } = await useBaseFetch(url).post(requestData).json()
 
     if (error.value) {
       return { success: false, message: handleFriendlyError(error.value, '注册') }
