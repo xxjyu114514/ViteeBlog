@@ -218,7 +218,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useArticleAPI } from '@/composables/useArticleAPI'
-import { getBaseUrl } from '@/config/apiConfig'
+import { getBaseUrl } from '@/api/config'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 
@@ -316,8 +316,9 @@ const fetchArticles = async (page = 1) => {
   try {
     let result
     if (userStore.isAdmin && viewMode.value === 'all') {
-      // 管理员查看全站文章
-      result = await getAdminAllArticles(page, pageSize.value, false)
+      // 管理员查看全站文章 - 修正参数顺序：status, page, size
+      // 如果要获取所有状态的文章，status 应该为 null
+      result = await getAdminAllArticles(null, page, pageSize.value)
     } else {
       // 查看自己的文章（也支持分页）
       result = await getMyArticles(page, pageSize.value)

@@ -168,9 +168,10 @@ const sendVerificationCode = async () => {
   errorMessage.value = ''
   
   try {
-    const { data, error } = await authAPI.sendRegisterCode(formData.email)
+    // 使用新的统一返回格式 { success: boolean, data: any, message: string }
+    const result = await authAPI.sendRegisterCode(formData.email)
     
-    if (!error.value && data.value) {
+    if (result.success) {
       successMessage.value = '验证码已发送至您的邮箱，请注意查收'
       // 3秒后自动清除成功提示
       setTimeout(() => {
@@ -180,7 +181,7 @@ const sendVerificationCode = async () => {
       }, 3000)
     } else {
       // 使用友好的错误信息
-      const errorMsg = error.value?.friendlyMessage || '发送验证码失败，请稍后重试'
+      const errorMsg = result.message || '发送验证码失败，请稍后重试'
       errorMessage.value = errorMsg
     }
   } catch (error) {
@@ -225,7 +226,9 @@ const handleSubmit = async () => {
     } else {
       // 注册逻辑
       console.log('开始注册请求，用户名:', formData.username, '邮箱:', formData.email)
-      const { data, error } = await authAPI.register({
+      
+      // 使用新的统一返回格式 { success: boolean, data: any, message: string }
+      const registerResult = await authAPI.register({
         user_in: {
           username: formData.username,
           email: formData.email,
@@ -234,7 +237,7 @@ const handleSubmit = async () => {
         email_code: formData.verificationCode
       })
       
-      if (!error.value && data.value) {
+      if (registerResult.success) {
         // 注册成功：立即执行自动登录
         console.log('✅ 注册成功！新用户创建完成，开始自动登录...')
         successMessage.value = '注册成功！正在自动登录...'
@@ -252,29 +255,22 @@ const handleSubmit = async () => {
               router.push('/personal')
             }, 1500)
           } else {
-            // 自动登录失败，切换到登录模式让用户手动登录
+            // 自动登录失败，切换回登录模式让用户手动登录
             console.error('❌ 自动登录失败:', loginResult.message)
-            errorMessage.value = loginResult.message || '自动登录失败，请手动登录'
-            setTimeout(() => {
-              isLogin.value = true
-              formData.email = ''
-              formData.verificationCode = ''
-              errorMessage.value = ''
-            }, 3000)
+            isLogin.value = true
+            errorMessage.value = `注册成功，但自动登录失败：${loginResult.message || '请手动登录'}`
+            // 清空表单状态，避免重复提交问题
+            isSubmitting.value = false
           }
         } catch (loginError) {
           console.error('💥 自动登录异常:', loginError)
-          errorMessage.value = '自动登录过程中发生错误，请手动登录'
-          setTimeout(() => {
-            isLogin.value = true
-            formData.email = ''
-            formData.verificationCode = ''
-            errorMessage.value = ''
-          }, 3000)
+          isLogin.value = true
+          errorMessage.value = '注册成功，但自动登录时发生异常，请手动登录'
+          isSubmitting.value = false
         }
       } else {
         // 注册失败：显示友好的错误信息
-        const errorMsg = error.value?.friendlyMessage || '注册失败，请检查输入信息'
+        const errorMsg = registerResult.message || '注册失败，请稍后重试'
         console.error('❌ 注册失败:', errorMsg)
         errorMessage.value = errorMsg
         isSubmitting.value = false

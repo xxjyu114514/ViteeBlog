@@ -1,181 +1,275 @@
+import { ref } from 'vue'
 import { useBaseFetch, handleFriendlyError } from '@/api/client'
 import { buildUrl } from '@/utils/apiUtils'
 
 export function useArticleAPI() {
+  // 文章操作的loading状态
+  const articleLoading = ref(false)
+  // 防重复提交锁
+  const articleSubmitLock = ref(false)
 
   // 自动保存/创建文章
   const autoSaveArticle = async (articleData) => {
-    const url = buildUrl('/article/autosave')
-    const { data, error } = await useBaseFetch(url).post(articleData).json()
-    
-    if (error.value) {
-      return { success: false, message: handleFriendlyError(error.value, '保存文章') }
+    // 检查是否正在提交中
+    if (articleSubmitLock.value) {
+      return { success: false, message: '操作正在进行中，请稍后...' }
     }
     
-    return { success: true, data: data.value }
+    articleLoading.value = true
+    articleSubmitLock.value = true
+    
+    try {
+      const url = buildUrl('/article/autosave')
+      const { data, error } = await useBaseFetch(url).post(articleData).json()
+      
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '保存文章') }
+      }
+      
+      return { success: true, data: data.value }
+    } catch (err) {
+      console.error('autoSaveArticle error:', err)
+      return { success: false, message: '保存文章时发生未知错误，请稍后重试' }
+    } finally {
+      articleLoading.value = false
+      articleSubmitLock.value = false
+    }
   }
 
   // 获取文章详情
   const getArticleDetail = async (articleId) => {
-    const url = buildUrl('/article/:id', { id: articleId })
-    const { data, error } = await useBaseFetch(url).get().json()
+    articleLoading.value = true
     
-    if (error.value) {
-      return { success: false, message: handleFriendlyError(error.value, '获取文章') }
+    try {
+      const url = buildUrl('/article/:id', { id: articleId })
+      const { data, error } = await useBaseFetch(url).get().json()
+      
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '获取文章') }
+      }
+      
+      return { success: true, data: data.value }
+    } catch (err) {
+      console.error('getArticleDetail error:', err)
+      return { success: false, message: '获取文章详情时发生未知错误，请稍后重试' }
+    } finally {
+      articleLoading.value = false
     }
-    
-    return { success: true, data: data.value }
   }
 
   // 发布文章
   const publishArticle = async (articleId) => {
-    const url = buildUrl('/article/:id/publish', { id: articleId })
-    const { data, error } = await useBaseFetch(url).put({}).json()
-    
-    if (error.value) {
-      return { success: false, message: handleFriendlyError(error.value, '发布文章') }
+    if (articleSubmitLock.value) {
+      return { success: false, message: '操作正在进行中，请稍后...' }
     }
     
-    return { success: true }
+    articleLoading.value = true
+    articleSubmitLock.value = true
+    
+    try {
+      const url = buildUrl('/article/:id/publish', { id: articleId })
+      const { data, error } = await useBaseFetch(url).put({}).json()
+      
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '发布文章') }
+      }
+      
+      return { success: true }
+    } catch (err) {
+      console.error('publishArticle error:', err)
+      return { success: false, message: '发布文章时发生未知错误，请稍后重试' }
+    } finally {
+      articleLoading.value = false
+      articleSubmitLock.value = false
+    }
   }
 
   // 获取公开文章列表（支持分页和分类筛选）
   const getPublicArticles = async (categoryId = null, page = 1, size = 10) => {
-    const queryParams = {}
-    if (categoryId) {
-      queryParams.category_id = categoryId
-    }
-    queryParams.page = page
-    queryParams.size = size
+    articleLoading.value = true
     
-    const url = buildUrl('/article/public/list', {}, queryParams)
-    const { data, error } = await useBaseFetch(url).get().json()
-    
-    if (error.value) {
-      return { success: false, message: handleFriendlyError(error.value, '获取文章列表') }
+    try {
+      const queryParams = {}
+      if (categoryId) {
+        queryParams.category_id = categoryId
+      }
+      queryParams.page = page
+      queryParams.size = size
+      
+      const url = buildUrl('/article/public/list', {}, queryParams)
+      const { data, error } = await useBaseFetch(url).get().json()
+      
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '获取文章列表') }
+      }
+      
+      return { success: true, data: data.value }
+    } catch (err) {
+      console.error('getPublicArticles error:', err)
+      return { success: false, message: '获取文章列表时发生未知错误，请稍后重试' }
+    } finally {
+      articleLoading.value = false
     }
-
-    // 防御性编程：确保返回的结构安全
-    const safeData = {
-      items: Array.isArray(data.value?.items) ? data.value.items : [],
-      total: data.value?.total || 0,
-      page: data.value?.page || page,
-      pages: data.value?.pages || 0
-    }
-    
-    return { success: true, data: safeData }
   }
 
-  // 获取用户自己的文章列表（支持分页）
-  const getMyArticles = async (page = 1, size = 10) => {
-    const queryParams = {
-      page: page,
-      size: size
-    }
+  // 获取我的文章列表
+  const getMyArticles = async (status = null, page = 1, size = 10) => {
+    articleLoading.value = true
     
-    const url = buildUrl('/article/my/list', {}, queryParams)
-    const { data, error } = await useBaseFetch(url).get().json()
-    
-    if (error.value) {
-      return { success: false, message: handleFriendlyError(error.value, '获取我的文章') }
+    try {
+      const queryParams = { page, size }
+      if (status !== null) {
+        queryParams.status = status
+      }
+      
+      const url = buildUrl('/article/my/list', {}, queryParams)
+      const { data, error } = await useBaseFetch(url).get().json()
+      
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '获取我的文章') }
+      }
+      
+      return { success: true, data: data.value }
+    } catch (err) {
+      console.error('getMyArticles error:', err)
+      return { success: false, message: '获取我的文章时发生未知错误，请稍后重试' }
+    } finally {
+      articleLoading.value = false
     }
-
-    // 防御性编程：确保返回的结构安全
-    const safeData = {
-      items: Array.isArray(data.value?.items) ? data.value.items : [],
-      total: data.value?.total || 0,
-      page: data.value?.page || page,
-      pages: data.value?.pages || 0
-    }
-    
-    return { success: true, data: safeData }
   }
 
-  // 软删除文章（移至回收站）
+  // 软删除文章
   const softDeleteArticle = async (articleId) => {
-    const url = buildUrl('/article/:id', { id: articleId })
-    const { data, error } = await useBaseFetch(url).delete().json()
-    
-    if (error.value) {
-      return { success: false, message: handleFriendlyError(error.value, '删除文章') }
+    if (articleSubmitLock.value) {
+      return { success: false, message: '操作正在进行中，请稍后...' }
     }
     
-    return { success: true }
+    articleLoading.value = true
+    articleSubmitLock.value = true
+    
+    try {
+      const url = buildUrl('/article/:id/soft-delete', { id: articleId })
+      const { data, error } = await useBaseFetch(url).delete().json()
+      
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '删除文章') }
+      }
+      
+      return { success: true }
+    } catch (err) {
+      console.error('softDeleteArticle error:', err)
+      return { success: false, message: '删除文章时发生未知错误，请稍后重试' }
+    } finally {
+      articleLoading.value = false
+      articleSubmitLock.value = false
+    }
   }
 
   // 恢复文章
   const restoreArticle = async (articleId) => {
-    const url = buildUrl('/article/:id/restore', { id: articleId })
-    const { data, error } = await useBaseFetch(url).post({}).json()
-    
-    if (error.value) {
-      return { success: false, message: handleFriendlyError(error.value, '恢复文章') }
+    if (articleSubmitLock.value) {
+      return { success: false, message: '操作正在进行中，请稍后...' }
     }
     
-    return { success: true }
+    articleLoading.value = true
+    articleSubmitLock.value = true
+    
+    try {
+      const url = buildUrl('/article/:id/restore', { id: articleId })
+      const { data, error } = await useBaseFetch(url).put({}).json()
+      
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '恢复文章') }
+      }
+      
+      return { success: true }
+    } catch (err) {
+      console.error('restoreArticle error:', err)
+      return { success: false, message: '恢复文章时发生未知错误，请稍后重试' }
+    } finally {
+      articleLoading.value = false
+      articleSubmitLock.value = false
+    }
   }
 
-  // 管理员审核文章
-  const reviewArticle = async (articleId, passAudit, remark = '') => {
-    // 如果是驳回但没有提供有效的remark，返回错误
-    if (!passAudit && (!remark || !remark.trim())) {
-      return { success: false, message: '驳回文章必须填写原因' }
-    }
-
-    const url = buildUrl('/article/admin/articles/:id/review', { id: articleId })
-    const reviewData = {
-      pass_audit: passAudit
-    }
-    // 只有在驳回时才添加remark字段，且确保是非空字符串
-    if (!passAudit && remark && remark.trim()) {
-      reviewData.remark = remark.trim()
+  // 审核文章
+  const reviewArticle = async (articleId, action) => {
+    if (articleSubmitLock.value) {
+      return { success: false, message: '操作正在进行中，请稍后...' }
     }
     
-    const { data, error } = await useBaseFetch(url).post(reviewData).json()
+    articleLoading.value = true
+    articleSubmitLock.value = true
     
-    if (error.value) {
-      return { success: false, message: handleFriendlyError(error.value, '审核文章') }
+    try {
+      const url = buildUrl('/article/:id/review', { id: articleId })
+      const { data, error } = await useBaseFetch(url).put({ action }).json()
+      
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '审核文章') }
+      }
+      
+      return { success: true }
+    } catch (err) {
+      console.error('reviewArticle error:', err)
+      return { success: false, message: '审核文章时发生未知错误，请稍后重试' }
+    } finally {
+      articleLoading.value = false
+      articleSubmitLock.value = false
     }
-    
-    return { success: true }
   }
 
-  // 获取全站文章列表（管理员专用）
-  const getAdminAllArticles = async (page = 1, size = 20, showDeleted = false) => {
-    const queryParams = {
-      page: page,
-      size: size,
-      show_deleted: showDeleted
-    }
+  // 获取管理员所有文章
+  const getAdminAllArticles = async (status = null, page = 1, size = 10) => {
+    articleLoading.value = true
     
-    const url = buildUrl('/article/admin/all-articles', {}, queryParams)
-    const { data, error } = await useBaseFetch(url).get().json()
-    
-    if (error.value) {
-      return { success: false, message: handleFriendlyError(error.value, '获取全站文章') }
+    try {
+      const queryParams = { page, size }
+      if (status !== null) {
+        queryParams.status = status
+      }
+      
+      const url = buildUrl('/article/admin/all', {}, queryParams)
+      const { data, error } = await useBaseFetch(url).get().json()
+      
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '获取所有文章') }
+      }
+      
+      return { success: true, data: data.value }
+    } catch (err) {
+      console.error('getAdminAllArticles error:', err)
+      return { success: false, message: '获取所有文章时发生未知错误，请稍后重试' }
+    } finally {
+      articleLoading.value = false
     }
-
-    // 防御性编程：确保返回的结构安全
-    const safeData = {
-      items: Array.isArray(data.value?.items) ? data.value.items : [],
-      total: data.value?.total || 0,
-      page: data.value?.page || page,
-      pages: data.value?.pages || 0
-    }
-    
-    return { success: true, data: safeData }
   }
 
-  // 撤回发布（从待审核状态撤回到草稿）
+  // 撤回文章
   const withdrawArticle = async (articleId) => {
-    const url = buildUrl('/article/:id/withdraw', { id: articleId })
-    const { data, error } = await useBaseFetch(url).post({}).json()
-    
-    if (error.value) {
-      return { success: false, message: handleFriendlyError(error.value, '撤回发布') }
+    if (articleSubmitLock.value) {
+      return { success: false, message: '操作正在进行中，请稍后...' }
     }
     
-    return { success: true }
+    articleLoading.value = true
+    articleSubmitLock.value = true
+    
+    try {
+      const url = buildUrl('/article/:id/withdraw', { id: articleId })
+      const { data, error } = await useBaseFetch(url).put({}).json()
+      
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '撤回文章') }
+      }
+      
+      return { success: true }
+    } catch (err) {
+      console.error('withdrawArticle error:', err)
+      return { success: false, message: '撤回文章时发生未知错误，请稍后重试' }
+    } finally {
+      articleLoading.value = false
+      articleSubmitLock.value = false
+    }
   }
 
   return {
@@ -188,6 +282,9 @@ export function useArticleAPI() {
     restoreArticle,
     reviewArticle,
     getAdminAllArticles,
-    withdrawArticle
+    withdrawArticle,
+    // 新增的loading状态和提交锁
+    articleLoading,
+    articleSubmitLock
   }
 }

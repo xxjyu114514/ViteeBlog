@@ -148,7 +148,7 @@ import Vditor from 'vditor'
 import 'vditor/dist/index.css'
 import { useUserStore } from '@/stores/user'
 import { buildUrl } from '@/utils/apiUtils'
-import { getBaseUrl } from '@/config/apiConfig'
+import { getBaseUrl } from '@/api/config'
 import { useArticleAPI } from '@/composables/useArticleAPI'
 import { useMetaAPI } from '@/composables/useMetaAPI'
 
@@ -266,7 +266,7 @@ const initVditor = (initialContent) => {
     // 注意：如果你的网络环境无法访问官方 CDN，可以重新开启并配置本地 cdn: '/vditor'
     
     upload: {
-      url: buildUrl('/article/upload-image'),
+      url: BACKEND_URL + buildUrl('/article/upload-image'),
       fieldName: 'file',
       max: 10 * 1024 * 1024,
       // 使用setHeaders函数动态获取token，每次上传前都会调用

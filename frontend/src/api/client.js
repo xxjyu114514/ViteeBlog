@@ -52,6 +52,7 @@ export const useBaseFetch = createFetch({
     },
     // 请求后拦截：统一处理 401 登出等全局行为
     onFetchError(ctx) {
+      // 简化逻辑：所有401都触发登出和跳转
       if (ctx.response?.status === 401) {
         const userStore = useUserStore()
         userStore.logout()
