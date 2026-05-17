@@ -109,3 +109,4 @@
   font-style: normal;
 }
 
+@import './assets/styles/components/_comment.scss';

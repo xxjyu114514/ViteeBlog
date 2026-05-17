@@ -8,6 +8,18 @@ export const useUserStore = defineStore('user', () => {
 
   // 计算属性
   const isAuthenticated = computed(() => !!token.value)
+  
+  // 新增：Token有效性验证
+  const isTokenValid = computed(() => {
+    if (!token.value) return false
+    try {
+      const payload = JSON.parse(atob(token.value.split('.')[1]))
+      return payload.exp * 1000 > Date.now()
+    } catch {
+      return false
+    }
+  })
+  
   const isAdmin = computed(() => userInfo.value?.role === 'admin')
 
   // Actions: 设置认证信息
@@ -25,13 +37,24 @@ export const useUserStore = defineStore('user', () => {
     localStorage.removeItem('vitee_token')
     localStorage.removeItem('vitee_user')
   }
+  
+  // 新增：主动检查token过期状态
+  function checkTokenExpiry() {
+    if (isAuthenticated.value && !isTokenValid.value) {
+      logout()
+      return true
+    }
+    return false
+  }
 
   return { 
     token, 
     userInfo, 
     isAuthenticated, 
+    isTokenValid,
     isAdmin, 
     setAuth, 
-    logout 
+    logout,
+    checkTokenExpiry
   }
 })

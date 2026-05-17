@@ -1,43 +1,48 @@
 import { useRouter } from 'vue-router'
 import { usePageTransition } from './usePageTransition'
 
-/**
- * 1级页面滚轮导航逻辑
- * 支持线性连续跳转：首页 → 文章 → 关于 → 留言
- */
 export function usePrimaryPageWheel(currentRouteName) {
   const router = useRouter()
   const { isAnimating } = usePageTransition()
 
-  // 定义1级页面的线性顺序
-  const pageOrder = [
-    'home',           // 首页
-    'posts-immersive', // 文章
-    'about-immersive', // 关于  
-    'message-immersive' // 留言
-  ]
-
-  // 获取当前页面在顺序中的索引
+  const pageOrder = ['home', 'posts-immersive', 'about-immersive', 'message-immersive']
   const currentIndex = pageOrder.indexOf(currentRouteName)
 
   const handleWheel = (e) => {
-    if (isAnimating.value) return
-    
+    // 1. 如果正在执行“打断”后的跳转，严格拦截，防止双重触发
+    if (window._isBreaking) return 
+
+    const isScrollingUp = e.deltaY < 0
+    const isScrollingDown = e.deltaY > 0
+
+    // 2. 向下滚动锁：如果正在动画，禁止向下多跳
+    if (isAnimating.value && isScrollingDown) return
+
     e.preventDefault()
 
-    // 滚轮向上：返回前一个页面（如果存在）
-    if (e.deltaY < 0 && currentIndex > 0) {
+    // --- 向上滚动：打断并强制返回 ---
+    if (isScrollingUp && currentIndex > 0) {
+      // 开启全局打断锁，防止滚轮动能触发多次 handleWheel
+      window._isBreaking = true 
+      
+      // 暴力重置动画状态，允许路由立即变更
+      isAnimating.value = false 
+      
       const prevPage = pageOrder[currentIndex - 1]
       router.push(getPageRoutePath(prevPage))
+
+      // 在页面跳转后的一段时间内，保持锁定，等待路由彻底卸载
+      setTimeout(() => {
+        window._isBreaking = false
+      }, 500) 
     }
-    // 滚轮向下：跳转到下一个页面（如果存在）
-    else if (e.deltaY > 0 && currentIndex < pageOrder.length - 1) {
+    // --- 向下滚动：正常步进 ---
+    else if (isScrollingDown && currentIndex < pageOrder.length - 1) {
       const nextPage = pageOrder[currentIndex + 1]
       router.push(getPageRoutePath(nextPage))
     }
   }
 
-  // 根据路由名称获取对应的路径
   const getPageRoutePath = (routeName) => {
     const routeMap = {
       'home': '/',
