@@ -194,7 +194,7 @@ async def delete_account(
     if current_user.role == UserRole.ADMIN:
         raise HTTPException(status_code=400, detail="管理员账号不能注销，请先转让管理员权限")
 
-    current_user.is_active = False
+    current_user.is_active = 0  # 使用整数0而不是布尔值False，以兼容TINYINT存储
     current_user.deleted_at = datetime.now()
     await db.commit()
 
@@ -214,11 +214,11 @@ async def restore_account(
         raise HTTPException(status_code=404, detail="用户不存在")
 
     # 2. 检查该用户是否确实已注销
-    if target_user.is_active and target_user.deleted_at is None:
+    if target_user.is_active == 1 and target_user.deleted_at is None:  # 使用整数比较而不是布尔值
         raise HTTPException(status_code=400, detail="该账号未被注销，无需恢复")
 
     # 3. 恢复账号
-    target_user.is_active = True
+    target_user.is_active = 1  # 使用整数1而不是布尔值True，以兼容TINYINT存储
     target_user.deleted_at = None
     await db.commit()
 

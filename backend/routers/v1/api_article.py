@@ -367,7 +367,7 @@ async def toggle_pin_article(
     article = res.scalars().first()
     if not article:
         raise HTTPException(status_code=404, detail="文章不存在")
-    article.is_pinned = not article.is_pinned
+    article.is_pinned = 1 if article.is_pinned == 0 else 0  # 使用整数而不是布尔值，以兼容TINYINT存储
     await db.commit()
     return {"message": "已置顶" if article.is_pinned else "已取消置顶", "is_pinned": article.is_pinned}
 

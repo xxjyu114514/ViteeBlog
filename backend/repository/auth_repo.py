@@ -32,7 +32,7 @@ class AuthRepository:
                 )
 
             # 新增：检查账号是否已注销
-            if not user.is_active:
+            if user.is_active == 0:  # 使用整数0而不是布尔值False，以兼容TINYINT存储
                 raise HTTPException(status_code=403, detail="该账号已注销，无法登录")
 
             # 2. 检查锁定状态 (需求：连续3次失败锁定15分钟)
