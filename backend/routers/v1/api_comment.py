@@ -40,7 +40,7 @@ async def create_comment(
         article_id=article_id,
         user_id=user.id,
         parent_id=comment_in.parent_id,
-        is_audited=True  # 新评论默认通过审核（后审模式下可改为 False）
+        is_audited=True  # 先发后审：评论立即发布，管理员事后可标记违规
     )
     db.add(new_comment)
     await db.commit()
@@ -301,7 +301,7 @@ async def get_all_comments_admin(
     }
 
 
-# 9. 管理员：获取待审核评论列表
+# 9. 管理员：获取已标记违规的评论列表
 @router.get("/admin/comments/pending")
 async def get_pending_comments(
         page: int = Query(1, ge=1),
@@ -309,7 +309,7 @@ async def get_pending_comments(
         admin: User = Depends(allow_admin_only),
         db: AsyncSession = Depends(get_db)
 ):
-    """获取所有未审核的评论（is_audited=False）"""
+    """获取所有被标记为违规/隐藏的评论（is_audited=False）"""
     stmt = (
         select(Comment)
         .where(Comment.is_audited == False, Comment.deleted_at == None)
@@ -334,15 +334,15 @@ async def get_pending_comments(
     }
 
 
-# 10. 管理员：审核评论（通过/驳回）
+# 10. 管理员：标记/恢复评论（隐藏违规评论或恢复误判）
 @router.put("/admin/comments/{comment_id}/audit")
 async def audit_comment(
         comment_id: int,
-        pass_audit: bool = Body(..., embed=True, description="True为通过，False为驳回"),
+        pass_audit: bool = Body(..., embed=True, description="True为恢复显示，False为标记违规隐藏"),
         admin: User = Depends(allow_admin_only),
         db: AsyncSession = Depends(get_db)
 ):
-    """管理员审核评论"""
+    """管理员标记评论为违规（隐藏）或恢复已隐藏的评论"""
     # 查找评论
     res = await db.execute(select(Comment).where(Comment.id == comment_id))
     comment = res.scalars().first()
@@ -357,19 +357,22 @@ async def audit_comment(
     comment.is_audited = pass_audit
     await db.commit()
     
-    action = "通过" if pass_audit else "驳回"
+    if pass_audit:
+        action = "恢复显示"
+    else:
+        action = "标记违规并隐藏"
     return {"message": f"评论已{action}", "is_audited": pass_audit}
 
 
-# 11. 管理员：批量审核评论
+# 11. 管理员：批量标记违规评论
 @router.post("/admin/comments/batch-audit")
 async def batch_audit_comments(
         comment_ids: List[int] = Body(..., description="评论ID列表"),
-        pass_audit: bool = Body(..., description="True为全部通过，False为全部驳回"),
+        pass_audit: bool = Body(..., description="True为批量恢复，False为批量标记违规"),
         admin: User = Depends(allow_admin_only),
         db: AsyncSession = Depends(get_db)
 ):
-    """批量审核多个评论"""
+    """批量标记多条评论为违规（隐藏）或批量恢复"""
     if not comment_ids:
         raise HTTPException(status_code=400, detail="评论ID列表不能为空")
     
@@ -391,7 +394,10 @@ async def batch_audit_comments(
     
     await db.commit()
     
-    action = "通过" if pass_audit else "驳回"
+    if pass_audit:
+        action = "恢复"
+    else:
+        action = "标记违规隐藏"
     return {
         "message": f"成功{action} {len(comments)} 条评论",
         "success_count": len(comments),
