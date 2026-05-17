@@ -1772,8 +1772,9 @@ axios.interceptors.response.use(
 - 👍 **点赞功能**：用户可点赞/取消点赞评论
 - 🗑️ **软删除**：作者或管理员可删除评论
 - 🚩 **举报系统**：用户可举报不当评论
-- 👮 **管理员审核**：查看和处理举报
+- 👮 **管理员审核**：查看和处理举报、评论后审机制
 - 🔍 **全站巡查**：管理员可查看所有评论
+- ✅ **评论审核**：管理员可审核待审核评论（单个/批量）
 
 ### 数据模型
 
@@ -1785,7 +1786,7 @@ axios.interceptors.response.use(
 | user_id | int | 评论者ID（外键关联User） |
 | article_id | int | 文章ID（外键关联Article） |
 | parent_id | int/null | 父评论ID，null表示一级评论 |
-| is_audited | bool | 是否已审核（默认true） |
+| is_audited | bool | 是否已审核（默认true，后审模式下可设为false） |
 | created_at | datetime | 创建时间 |
 | deleted_at | datetime/null | 删除时间（软删除） |
 
@@ -1912,6 +1913,8 @@ axios.interceptors.response.use(
 - ✅ 通过 `parent_id` 判断是否为回复
 - ✅ 包含点赞数 `like_count` 和当前用户点赞状态 `is_liked`
 - ✅ 未登录用户 `is_liked` 始终为 false
+- ✅ **分页格式**：返回 `{items, total, page, size, pages}` 统一分页结构
+- ⚠️ **后审机制**：新评论默认 `is_audited=True`，如需启用严格后审模式，需修改代码为 `False`
 
 ---
 
