@@ -39,8 +39,7 @@ async def create_comment(
         content=comment_in.content,
         article_id=article_id,
         user_id=user.id,
-        parent_id=comment_in.parent_id,
-        is_audited=True
+        parent_id=comment_in.parent_id
     )
     db.add(new_comment)
     await db.commit()
@@ -72,7 +71,6 @@ async def get_comments(
         .outerjoin(CommentLike, Comment.id == CommentLike.comment_id)
         .where(and_(
             Comment.article_id == article_id,
-            Comment.is_audited == 1,  # 使用整数1而不是布尔值True，以兼容TINYINT存储
             Comment.deleted_at == None
         ))
         .group_by(Comment.id)
