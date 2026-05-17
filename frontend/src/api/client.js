@@ -52,12 +52,15 @@ export const useBaseFetch = createFetch({
     },
     // 请求后拦截：统一处理 401 登出等全局行为
     onFetchError(ctx) {
-      // 简化逻辑：所有401都触发登出和跳转
+      // 改进逻辑：排除登录请求的401错误
       if (ctx.response?.status === 401) {
-        const userStore = useUserStore()
-        userStore.logout()
-        // 强制重定向到登录页
-        window.location.href = '/login'
+        // 检查是否为登录请求（排除/auth/login路径）
+        if (!ctx.request.url.includes('/auth/login')) {
+          const userStore = useUserStore()
+          userStore.logout()
+          // 强制重定向到登录页
+          window.location.href = '/login'
+        }
       }
       return ctx
     }
