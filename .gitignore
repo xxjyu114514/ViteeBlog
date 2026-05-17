@@ -105,3 +105,8 @@ storage/images/*
 
 # 强制不忽略 .gitkeep 文件
 !**/ .gitkeep
+
+backend/alembic/*
+backend/alembic/versions/4225090b7b65_initial_migration.py
+backend/.env
+backend/.env

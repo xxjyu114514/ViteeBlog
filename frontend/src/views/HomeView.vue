@@ -16,7 +16,3 @@ import { usePrimaryPageWheel } from '@/composables/usePrimaryPageWheel'
 // 维持项目原有的滚轮导航逻辑
 const { handleWheel } = usePrimaryPageWheel('home')
 </script>
-
-<style lang="scss" scoped>
-
-</style>

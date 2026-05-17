@@ -13,18 +13,27 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 
 from dependencies import get_db, get_current_user, allow_admin_only, get_current_user_optional
-from models.blog_models import Article, ArticleStatus, User, Category, Tag, UserRole, article_tag
-from schemas.article_schema import ArticleCreate, ArticleReviewAction
+from models.blog_models import Article, ArticleStatus, User, Category, Tag, UserRole, article_tag, ArticleLike
+from schemas.article_schema import ArticleCreate, ArticleReviewAction, ArticleDetailOut
 
 router = APIRouter()
 
 IMAGE_STORAGE = "storage/images"
 ARTICLE_STORAGE = "storage/articles"
+_upload_counter: dict = {}
 
 
-# --- 1. 图片上传 (不允许修改) ---
+# --- 接口 1：POST /upload-image (图片上传) ---
 @router.post("/upload-image", summary="图片上传接口")
 async def upload_article_image(file: UploadFile = File(...), user: User = Depends(get_current_user)):
+    now = datetime.now()
+    user_id = user.id
+    if user_id not in _upload_counter:
+        _upload_counter[user_id] = []
+    _upload_counter[user_id] = [t for t in _upload_counter[user_id] if (now - t).total_seconds() < 3600]
+    if len(_upload_counter[user_id]) >= 15:
+        raise HTTPException(status_code=429, detail="上传过于频繁，请1小时后再试")
+
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="只能上传图片文件")
     ext = os.path.splitext(file.filename)[1]
@@ -37,91 +46,77 @@ async def upload_article_image(file: UploadFile = File(...), user: User = Depend
             raise HTTPException(status_code=400, detail="文件大小不能超过10MB")
         async with aiofiles.open(file_path, "wb") as f:
             await f.write(content)
+        _upload_counter[user_id].append(now)
         return {"url": f"/storage/images/{unique_name}"}
     except Exception:
         raise HTTPException(status_code=500, detail="文件保存失败")
 
 
-# --- 2. 自动保存 (修改点：恢复权限逻辑、补全路径处理、确认标签) ---
+# --- 接口 2：DELETE /upload-image (图片删除) ---
+@router.delete("/upload-image", summary="图片删除接口")
+async def delete_article_image(filename: str, user: User = Depends(get_current_user)):
+    file_path = os.path.join(IMAGE_STORAGE, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="图片不存在")
+    try:
+        os.remove(file_path)
+        return {"message": "图片已删除"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"删除文件时出错: {str(e)}")
+
+
+# --- 接口 3：POST /autosave (加入乐观锁逻辑) ---
 @router.post("/autosave", summary="自动保存/草稿更新")
 async def autosave(article_in: ArticleCreate, user: User = Depends(get_current_user),
                    db: AsyncSession = Depends(get_db)):
-    # 标签处理逻辑
     tags = []
     if article_in.tag_ids:
         tag_res = await db.execute(select(Tag).where(Tag.id.in_(article_in.tag_ids)))
-        found_tags = tag_res.scalars().all()
-        # 验证所有传入的标签ID都存在
-        if len(found_tags) != len(article_in.tag_ids):
-            raise HTTPException(status_code=400, detail="部分标签ID不存在")
-        tags = found_tags
+        tags = tag_res.scalars().all()
 
     if article_in.id:
-        # 更新分支
         res = await db.execute(select(Article).where(Article.id == article_in.id).options(selectinload(Article.tags)))
         article = res.scalars().first()
 
-        # 恢复权限判断逻辑
         if not article or (article.user_id != user.id and user.role != UserRole.ADMIN):
             raise HTTPException(status_code=403, detail="无权修改此文章")
 
-        # 只更新非 None 的字段，避免覆盖为空值
-        if article_in.title is not None:
-            article.title = article_in.title
-        if article_in.summary is not None:
-            article.summary = article_in.summary
-        if article_in.category_id is not None:
-            article.category_id = article_in.category_id
+        if article_in.version is not None and article_in.version != article.version:
+            raise HTTPException(status_code=409, detail="文章已被他人修改，请刷新后重新编辑")
+
+        article.title = article_in.title
+        article.summary = article_in.summary
+        if article_in.cover_image is not None:
+            article.cover_image = article_in.cover_image
+        article.category_id = article_in.category_id
         article.updated_at = datetime.now()
         article.tags = tags
 
         if article_in.content is not None:
             new_hash = hashlib.md5(article_in.content.encode()).hexdigest()
-            # 哈希比对逻辑
             if article.content_hash != new_hash:
-                os.makedirs(ARTICLE_STORAGE, exist_ok=True)
-                file_name = f"{uuid.uuid4().hex}.md"
-                file_path = os.path.join(ARTICLE_STORAGE, file_name)
-                async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
-                    await f.write(article_in.content)
-                article.content_path = file_path
+                article.content = article_in.content
                 article.content_hash = new_hash
-        # 补全 content_path 处理
-        elif article_in.content_path:
-            article.content_path = article_in.content_path
+        article.version += 1
     else:
-        # 新建分支
         if (not article_in.title or not article_in.title.strip()) and not article_in.content:
             raise HTTPException(status_code=400, detail="标题和内容不能同时为空")
 
-        file_path = ""
-        content_hash = ""
-        if article_in.content:
-            os.makedirs(ARTICLE_STORAGE, exist_ok=True)
-            file_name = f"{uuid.uuid4().hex}.md"
-            file_path = os.path.join(ARTICLE_STORAGE, file_name)
-            async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
-                await f.write(article_in.content)
-            content_hash = hashlib.md5(article_in.content.encode()).hexdigest()
-
+        content_hash = hashlib.md5(article_in.content.encode()).hexdigest() if article_in.content else ""
         article = Article(
-            title=article_in.title,
-            summary=article_in.summary,
-            content_path=file_path or article_in.content_path,
-            content_hash=content_hash,
-            category_id=article_in.category_id,
-            user_id=user.id,
-            status=ArticleStatus.DRAFT,
-            tags=tags
+            title=article_in.title, summary=article_in.summary, content=article_in.content,
+            content_hash=content_hash, category_id=article_in.category_id, user_id=user.id,
+            cover_image=article_in.cover_image,
+            status=ArticleStatus.DRAFT, tags=tags, version=1
         )
         db.add(article)
 
     await db.commit()
     await db.refresh(article)
-    return {"id": article.id, "message": "已自动保存"}
+    return {"id": article.id, "version": article.version, "message": "已自动保存"}
 
 
-# --- 3. 正式发布 (修改点：Admin直发逻辑) ---
+# --- 接口 4：PUT /{article_id}/publish (发布文章) ---
 @router.put("/{article_id}/publish", summary="正式发布文章")
 async def publish_article(article_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     res = await db.execute(select(Article).where(Article.id == article_id))
@@ -130,18 +125,17 @@ async def publish_article(article_id: int, user: User = Depends(get_current_user
     if not article or (article.user_id != user.id and user.role != UserRole.ADMIN):
         raise HTTPException(status_code=403, detail="无权操作")
 
-    if not article.title or not article.content_path:
-        raise HTTPException(status_code=400, detail="标题或内容不能为空，无法发布")
+    if not article.title or not article.title.strip():
+        raise HTTPException(status_code=400, detail="发布失败：标题不能为空")
+    if not article.content or not article.content.strip():
+        raise HTTPException(status_code=400, detail="发布失败：文章内容不能为空")
 
-    if not os.path.exists(article.content_path):
-        raise HTTPException(status_code=500, detail="正文文件丢失")
-
-    # 管理员免审直发
     if user.role == UserRole.ADMIN:
         article.status = ArticleStatus.PUBLISHED
         article.published_at = datetime.now()
     else:
         article.status = ArticleStatus.PENDING
+        article.review_remark = None
         article.submitted_at = datetime.now()
 
     article.updated_at = datetime.now()
@@ -149,8 +143,8 @@ async def publish_article(article_id: int, user: User = Depends(get_current_user
     return {"message": "发布成功" if user.role == UserRole.ADMIN else "已提交审核"}
 
 
-# --- 4. 详情 (修改点：恢复完整权限逻辑) ---
-@router.get("/{article_id}", summary="获取文章详情")
+# --- 接口 5：GET /{article_id} (获取详情) ---
+@router.get("/{article_id}", response_model=ArticleDetailOut, summary="获取文章详情")
 async def get_article_detail(article_id: int, user: Optional[User] = Depends(get_current_user_optional),
                              db: AsyncSession = Depends(get_db)):
     res = await db.execute(
@@ -162,26 +156,52 @@ async def get_article_detail(article_id: int, user: Optional[User] = Depends(get
     if not article:
         raise HTTPException(status_code=404, detail="文章不存在")
 
-    # 权限校验
     is_author = user and article.user_id == user.id
     is_admin = user and user.role == UserRole.ADMIN
 
-    # 软删除处理
-    if article.deleted_at:
-        if not (is_author or is_admin):
-            raise HTTPException(status_code=404, detail="文章已删除")
+    if article.deleted_at and not (is_author or is_admin):
+        raise HTTPException(status_code=404, detail="文章已删除")
 
-    # 未发布文章处理
     if article.status != ArticleStatus.PUBLISHED:
         if not user:
             raise HTTPException(status_code=401, detail="请登录后查看私有文章")
         if not (is_author or is_admin):
             raise HTTPException(status_code=403, detail="无权访问该文章")
 
+    # 使用原子操作增加阅读量，避免并发问题
+    await db.execute(
+        update(Article)
+        .where(Article.id == article_id)
+        .values(view_count=Article.view_count + 1)
+    )
+    await db.commit()
+    
+    # 刷新对象以获取最新的 view_count
+    await db.refresh(article)
+
+    # 查询点赞信息
+    # 1. 查询总点赞数
+    like_count_res = await db.execute(
+        select(func.count(ArticleLike.id)).where(ArticleLike.article_id == article_id)
+    )
+    article.like_count = like_count_res.scalar() or 0
+
+    # 2. 查询当前用户是否已点赞
+    if user:
+        like_check = await db.execute(
+            select(ArticleLike).where(
+                ArticleLike.article_id == article_id,
+                ArticleLike.user_id == user.id
+            )
+        )
+        article.is_liked = like_check.scalars().first() is not None
+    else:
+        article.is_liked = False
+
     return article
 
 
-# --- 5. 撤回发布 (修改点：恢复状态校验) ---
+# --- 接口 6：POST /{article_id}/withdraw (撤回审核) ---
 @router.post("/{article_id}/withdraw", summary="撤回发布")
 async def withdraw_article(article_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     res = await db.execute(select(Article).where(Article.id == article_id))
@@ -189,7 +209,6 @@ async def withdraw_article(article_id: int, user: User = Depends(get_current_use
     if not article or (article.user_id != user.id and user.role != UserRole.ADMIN):
         raise HTTPException(status_code=403)
 
-    # 状态校验：只有待审核可以撤回
     if article.status != ArticleStatus.PENDING:
         raise HTTPException(status_code=400, detail="只有处于待审核状态的文章可以撤回")
 
@@ -198,7 +217,7 @@ async def withdraw_article(article_id: int, user: User = Depends(get_current_use
     return {"message": "已撤回至草稿状态"}
 
 
-# --- 6. 管理员审核 (修改点：恢复完整审核逻辑) ---
+# --- 接口 7：POST /admin/articles/{article_id}/review (管理员审核) ---
 @router.post("/admin/articles/{article_id}/review", summary="【管理员】审核文章")
 async def review_article(article_id: int, action: ArticleReviewAction, admin: User = Depends(allow_admin_only),
                          db: AsyncSession = Depends(get_db)):
@@ -207,17 +226,16 @@ async def review_article(article_id: int, action: ArticleReviewAction, admin: Us
     if not article:
         raise HTTPException(status_code=404, detail="文章不存在")
 
-    # 校验状态
     if article.status != ArticleStatus.PENDING:
         raise HTTPException(status_code=400, detail="该文章不处于待审核状态")
 
     if action.pass_audit:
         article.status = ArticleStatus.PUBLISHED
+        article.review_remark = None
         article.reviewed_at = datetime.now()
         article.reviewed_by = admin.id
         article.published_at = datetime.now()
     else:
-        # 驳回校验
         if not action.remark or not action.remark.strip():
             raise HTTPException(status_code=400, detail="驳回文章必须填写驳回理由")
         article.status = ArticleStatus.DRAFT
@@ -229,36 +247,49 @@ async def review_article(article_id: int, action: ArticleReviewAction, admin: Us
     return {"message": "审核操作成功"}
 
 
-# --- 7. 待审核列表 (不允许修改) ---
+# --- 接口 8：GET /admin/pending (待审核列表) ---
 @router.get("/admin/pending", summary="【管理员】待审核列表")
-async def list_pending_articles(admin: User = Depends(allow_admin_only), db: AsyncSession = Depends(get_db)):
-    res = await db.execute(select(Article).where(Article.status == ArticleStatus.PENDING))
-    return res.scalars().all()
+async def list_pending_articles(
+        page: int = Query(1, ge=1),
+        size: int = Query(20, ge=1),
+        admin: User = Depends(allow_admin_only),
+        db: AsyncSession = Depends(get_db)
+):
+    stmt = (
+        select(Article)
+        .where(Article.status == ArticleStatus.PENDING, Article.deleted_at == None)
+        .order_by(Article.submitted_at.asc())
+    )
+    total_res = await db.execute(select(func.count()).select_from(stmt.subquery()))
+    total = total_res.scalar() or 0
+    res = await db.execute(stmt.offset((page - 1) * size).limit(size))
+    return {
+        "items": res.scalars().all(),
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": math.ceil(total / size) if total > 0 else 0
+    }
 
 
-# --- 8. 软删除 (不允许修改) ---
+# --- 接口 9：DELETE /{article_id} (软删除) ---
 @router.delete("/{article_id}", summary="软删除")
 async def soft_delete(article_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     res = await db.execute(select(Article).where(Article.id == article_id))
     article = res.scalars().first()
-    
     if not article:
         raise HTTPException(status_code=404, detail="文章不存在")
-    
-    # 检查是否已被删除
     if article.deleted_at:
         raise HTTPException(status_code=400, detail="文章已在回收站中")
-    
-    # 权限校验
     if user.role != UserRole.ADMIN and article.user_id != user.id:
         raise HTTPException(status_code=403, detail="无权删除此文章")
-    
+
     article.deleted_at = datetime.now()
     await db.commit()
     return {"message": "已入回收站"}
 
 
-# --- 9. 硬删除 (不允许修改) ---
+# --- 接口 10：DELETE /{article_id}/hard (硬删除) ---
 @router.delete("/{article_id}/hard", summary="硬删除")
 async def hard_delete_article(article_id: int, user: User = Depends(get_current_user),
                               db: AsyncSession = Depends(get_db)):
@@ -266,20 +297,13 @@ async def hard_delete_article(article_id: int, user: User = Depends(get_current_
     article = res.scalars().first()
     if not article or (article.user_id != user.id and user.role != UserRole.ADMIN):
         raise HTTPException(status_code=403, detail="无权删除此文章")
-    
-    # 删除关联的 Markdown 文件
-    if article.content_path and os.path.exists(article.content_path):
-        try:
-            os.remove(article.content_path)
-        except Exception as e:
-            print(f"警告：删除文件失败 {article.content_path}: {str(e)}")
-    
+
     await db.delete(article)
     await db.commit()
     return {"message": "文章已永久删除"}
 
 
-# --- 10. 恢复 (不允许修改) ---
+# --- 接口 11：POST /{article_id}/restore (恢复文章) ---
 @router.post("/{article_id}/restore", summary="恢复文章")
 async def restore_article(article_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     stmt = update(Article).where(Article.id == article_id)
@@ -289,59 +313,34 @@ async def restore_article(article_id: int, user: User = Depends(get_current_user
     return {"message": "已恢复"}
 
 
-# --- 11. 用户角色修改 (修改点：恢复安全校验) ---
-@router.put("/admin/users/{user_id}/role", summary="【超级管理员】修改用户角色")
-async def update_user_role(user_id: int, new_role: UserRole = Body(..., embed=True),
-                           admin: User = Depends(allow_admin_only), db: AsyncSession = Depends(get_db)):
-    # 安全校验：不能修改自己
-    if user_id == admin.id:
-        raise HTTPException(status_code=400, detail="不能修改自己的角色")
-
-    res = await db.execute(select(User).where(User.id == user_id))
-    target_user = res.scalars().first()
-    # 校验目标是否存在
-    if not target_user:
-        raise HTTPException(status_code=404, detail="目标用户不存在")
-
-    # 降级管理员校验
-    if target_user.role == UserRole.ADMIN and new_role != UserRole.ADMIN:
-        admin_count_res = await db.execute(select(func.count(User.id)).where(User.role == UserRole.ADMIN))
-        if admin_count_res.scalar() <= 1:
-            raise HTTPException(status_code=400, detail="全站必须至少保留一名管理员")
-
-    target_user.role = new_role
-    await db.commit()
-    return {"message": f"成功将用户角色更新为 {new_role}"}
-
-
-# --- 12. 我的列表 (不允许修改) ---
+# --- 接口 12：GET /my/list (我的文章列表) ---
 @router.get("/my/list", summary="我的文章列表")
 async def get_my_articles(page: int = Query(1, ge=1), size: int = Query(10, ge=1),
                           status: Optional[ArticleStatus] = Query(None), user: User = Depends(get_current_user),
                           db: AsyncSession = Depends(get_db)):
     filters = [Article.user_id == user.id, Article.deleted_at == None]
     if status: filters.append(Article.status == status)
-    query = select(Article).where(and_(*filters)).order_by(Article.created_at.desc())
+    query = select(Article).where(and_(*filters)).order_by(Article.is_pinned.desc(), Article.created_at.desc())
     total_res = await db.execute(select(func.count()).select_from(query.subquery()))
     total = total_res.scalar() or 0
     res = await db.execute(query.offset((page - 1) * size).limit(size))
-    return {"items": res.scalars().all(), "total": total, "page": page, "pages": math.ceil(total / size)}
+    return {"items": res.scalars().all(), "total": total, "page": page, "size": size, "pages": math.ceil(total / size)}
 
 
-# --- 13. 公开列表 (不允许修改) ---
+# --- 接口 13：GET /public/list (公开文章列表) ---
 @router.get("/public/list", summary="公开文章列表")
 async def list_public_articles(page: int = Query(1, ge=1), size: int = Query(10, ge=1),
                                category_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
     filters = [Article.status == ArticleStatus.PUBLISHED, Article.deleted_at == None]
     if category_id: filters.append(Article.category_id == category_id)
-    query = select(Article).where(and_(*filters)).order_by(Article.created_at.desc())
+    query = select(Article).where(and_(*filters)).order_by(Article.is_pinned.desc(), Article.created_at.desc())
     total_res = await db.execute(select(func.count()).select_from(query.subquery()))
     total = total_res.scalar() or 0
     res = await db.execute(query.offset((page - 1) * size).limit(size))
-    return {"items": res.scalars().all(), "total": total, "page": page, "pages": math.ceil(total / size)}
+    return {"items": res.scalars().all(), "total": total, "page": page, "size": size, "pages": math.ceil(total / size)}
 
 
-# --- 14. 全站列表 (不允许修改) ---
+# --- 接口 14：GET /admin/all-articles (全站文章列表) ---
 @router.get("/admin/all-articles", summary="【管理员】全站文章列表")
 async def list_all_articles_admin(page: int = Query(1, ge=1), size: int = Query(10, ge=1),
                                   show_deleted: bool = Query(False, description="是否显示已删除文章"),
@@ -349,9 +348,94 @@ async def list_all_articles_admin(page: int = Query(1, ge=1), size: int = Query(
     filters = []
     if not show_deleted:
         filters.append(Article.deleted_at == None)
-    
-    query = select(Article).where(and_(*filters)).order_by(Article.created_at.desc()) if filters else select(Article).order_by(Article.created_at.desc())
+
+    query = select(Article).where(and_(*filters)).order_by(Article.is_pinned.desc(), Article.created_at.desc())
     total_res = await db.execute(select(func.count()).select_from(query.subquery()))
     total = total_res.scalar() or 0
     res = await db.execute(query.offset((page - 1) * size).limit(size))
-    return {"items": res.scalars().all(), "total": total, "page": page, "pages": math.ceil(total / size)}
+    return {"items": res.scalars().all(), "total": total, "page": page, "size": size, "pages": math.ceil(total / size)}
+
+
+# --- 接口 15：PUT /admin/articles/{article_id}/pin (管理员置顶/取消置顶) ---
+@router.put("/admin/articles/{article_id}/pin", summary="【管理员】置顶/取消置顶文章")
+async def toggle_pin_article(
+    article_id: int,
+    admin: User = Depends(allow_admin_only),
+    db: AsyncSession = Depends(get_db)
+):
+    res = await db.execute(select(Article).where(Article.id == article_id))
+    article = res.scalars().first()
+    if not article:
+        raise HTTPException(status_code=404, detail="文章不存在")
+    article.is_pinned = not article.is_pinned
+    await db.commit()
+    return {"message": "已置顶" if article.is_pinned else "已取消置顶", "is_pinned": article.is_pinned}
+
+
+# --- 接口 16：GET /public/archive (公开文章归档) ---
+@router.get("/public/archive", summary="文章归档（按年月统计）")
+async def get_article_archive(db: AsyncSession = Depends(get_db)):
+    # 只统计已发布且未删除的文章
+    stmt = (
+        select(
+            func.YEAR(Article.published_at).label("year"),
+            func.MONTH(Article.published_at).label("month"),
+            func.count(Article.id).label("count")
+        )
+        .where(Article.status == ArticleStatus.PUBLISHED, Article.deleted_at == None)
+        .group_by("year", "month")
+        .order_by("year", "month")
+    )
+    res = await db.execute(stmt)
+    rows = res.all()
+    return [
+        {"year": row.year, "month": row.month, "count": row.count}
+        for row in rows
+    ]
+
+
+# --- 接口 17：POST /{article_id}/like (文章点赞/取消点赞) ---
+@router.post("/{article_id}/like", summary="文章点赞/取消点赞")
+async def toggle_article_like(
+        article_id: int,
+        user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db)
+):
+    # 校验文章是否存在
+    article_res = await db.execute(select(Article).where(Article.id == article_id))
+    if not article_res.scalars().first():
+        raise HTTPException(status_code=404, detail="文章不存在")
+
+    # 检查是否已点赞
+    stmt = select(ArticleLike).where(
+        and_(ArticleLike.article_id == article_id, ArticleLike.user_id == user.id)
+    )
+    res = await db.execute(stmt)
+    existing_like = res.scalars().first()
+
+    if existing_like:
+        await db.delete(existing_like)
+        liked = False
+    else:
+        new_like = ArticleLike(article_id=article_id, user_id=user.id)
+        db.add(new_like)
+        liked = True
+
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail="操作过于频繁")
+
+    # 获取最新点赞数
+    count_res = await db.execute(select(func.count(ArticleLike.id)).where(ArticleLike.article_id == article_id))
+    return {"liked": liked, "like_count": count_res.scalar() or 0}
+
+
+# --- 接口 18：GET /{article_id}/like/count (获取文章点赞数) ---
+@router.get("/{article_id}/like/count", summary="获取文章点赞数")
+async def get_article_like_count(article_id: int, db: AsyncSession = Depends(get_db)):
+    count_res = await db.execute(
+        select(func.count(ArticleLike.id)).where(ArticleLike.article_id == article_id)
+    )
+    return {"article_id": article_id, "like_count": count_res.scalar() or 0}

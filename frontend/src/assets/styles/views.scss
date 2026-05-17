@@ -1,5 +1,5 @@
-@use 'variables' as *;
-@use 'mixins' as *;
+@use '@/assets/styles/variables' as *;
+@use '@/assets/styles/mixins' as *;
 
 /* =======================================
    沉浸式视图合集 (About, Message, Posts)
@@ -42,7 +42,7 @@
   overflow: hidden; background: $bg-dark;
   .hero-static {
     position: relative; width: 100%; height: 100%;
-    background: $bg-dark url('../hero-bg.webp') center/cover no-repeat; color: white;
+    background: $bg-dark url('@/assets/hero-bg.webp') center/cover no-repeat; color: white;
   }
   .hero-content {
     position: absolute; left: 60px; bottom: 80px; text-align: left; z-index: 10; padding: 20px 30px;
@@ -61,6 +61,307 @@
   }
 }
 @media (max-width: 768px) { .home-view-wrapper .hero-content { left: 30px; bottom: 50px; .glass-text { font-size: 1.8rem; } } }
+
+/* =======================================
+   Posts 沉浸式文章列表页 - 优化背景和响应式
+   ======================================= */
+.posts-immersive-wrapper {
+  .hero-static {
+    height: 45vh;
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    position: relative;
+    // 修复16:9黑框问题：使用cover确保填满，通过background-position-y控制显示区域
+    background: $bg-dark url('@/assets/hero-bg.webp') center/cover no-repeat;
+    // 显示图片从上到下10%到50%的区域（通过调整垂直位置）
+    background-position-y: 30%;
+    
+    .header-content {
+      text-align: left;
+      padding-left: 20px;
+      
+      .page-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: white;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        margin: 0;
+      }
+      
+      .page-subtitle {
+        font-size: 1.1rem;
+        color: white;
+        margin-top: 8px;
+      }
+    }
+  }
+
+  .light-immersive-panel {
+    height: 55vh;
+    // 卡片高度自适应：小屏幕时降低最小高度
+    min-height: 500px;
+    opacity: 0;
+    transform: translateY(50px);
+    animation: cardSlideUp 0.8s ease-out forwards;
+    
+    .responsive-container {
+      display: flex;
+      justify-content: space-between;
+      padding: 40px 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      height: 100%;
+      
+      @media (max-width: 768px) {
+        flex-direction: column;
+        gap: 32px;
+        min-height: 400px;
+      }
+      
+      .list-section {
+        flex: 1;
+        margin-right: 40px;
+        position: relative; /* 为绝对定位的按钮提供定位上下文 */
+        
+        .articles-header {
+          margin-bottom: 20px;
+          
+          .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+          }
+          
+          .section-description {
+            font-size: 1rem;
+            color: #666;
+          }
+        }
+        
+        .glass-main-card {
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(10px);
+          border-radius: 20px;
+          padding: 30px;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+          height: calc(100% - 80px);
+          display: flex;
+          flex-direction: column;
+          
+          .items-stack {
+            margin-bottom: 60px; /* 为sticky按钮预留空间 */
+            flex: 1;
+            overflow-y: auto;
+            
+            .glass-sub-card {
+              background: rgba(255, 255, 255, 0.8);
+              border: 1px solid rgba(255, 255, 255, 0.5);
+              border-radius: 15px;
+              padding: 20px;
+              margin-bottom: 15px;
+              cursor: pointer;
+              transition: transform 0.2s ease, box-shadow 0.2s ease;
+              
+              &:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+                background: rgba(255, 255, 255, 0.9);
+              }
+              
+              .card-internal {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                
+                .text-info {
+                  display: flex;
+                  align-items: center;
+                  gap: 15px;
+                  
+                  .item-index {
+                    font-size: 1.2rem;
+                    font-weight: 600;
+                    color: $color-primary;
+                  }
+                  
+                  .item-title {
+                    font-size: 1.1rem;
+                    font-weight: 500;
+                    color: #333;
+                    max-width: 300px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    margin: 0;
+                  }
+                }
+                
+                .static-arrow {
+                  font-size: 1.2rem;
+                  color: #666;
+                }
+              }
+            }
+          }
+          
+          // "查看更多文章"按钮 - 使用sticky定位确保始终可见
+          .more-articles-btn {
+            position: sticky;
+            bottom: 20px;
+            margin-left: auto;
+            width: fit-content;
+            background: linear-gradient(135deg, $color-primary 0%, #2563eb 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            z-index: 10;
+            
+            &:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+            }
+            
+            .btn-text {
+              display: flex;
+              align-items: center;
+              gap: 6px;
+            }
+          }
+        }
+      }
+      
+      .auth-section {
+        width: 300px;
+        
+        @media (max-width: 768px) {
+          width: 100%;
+        }
+        
+        .glass-login-card {
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(10px);
+          border-radius: 20px;
+          padding: 30px;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+          height: fit-content;
+          
+          .login-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            
+            .user-avatar-glass {
+              width: 40px;
+              height: 40px;
+              background: linear-gradient(135deg, $color-primary 0%, #2563eb 100%);
+              border-radius: 50%;
+            }
+            
+            .user-info {
+              display: flex;
+              flex-direction: column;
+              align-items: flex-start;
+              
+              .username {
+                font-size: 1.2rem;
+                font-weight: 600;
+                color: #333;
+              }
+              
+              .role-badge {
+                font-size: 0.9rem;
+                color: #666;
+              }
+            }
+            
+            .login-title {
+              font-size: 1.2rem;
+              font-weight: 600;
+              color: #333;
+              margin: 0;
+            }
+          }
+          
+          .login-body {
+            .action-btn {
+              width: 100%;
+              padding: 12px;
+              background: $color-primary;
+              color: white;
+              border: none;
+              border-radius: 8px;
+              font-size: 1rem;
+              font-weight: 500;
+              cursor: pointer;
+              transition: background 0.2s ease;
+              
+              &:hover {
+                background: $color-primary-hover;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 加载和错误状态样式
+  .loading-state,
+  .error-state,
+  .empty-state {
+    padding: 2rem;
+    text-align: center;
+    
+    .loading-spinner {
+      width: 30px;
+      height: 30px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid $color-primary;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    
+    .error-message {
+      color: #e74c3c;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    p {
+      font-size: 1rem;
+      color: #666;
+    }
+  }
+
+  .text-center {
+    text-align: center;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  @keyframes cardSlideUp {
+    0% {
+      opacity: 0;
+      transform: translateY(50px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
 
 .login-page { display: flex; width: 100%; height: 100vh; background: #fff; overflow: hidden; }
 .login-visual {
@@ -196,26 +497,86 @@
 .content-scroller { max-width: 1100px; margin: 0 auto; }   
 
 /* =======================================
-   ArticleManage 文章管理页面特有样式
+   Article Manage 文章管理
    ======================================= */
 .article-manage-wrapper {
-  .radio-group {
-    display: flex;
-    gap: 20px;
+  .admin-controls {
+    background: $bg-smoke; padding: 15px; border-radius: 12px; margin-bottom: 20px;
+    .select-field { margin-left: 10px; }
   }
-  .radio-option {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
+  
+  .article-item {
+    padding: 20px; margin-bottom: 15px; transition: $transition-base;
+    &:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    
+    .article-title { margin: 0 0 8px 0; font-size: 1.2rem; color: $text-main; }
+    .meta-text { 
+      display: flex; gap: 15px; color: $text-secondary; font-size: 0.9rem; flex-wrap: wrap;
+      .status-draft { color: $color-warning; background: rgba(245, 158, 11, 0.1); padding: 2px 8px; border-radius: 4px; }
+      .status-published { color: $color-success; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px; }
+      .status-audited { color: $color-primary; background: rgba(59, 130, 246, 0.1); padding: 2px 8px; border-radius: 4px; }
+    }
+    
+    .article-actions { display: flex; gap: 8px; }
   }
-  .radio-option input[type="radio"] {
-    margin-right: 8px;
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
+}
+
+/* 审核弹窗预览样式 */
+.article-preview-section {
+  .preview-title {
+    margin: 0 0 15px 0; padding-bottom: 10px; border-bottom: 1px solid $border-color;
+    color: $text-main; font-size: 1.1rem; font-weight: 600;
   }
-  .radio-text {
-    font-size: 14px;
-    color: $text-secondary;
+  
+  .preview-loading {
+    text-align: center; padding: 20px;
+    .loading-spinner { margin: 0 auto 10px; }
+  }
+  
+  .preview-content {
+    .preview-header {
+      margin-bottom: 15px;
+      .preview-article-title {
+        margin: 0 0 8px 0; font-size: 1.3rem; color: $text-main; font-weight: 600;
+      }
+      .preview-meta {
+        display: flex; gap: 15px; color: $text-secondary; font-size: 0.85rem; flex-wrap: wrap;
+      }
+    }
+    
+    .preview-summary {
+      margin-bottom: 15px; padding: 12px; background: $bg-smoke; border-radius: 8px;
+      font-size: 0.95rem; line-height: 1.5;
+    }
+    
+    .preview-content-area {
+      h5 {
+        margin: 0 0 10px 0; color: $text-main; font-size: 1rem; font-weight: 600;
+      }
+      .markdown-content {
+        font-size: 0.95rem; line-height: 1.6; color: $text-main;
+        max-height: 300px; overflow-y: auto; padding: 10px 0;
+        // 继承现有的markdown样式
+        p { margin: 8px 0; }
+        h1, h2, h3, h4, h5, h6 { margin: 16px 0 8px 0; color: $text-main; }
+        code { background: $bg-smoke; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+        pre { 
+          background: $bg-smoke; padding: 12px; border-radius: 8px; overflow-x: auto;
+          code { background: transparent; padding: 0; }
+        }
+        blockquote { 
+          border-left: 4px solid $color-primary; padding-left: 16px; 
+          color: $text-secondary; margin: 12px 0;
+        }
+        ul, ol { margin: 12px 0; padding-left: 20px; }
+        li { margin: 4px 0; }
+        a { color: $color-primary; text-decoration: underline; }
+        img { max-width: 100%; height: auto; margin: 12px 0; }
+      }
+    }
+  }
+  
+  .preview-error {
+    text-align: center; padding: 20px; color: $color-danger;
   }
 }

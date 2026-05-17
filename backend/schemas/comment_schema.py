@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 
+
 class UserSimpleOut(BaseModel):
     id: int
     username: str
@@ -9,23 +10,34 @@ class UserSimpleOut(BaseModel):
     class Config:
         from_attributes = True
 
+
 class CommentCreate(BaseModel):
     content: str = Field(..., min_length=1, max_length=1000)
     parent_id: Optional[int] = None
 
+
 class CommentResponse(BaseModel):
     id: int
     content: str
-    parent_id: Optional[int]
+    parent_id: Optional[int] = None
     user_id: int
     created_at: datetime
     author: UserSimpleOut
+    like_count: int = 0
+    is_liked: bool = False
 
     class Config:
         from_attributes = True
 
+
+class LikeResponse(BaseModel):
+    liked: bool
+    like_count: int
+
+
 class ReportCreate(BaseModel):
     reason: str = Field(..., min_length=2, max_length=200)
+
 
 class ReportResponse(BaseModel):
     id: int
@@ -37,6 +49,3 @@ class ReportResponse(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-####

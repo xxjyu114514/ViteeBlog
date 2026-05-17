@@ -86,7 +86,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useArticleAPI } from '@/composables/useArticleAPI'
-import { getBaseUrl } from '@/config/apiConfig'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 

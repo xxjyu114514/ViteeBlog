@@ -1,131 +1,175 @@
-import { createFetch } from '@vueuse/core'
+import { ref } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { useRouter } from 'vue-router'
-import { getBaseUrl } from '@/config/apiConfig'
+import { useBaseFetch, handleFriendlyError } from '@/api/client'
 import { buildUrl } from '@/utils/apiUtils'
-
-// 创建一个预配置的 fetch 实例
-const useBaseFetch = createFetch({
-  baseUrl: getBaseUrl(),
-  options: {
-    async beforeFetch({ options }) {
-      const userStore = useUserStore()
-      if (userStore.token) {
-        options.headers = {
-          ...options.headers,
-          Authorization: `Bearer ${userStore.token}`,
-        }
-      }
-      return { options }
-    },
-    onFetchError(ctx) {
-      // 全局处理：例如 401 自动登出
-      if (ctx.response?.status === 401) {
-        const userStore = useUserStore()
-        userStore.logout()
-        // 在composable中不能使用useRouter，改用window.location
-        window.location.href = '/login'
-      }
-      return ctx
-    },
-  },
-  fetchOptions: {
-    mode: 'cors',
-  },
-})
-
-// 统一的错误信息提取函数
-const extractFriendlyErrorMessage = (error, context = '操作') => {
-  // 用户友好提示
-  if (!error) {
-    return `${context}失败，请稍后重试`
-  }
-  
-  // 优先使用后端返回的具体错误详情
-  if (error.data?.detail) {
-    return error.data.detail
-  }
-  
-  // 根据HTTP状态码提供友好提示
-  switch (error.status) {
-    case 400:
-      return '输入信息有误，请检查后重试'
-    case 401:
-      return '身份验证失败，请检查用户名和密码'
-    case 403:
-      if (error.data?.detail && error.data.detail.includes('锁定')) {
-        return error.data.detail // 保留具体的锁定时间信息
-      }
-      return '操作被拒绝，请稍后重试'
-    case 404:
-      return '请求的资源不存在'
-    case 429:
-      return '操作太频繁，请稍后再试'
-    case 500:
-      return '系统繁忙，请稍后重试'
-    case 502:
-    case 503:
-    case 504:
-      return '服务暂时不可用，请稍后重试'
-    default:
-      return `${context}失败，请稍后重试`
-  }
-}
 
 export function useAuthAPI() {
   const userStore = useUserStore()
-  const router = useRouter()
+  // 认证操作的loading状态
+  const authLoading = ref(false)
+  // 防重复提交锁
+  const authSubmitLock = ref(false)
 
-  // 登录逻辑
   const login = async (username, password) => {
-    const { data, error } = await useBaseFetch('/auth/login').post({
-      username,
-      password,
-    }).json()
-
-    if (!error.value && data.value) {
-      userStore.setAuth(data.value.access_token, data.value.user)
-      return { success: true }
+    if (authSubmitLock.value) {
+      return { success: false, message: '登录正在进行中，请稍后...' }
     }
     
-    // 使用友好的错误信息
-    const errorMessage = extractFriendlyErrorMessage(error.value, '登录')
-    return { success: false, message: errorMessage }
+    authLoading.value = true
+    authSubmitLock.value = true
+    
+    try {
+      const url = buildUrl('/auth/login')
+      // 发送 JSON 格式数据，匹配后端 Pydantic UserLogin 模型
+      const loginData = {
+        username: username,
+        password: password
+      }
+
+      // 关键修改：使用 updateDataOnError: true 来捕获错误响应
+      const fetchInstance = useBaseFetch(url, {
+        updateDataOnError: true
+      });
+      
+      const { data, error } = await fetchInstance.post(loginData).json()
+
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '登录') }
+      }
+      
+      // 登录成功后更新 Store
+      if (data.value) {
+        userStore.setAuth(data.value.access_token, data.value.user)
+      }
+      
+      return { success: true, data: data.value }
+    } catch (err) {
+      console.error('login error:', err)
+      return { success: false, message: '登录时发生未知错误，请稍后重试' }
+    } finally {
+      authLoading.value = false
+      authSubmitLock.value = false
+    }
   }
 
-  // 注册逻辑
-  const register = async (userData) => {
-    const { data, error } = await useBaseFetch('/auth/register').post(userData).json()
-    
-    if (!error.value) {
-      return { data, error }
+  const register = async (registerData) => {
+    if (authSubmitLock.value) {
+      return { success: false, message: '注册正在进行中，请稍后...' }
     }
     
-    // 修改错误对象，添加友好的错误信息
-    error.value = {
-      ...error.value,
-      friendlyMessage: extractFriendlyErrorMessage(error.value, '注册')
-    }
+    authLoading.value = true
+    authSubmitLock.value = true
     
-    return { data, error }
+    try {
+      // registerData 应该已经是完整的请求体格式: { user_in: {...}, email_code: "..." }
+      const url = buildUrl('/auth/register')
+      const { data, error } = await useBaseFetch(url).post(registerData).json()
+
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '注册') }
+      }
+      return { success: true, data: data.value }
+    } catch (err) {
+      console.error('register error:', err)
+      return { success: false, message: '注册时发生未知错误，请稍后重试' }
+    } finally {
+      authLoading.value = false
+      authSubmitLock.value = false
+    }
   }
 
   // 发送注册验证码
   const sendRegisterCode = async (email) => {
-    const { data, error } = await useBaseFetch('/auth/send-register-code').post({ email }).json()
-    
-    if (!error.value) {
-      return { data, error }
+    if (authSubmitLock.value) {
+      return { success: false, message: '验证码发送中，请稍后...' }
     }
     
-    // 修改错误对象，添加友好的错误信息
-    error.value = {
-      ...error.value,
-      friendlyMessage: extractFriendlyErrorMessage(error.value, '发送验证码')
-    }
+    authLoading.value = true
+    authSubmitLock.value = true
     
-    return { data, error }
+    try {
+      const url = buildUrl('/auth/send-register-code')
+      // 关键修改：使用 updateDataOnError: true 来捕获错误响应
+      const fetchInstance = useBaseFetch(url, {
+        updateDataOnError: true
+      });
+      
+      const { data, error } = await fetchInstance.post({ email }).json()
+
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '发送验证码') }
+      }
+      return { success: true, data: data.value }
+    } catch (err) {
+      console.error('sendRegisterCode error:', err)
+      return { success: false, message: '发送验证码时发生未知错误，请稍后重试' }
+    } finally {
+      authLoading.value = false
+      authSubmitLock.value = false
+    }
   }
 
-  return { login, register, sendRegisterCode }
+  const getCurrentUser = async () => {
+    authLoading.value = true
+    
+    try {
+      const url = buildUrl('/auth/me')
+      // 关键修改：使用 updateDataOnError: true 来捕获错误响应
+      const fetchInstance = useBaseFetch(url, {
+        updateDataOnError: true
+      });
+      
+      const { data, error } = await fetchInstance.get().json()
+
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '获取用户信息') }
+      }
+      return { success: true, data: data.value }
+    } catch (err) {
+      console.error('getCurrentUser error:', err)
+      return { success: false, message: '获取用户信息时发生未知错误，请稍后重试' }
+    } finally {
+      authLoading.value = false
+    }
+  }
+
+  const logout = async () => {
+    authLoading.value = true
+    
+    try {
+      const url = buildUrl('/auth/logout')
+      // 关键修改：使用 updateDataOnError: true 来捕获错误响应
+      const fetchInstance = useBaseFetch(url, {
+        updateDataOnError: true
+      });
+      
+      const { data, error } = await fetchInstance.post().json()
+
+      // 无论后端是否成功，前端都执行登出逻辑
+      userStore.logout()
+
+      if (error.value) {
+        // 可以选择忽略登出接口的错误，或者返回提示
+        return { success: false, message: handleFriendlyError(error.value, '登出') }
+      }
+      return { success: true, data: data.value }
+    } catch (err) {
+      console.error('logout error:', err)
+      // 即使登出失败，用户状态也已清除
+      return { success: true, message: '已退出登录' }
+    } finally {
+      authLoading.value = false
+    }
+  }
+
+  return { 
+    login, 
+    register, 
+    sendRegisterCode,
+    getCurrentUser, 
+    logout,
+    // 新增的loading状态和提交锁
+    authLoading,
+    authSubmitLock
+  }
 }

@@ -48,9 +48,10 @@ Authorization: Bearer <Your_Token>
 ### 核心流程
 **注册采用两步验证机制：**
 1. 调用 `/auth/send-register-code` 获取邮箱验证码
-2. 调用 `/auth/register` 携带验证码完成注册
+2. 调用 `/auth/register` 携带验证码完成注册（注意请求体嵌套结构）
 
 > ⚠️ 验证码一次性有效，校验后立即销毁
+> ⚠️ **重要**：注册接口的请求体需要使用嵌套结构，因为后端使用了 `Body(embed=True)`
 
 ### 1. 发送注册验证码
 
@@ -85,7 +86,7 @@ Authorization: Bearer <Your_Token>
 
 **接口**: `POST /auth/register`
 
-**请求体**:
+**请求体**（注意嵌套结构）:
 ```json
 {
   "user_in": {
@@ -95,6 +96,12 @@ Authorization: Bearer <Your_Token>
   },
   "email_code": "123456"
 }
+```
+
+**⚠️ 重要说明**:
+- 由于后端使用了 `Body(embed=True)`，请求体必须是嵌套结构
+- `user_in` 对象包含用户注册信息
+- `email_code` 与 `user_in` 同级
 ```
 
 **参数约束**:
@@ -114,8 +121,219 @@ Authorization: Bearer <Your_Token>
 ```
 
 **错误响应**:
-- `400`: 验证码错误或已失效 / 用户名或邮箱已存在
+- `400`: 验证码错误或已失效 / 用户名或邮箱已存在 / 该邮箱已注册
 - `422`: 参数验证失败（查看具体字段错误）
+- `500`: 服务器内部错误
+
+---
+
+### 4. 修改个人密码
+
+**接口**: `PUT /auth/change-password`  
+**权限**: 所有登录用户
+
+**请求头**:
+```
+Authorization: Bearer <Your_Token>
+```
+
+**请求体**:
+```json
+{
+  "old_password": "123456",
+  "new_password": "newpassword123"
+}
+```
+
+**成功响应** (200):
+```json
+{
+  "message": "密码修改成功"
+}
+```
+
+**错误响应**:
+- `400`: 旧密码错误
+- `401`: 未授权（Token无效或过期）
+
+**前端注意**:
+- ✅ 需要用户输入旧密码进行验证
+- ✅ 新密码长度要求：6-128个字符
+- ✅ 修改成功后建议提示用户重新登录
+
+---
+
+### 5. 发送找回密码验证码
+
+**接口**: `POST /auth/forgot-password/send-code`
+
+**请求体**:
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**成功响应** (200):
+```json
+{
+  "message": "验证码已发送至您的邮箱，请查收"
+}
+```
+
+**错误响应**:
+- `400`: 该邮箱未注册
+- `500`: 邮件发送失败
+
+**前端注意**:
+- ✅ 只有已注册的邮箱才能发送重置验证码
+- ✅ 验证码有效期10分钟
+- ✅ 点击后禁用按钮，开启60秒倒计时
+
+---
+
+### 6. 重置密码
+
+**接口**: `POST /auth/forgot-password/reset`
+
+**请求体**:
+```json
+{
+  "email": "user@example.com",
+  "code": "123456",
+  "new_password": "newpassword123"
+}
+```
+
+**参数约束**:
+- `email`: 必须是已注册的邮箱
+- `code`: 6位数字验证码
+- `new_password`: 6-128个字符
+
+**成功响应** (200):
+```json
+{
+  "message": "密码重置成功，请使用新密码登录"
+}
+```
+
+**错误响应**:
+- `400`: 验证码错误、已失效或已被使用过
+- `404`: 用户不存在
+- `422`: 参数验证失败
+
+**前端注意**:
+- ✅ 需要先执行步骤5获取验证码
+- ✅ 验证码一次性有效，使用后失效
+- ✅ 重置成功后跳转到登录页
+
+---
+
+### 7. 注销个人账号
+
+**接口**: `DELETE /auth/delete-account`  
+**权限**: 所有登录用户（管理员除外）
+
+**请求头**:
+```
+Authorization: Bearer <Your_Token>
+```
+
+**成功响应** (200):
+```json
+{
+  "message": "账号已注销，感谢您的使用"
+}
+```
+
+**错误响应**:
+- `400`: 管理员账号不能注销，请先转让管理员权限
+- `401`: 未授权
+
+**前端注意**:
+- ⚠️ **此操作不可逆**，必须二次确认
+- ⚠️ 注销后 `is_active=False`，`deleted_at` 设置为当前时间
+- ⚠️ 管理员账号不能直接注销，需先转移权限
+- ℹ️ 注销后可以联系管理员恢复账号
+
+---
+
+### 8. 【超级管理员】修改用户角色
+
+**接口**: `PUT /auth/admin/users/{user_id}/role`  
+**权限**: 仅管理员
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_id | int | ✅ | 目标用户ID |
+
+**请求头**:
+```
+Authorization: Bearer <Admin_Token>
+```
+
+**请求体**:
+```json
+{
+  "new_role": "admin"
+}
+```
+
+**可选值**:
+- `"admin"`: 提升为管理员
+- `"common"`: 降级为普通用户
+
+**成功响应** (200):
+```json
+{
+  "message": "成功将用户角色更新为 admin"
+}
+```
+
+**错误响应**:
+- `400`: 不能修改自己的角色 / 全站必须至少保留一名管理员
+- `404`: 目标用户不存在
+- `403`: 权限不足
+
+**前端注意**:
+- ⚠️ 不能修改自己的角色
+- ⚠️ 降级最后一个管理员时会失败
+- ✅ 枚举值是小写字符串（`"admin"` 而非 `"ADMIN"`）
+
+---
+
+### 9. 【管理员】恢复已注销账号
+
+**接口**: `PUT /auth/admin/users/{user_id}/restore`  
+**权限**: 仅管理员
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_id | int | ✅ | 被注销的用户ID |
+
+**请求头**:
+```
+Authorization: Bearer <Admin_Token>
+```
+
+**成功响应** (200):
+```json
+{
+  "message": "账号 BaoZi 已恢复"
+}
+```
+
+**错误响应**:
+- `400`: 该账号未被注销，无需恢复
+- `404`: 用户不存在
+- `403`: 权限不足
+
+**前端注意**:
+- ✅ 恢复后会设置 `is_active=True`，`deleted_at=None`
+- ✅ 用户可以重新登录
+- ⚠️ 只能恢复已注销的账号（`deleted_at` 不为 null）
 
 ---
 
@@ -332,8 +550,8 @@ def downgrade():
 
 ---
 
-**最后更新时间**: 2026-04-19  
-**文档版本**: v3.1  
+**最后更新时间**: 2026-05-05  
+**文档版本**: v4.2  
 **维护者**: Backend Team
 
 ---
@@ -346,13 +564,18 @@ def downgrade():
 - **管理员专属**：审核文章、查看全站文章、调整用户权限、管理分类/标签
 
 ### 核心功能概览
-- ✍️ **自动保存**：实时同步草稿到服务器（文件 + 数据库）
+- ✍️ **自动保存**：实时同步草稿到服务器（数据库存储，支持乐观锁）
+- 🔒 **乐观锁机制**：防止多人同时编辑导致的内容覆盖
 - 📝 **审核流程**：普通用户提交 → 管理员审核 → 发布/驳回
 - 🔙 **撤回功能**：可撤回待审核文章重新编辑
 - 🛡️ **防灌水**：普通用户最多3篇待审核文章
 - 🗑️ **回收站机制**：软删除后数据保留
 - ♻️ **恢复功能**：可从回收站恢复误删文章
-- 💥 **硬删除**：永久粉碎文章及物理文件
+- 💥 **硬删除**：永久粉碎文章记录
+- 🖼️ **图片管理**：支持上传和删除图片
+- ⭐ **文章点赞**：用户可点赞/取消点赞文章
+- 📌 **文章置顶**：管理员可置顶重要文章
+- 📅 **文章归档**：按年月统计文章数量
 
 ### 文章状态流转
 
@@ -387,7 +610,9 @@ def downgrade():
   "summary": "文章摘要",
   "content": "# Markdown 内容\n\n这是文章内容...",
   "category_id": 1,
-  "tag_ids": [1, 2]
+  "tag_ids": [1, 2],
+  "cover_image": "/storage/images/abc123.jpg",
+  "version": null
 }
 ```
 
@@ -397,37 +622,35 @@ def downgrade():
 | id | int | ❌ | 新建时为 null，更新时必填 |
 | title | string | ❌ | 文章标题（1-200字符），可选 |
 | summary | string | ❌ | 文章摘要（最多500字符） |
-| content | string | ❌ | 文章内容（Markdown格式），后端自动保存为文件 |
-| content_path | string | ❌ | 可选，如果提供则直接使用，否则根据 content 自动生成 |
+| content | string | ❌ | 文章内容（Markdown格式），直接存储到数据库 |
 | category_id | int | ❌ | 分类ID，可选 |
 | tag_ids | int[] | ❌ | 标签ID数组 |
+| cover_image | string | ❌ | 封面图片URL（可选） |
+| version | int | ❌ | 版本号（更新时用于乐观锁校验，新建时可忽略） |
 
 **成功响应** (200):
 ```json
 {
   "id": 1,
-  "title": "文章标题",
-  "summary": "文章摘要",
-  "content_path": "storage/articles/a1b2c3d4.md",
-  "category_id": 1,
-  "user_id": 1,
-  "status": "draft",
-  "created_at": "2026-04-26T10:00:00",
-  "updated_at": "2026-04-26T10:00:00"
+  "version": 1,
+  "message": "已自动保存"
 }
 ```
 
 **错误响应**:
-- `400`: 分类不存在
+- `400`: 分类不存在 / 标题和内容不能同时为空
 - `403`: 无权操作此文章
 - `404`: 文章不存在
+- `409`: 文章已被他人修改，请刷新后重新编辑（乐观锁冲突）
 
 **前端注意**:
 - ✅ 建议实现防抖保存（停止输入后2秒自动调用）
-- ✅ 新建文章返回完整 Article 对象，使用 `response.body.id` 获取文章ID
-- ✅ 后端会自动将 `content` 保存为 Markdown 文件并生成 `content_path`
+- ✅ 返回简化格式 `{id, version, message}`，使用 `response.body.id` 获取文章ID
+- ✅ 文章内容直接存储在数据库 `content` 字段，无需单独读取文件
 - ⚠️ **待审核状态（PENDING）下禁止编辑**，必须先撤回为草稿
 - ⚠️ 保存草稿不会改变文章状态，状态由发布接口控制
+- 🔒 **乐观锁机制**：更新文章时必须携带当前 `version`，如果版本不匹配会返回 409 错误
+- ✅ 每次保存成功后，`version` 会自动递增，前端应更新本地缓存的版本号
 
 ---
 
@@ -442,7 +665,10 @@ def downgrade():
   "id": 1,
   "title": "文章标题",
   "summary": "摘要内容...",
-  "content_path": "storage/articles/a1b2c3d4.md",
+  "content": "# Markdown 内容\n\n这是文章内容...",
+  "cover_image": "/storage/images/abc123.jpg",
+  "version": 1,
+  "view_count": 100,
   "status": "published",
   "submitted_at": null,
   "reviewed_at": null,
@@ -452,6 +678,10 @@ def downgrade():
   "deleted_at": null,
   "user_id": 1,
   "category_id": 1,
+  "author": {
+    "id": 1,
+    "username": "BaoZi"
+  },
   "category": { 
     "id": 1, 
     "name": "技术分享" 
@@ -462,6 +692,15 @@ def downgrade():
 }
 ```
 
+**新增字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| cover_image | string | 封面图片URL，可为 null |
+| view_count | int | 文章阅读量，每次访问自动+1 |
+| like_count | int | 文章点赞数 |
+| is_liked | bool | 当前用户是否已点赞（未登录时为false） |
+| author | object | 作者信息（id, username） |
+
 **权限说明**:
 - ✅ **已发布文章**：所有人可查看
 - ✅ **草稿/待审核文章**：仅作者和管理员可查看
@@ -471,7 +710,8 @@ def downgrade():
 
 **前端注意**:
 - ✅ 返回 Article 对象，包含分类、标签等关联信息
-- ⚠️ **不包含文章内容**，需要通过 `content_path` 单独读取文件
+- ✅ **直接包含文章内容** (`content` 字段)，无需额外请求
+- ✅ 包含 `version` 字段，编辑时需携带用于乐观锁校验
 - ⚠️ 根据文章状态和用户身份进行权限判断
 - ⚠️ 已删除文章对普通用户不可见
 
@@ -488,8 +728,7 @@ def downgrade():
 
 **前置校验**:
 1. ✅ 标题不能为空
-2. ✅ 文章内容文件必须存在
-3. ✅ 文章内容不能为空
+2. ✅ 文章内容不能为空（检查数据库中的 content 字段）
 
 **成功响应** (200) - 管理员:
 ```json
@@ -502,7 +741,7 @@ def downgrade():
 ```
 
 **错误响应**:
-- `400`: 发布失败：标题不能为空 / 文章内容文件不存在 / 文章内容不能为空
+- `400`: 发布失败：标题不能为空 / 文章内容不能为空
 - `403`: 文章不存在或无权操作
 
 **状态流转**:
@@ -511,8 +750,9 @@ def downgrade():
 
 **前端注意**:
 - ⚠️ 发布前确保标题和内容不为空
-- ⚠️ 确保 autosave 已成功保存内容文件
+- ⚠️ 确保 autosave 已成功保存内容到数据库
 - ✅ 建议在提交前提示用户确认
+- ✅ 普通用户提交审核时，系统会自动清空之前的驳回理由
 
 ---
 
@@ -538,6 +778,7 @@ def downgrade():
 - ✅ 仅在文章状态为 `pending` 时显示撤回按钮
 - ✅ 撤回后可以重新编辑并提交
 - ⚠️ 撤回后需要重新提交才能再次进入审核队列
+- ✅ 撤回后可继续编辑，编辑时注意携带最新的 `version`
 
 ### 5. 获取公开文章列表（分页）
 
@@ -559,7 +800,8 @@ def downgrade():
       "id": 1,
       "title": "文章标题",
       "summary": "摘要...",
-      "content_path": "storage/articles/a1b2c3d4.md",
+      "cover_image": "/storage/images/abc123.jpg",
+      "view_count": 150,
       "status": "published",
       "published_at": "2026-04-25T10:00:00",
       "created_at": "2026-04-25T09:00:00",
@@ -569,6 +811,7 @@ def downgrade():
   ],
   "total": 50,
   "page": 1,
+  "size": 10,
   "pages": 5
 }
 ```
@@ -576,8 +819,11 @@ def downgrade():
 **前端注意**:
 - ✅ 仅返回已发布且未删除的文章（`status='published' AND deleted_at IS NULL`）
 - ✅ 按 `created_at` 降序排列
-- ✅ 返回统一的分页格式 `{items, total, page, pages}`
+- ✅ 返回统一的分页格式 `{items, total, page, size, pages}`
 - ✅ 支持按分类筛选
+- ✅ **新增字段**：
+  - `cover_image`: 封面图片URL，可用于文章卡片展示
+  - `view_count`: 阅读量统计，实时递增
 
 ---
 
@@ -601,6 +847,8 @@ def downgrade():
       "id": 1,
       "title": "我的草稿",
       "summary": "摘要...",
+      "cover_image": "/storage/images/abc123.jpg",
+      "view_count": 50,
       "status": "draft",
       "submitted_at": null,
       "reviewed_at": null,
@@ -613,6 +861,7 @@ def downgrade():
   ],
   "total": 10,
   "page": 1,
+  "size": 10,
   "pages": 1
 }
 ```
@@ -621,7 +870,8 @@ def downgrade():
 - ✅ 返回当前用户的所有文章（不包括已删除）
 - ✅ 按 `created_at` 降序排列
 - ✅ 可通过 `status` 参数筛选特定状态的文章
-- ✅ 返回统一的分页格式 `{items, total, page, pages}`
+- ✅ 返回统一的分页格式 `{items, total, page, size, pages}`
+- ✅ **新增字段**：`cover_image`（封面图）、`view_count`（阅读量）
 
 ---
 
@@ -634,30 +884,39 @@ def downgrade():
 
 **成功响应** (200):
 ```json
-[
-  {
-    "id": 1,
-    "title": "待审核文章",
-    "summary": "摘要...",
-    "status": "pending",
-    "submitted_at": "2026-04-25T10:00:00",
-    "created_at": "2026-04-25T09:00:00",
-    "author": { 
-      "id": 2, 
-      "username": "testuser" 
-    },
-    "category": { 
-      "id": 1, 
-      "name": "技术分享" 
+{
+  "items": [
+    {
+      "id": 1,
+      "title": "待审核文章",
+      "summary": "摘要...",
+      "cover_image": "/storage/images/abc123.jpg",
+      "view_count": 10,
+      "status": "pending",
+      "submitted_at": "2026-04-25T10:00:00",
+      "created_at": "2026-04-25T09:00:00",
+      "author": { 
+        "id": 2, 
+        "username": "testuser" 
+      },
+      "category": { 
+        "id": 1, 
+        "name": "技术分享" 
+      }
     }
-  }
-]
+  ],
+  "total": 5,
+  "page": 1,
+  "size": 20,
+  "pages": 1
+}
 ```
 
 **前端注意**:
 - ✅ 仅返回待审核状态的文章（`status='pending'`）
 - ✅ 按 `submitted_at` 升序排列（先提交先处理）
 - ✅ 预加载作者和分类信息
+- ✅ 返回分页格式 `{items, total, page, size, pages}`
 - ⚠️ 普通用户调用返回 403
 
 ---
@@ -687,7 +946,7 @@ def downgrade():
 ```
 
 **状态流转**:
-- 通过: `PENDING` → `PUBLISHED`（设置 `reviewed_at`, `reviewed_by`, `published_at`）
+- 通过: `PENDING` → `PUBLISHED`（设置 `reviewed_at`, `reviewed_by`, `published_at`，清空 `review_remark`）
 - 驳回: `PENDING` → `DRAFT`（设置 `reviewed_at`, `reviewed_by`, `review_remark`）
 
 **前端注意**:
@@ -717,8 +976,8 @@ def downgrade():
 ```
 
 **错误响应**:
-- `400`: 只能上传图片文件 / 图片太大了（超过10MB）
-- `500`: 图片保存失败
+- `400`: 只能上传图片文件 / 文件大小不能超过10MB
+- `500`: 文件保存失败
 
 **前端注意**:
 - ✅ 支持格式：jpg, jpeg, png, gif, webp 等
@@ -727,7 +986,34 @@ def downgrade():
 
 ---
 
-### 10. 移至回收站（软删除）
+### 10. 删除图片
+
+**接口**: `DELETE /article/upload-image?filename=a1b2c3d4.jpg`  
+**权限**: 所有登录用户
+
+**查询参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| filename | string | ✅ | 要删除的图片文件名 |
+
+**成功响应** (200):
+```json
+{
+  "message": "图片已删除"
+}
+```
+
+**错误响应**:
+- `404`: 图片不存在
+- `500`: 删除文件时出错
+
+**前端注意**:
+- ⚠️ 删除图片前请确认该图片未被其他文章引用
+- ⚠️ 此操作不可逆
+
+---
+
+### 11. 移至回收站（软删除）
 
 **接口**: `DELETE /article/{article_id}`  
 **权限**: 文章作者或管理员
@@ -746,7 +1032,7 @@ def downgrade():
 
 ---
 
-### 11. 恢复文章
+### 12. 恢复文章
 
 **接口**: `POST /article/{article_id}/restore`  
 **权限**: 文章作者或管理员
@@ -760,12 +1046,12 @@ def downgrade():
 
 ---
 
-### 12. 彻底删除（硬删除）
+### 13. 彻底删除（硬删除）
 
 **接口**: `DELETE /article/{article_id}/hard`  
 **权限**: 文章作者或管理员
 
-**⚠️ 警告**: 此操作不可逆！会删除数据库记录和物理文件
+**⚠️ 警告**: 此操作不可逆！会永久删除数据库记录
 
 **成功响应** (200):
 ```json
@@ -775,6 +1061,149 @@ def downgrade():
 **前端注意**:
 - ⚠️ 执行前必须二次确认
 - ⚠️ 删除后无法撤销
+- ℹ️ 硬删除仅删除数据库记录，不再处理物理文件
+
+---
+
+### 14. 文章点赞/取消点赞
+
+**接口**: `POST /article/{article_id}/like`  
+**权限**: 所有登录用户
+
+**功能**: 智能切换点赞状态（未点赞则点赞，已点赞则取消）
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| article_id | int | ✅ | 文章ID |
+
+**成功响应** (200) - 首次点赞:
+```json
+{
+  "liked": true,
+  "like_count": 1
+}
+```
+
+**成功响应** (200) - 取消点赞:
+```json
+{
+  "liked": false,
+  "like_count": 0
+}
+```
+
+**响应字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| liked | bool | 当前操作后的点赞状态（true=已点赞，false=已取消） |
+| like_count | int | 最新的点赞总数 |
+
+**错误响应**:
+- `404`: 文章不存在
+- `401`: 未登录
+
+**前端注意**:
+- ✅ 接口自动判断当前点赞状态并切换
+- ✅ 返回最新的点赞数和状态，前端直接更新UI
+- ✅ 使用唯一约束防止重复点赞
+- ⚠️ 需要携带 Token 认证
+
+---
+
+### 15. 获取文章点赞数
+
+**接口**: `GET /article/{article_id}/like/count`  
+**权限**: 公开
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| article_id | int | ✅ | 文章ID |
+
+**成功响应** (200):
+```json
+{
+  "article_id": 1,
+  "like_count": 10
+}
+```
+
+**前端注意**:
+- ✅ 无需登录即可获取点赞数
+- ✅ 用于在文章列表页显示点赞统计
+
+---
+
+### 16. 【管理员】置顶/取消置顶文章
+
+**接口**: `PUT /article/admin/articles/{article_id}/pin`  
+**权限**: 仅管理员
+
+**功能**: 切换文章置顶状态
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| article_id | int | ✅ | 文章ID |
+
+**成功响应** (200) - 置顶:
+```json
+{
+  "message": "已置顶",
+  "is_pinned": true
+}
+```
+
+**成功响应** (200) - 取消置顶:
+```json
+{
+  "message": "已取消置顶",
+  "is_pinned": false
+}
+```
+
+**前端注意**:
+- ✅ 置顶文章会在列表顶部显示（按 `is_pinned` 降序排列）
+- ✅ 可在公开列表、我的文章列表、全站列表中看到置顶效果
+- ⚠️ 仅管理员可操作
+
+---
+
+### 17. 获取文章归档（按年月统计）
+
+**接口**: `GET /article/public/archive`  
+**权限**: 公开
+
+**功能**: 获取已发布文章的年月统计数据
+
+**成功响应** (200):
+```json
+[
+  {
+    "year": 2026,
+    "month": 4,
+    "count": 15
+  },
+  {
+    "year": 2026,
+    "month": 5,
+    "count": 8
+  }
+]
+```
+
+**响应字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| year | int | 年份 |
+| month | int | 月份（1-12） |
+| count | int | 该月发布的文章数量 |
+
+**前端注意**:
+- ✅ 仅统计已发布且未删除的文章
+- ✅ 按年月升序排列
+- ✅ 可用于生成归档页面或侧边栏统计
 
 ---
 
@@ -961,31 +1390,27 @@ def downgrade():
 ### 场景1: 普通用户创建并提交审核文章
 
 ```javascript
-// Step 1: 自动保存草稿（使用 content 字段）
+// Step 1: 自动保存草稿（使用 content 字段，支持乐观锁）
 const saveResponse = await axios.post('/api/v1/article/autosave', {
   id: null,  // 新建文章
   title: '我的新文章',
   summary: '这是一篇测试文章',
   content: '# 我的新文章\n\n这是文章内容...',
   category_id: 1,
-  tag_ids: [1, 2]
+  tag_ids: [1, 2],
+  version: null  // 新建时为 null
 }, {
   headers: { 'Authorization': `Bearer ${token}` }
 })
 
-const articleId = saveResponse.data.id  // 注意：返回的是完整 Article 对象
+const articleId = saveResponse.data.id  // 获取文章ID
+let currentVersion = saveResponse.data.version  // 保存当前版本号
 
 // Step 2: 用户点击提交审核
 await axios.put(`/api/v1/article/${articleId}/publish`, {}, {
   headers: { 'Authorization': `Bearer ${token}` }
 })
 // 响应: { "message": "已提交审核" }
-
-// Step 3: 查看我的待审核文章
-const myPending = await axios.get('/api/v1/article/my/list?status=pending&page=1&size=10', {
-  headers: { 'Authorization': `Bearer ${token}` }
-})
-// 响应格式: { items: [...], total: 5, page: 1, pages: 1 }
 ```
 
 ### 场景2: 管理员审核文章
@@ -1025,16 +1450,20 @@ await axios.post(`/api/v1/article/${articleId}/withdraw`, {}, {
 })
 // 响应: { "message": "已撤回为草稿状态" }
 
-// Step 2: 修改文章内容（使用 content 字段）
+// Step 2: 修改文章内容（使用 content 字段，携带版本号）
 await axios.post('/api/v1/article/autosave', {
   id: articleId,  // 携带ID表示更新
   title: '修改后的标题',
   summary: '修改后的摘要',
   content: '# 修改后的文章\n\n这是更新后的内容...',
   category_id: 1,
-  tag_ids: [1, 2, 3]
+  tag_ids: [1, 2, 3],
+  version: currentVersion  // 携带当前版本号进行乐观锁校验
 }, {
   headers: { 'Authorization': `Bearer ${token}` }
+}).then(response => {
+  // 更新本地版本号
+  currentVersion = response.data.version
 })
 
 // Step 3: 重新提交审核
@@ -1072,10 +1501,11 @@ import { ref, watch } from 'vue'
 
 const title = ref('')
 const summary = ref('')
-const content = ref('')  // 使用 content 而非 content_path
+const content = ref('')  // 使用 content 字段
 const categoryId = ref(1)
 const tagIds = ref([1, 2])
 const articleId = ref(null)
+const currentVersion = ref(null)  // 当前版本号
 let saveTimer = null
 
 // 监听内容变化，防抖保存
@@ -1089,20 +1519,27 @@ watch([title, summary, content], async () => {
         summary: summary.value,
         content: content.value,  // 直接发送 Markdown 内容
         category_id: categoryId.value,
-        tag_ids: tagIds.value
+        tag_ids: tagIds.value,
+        version: currentVersion.value  // 携带版本号
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       
-      // 新建文章时保存返回的 ID
+      // 新建文章时保存返回的 ID 和 version
       if (!articleId.value) {
-        articleId.value = response.data.id  // 注意：返回完整 Article 对象
+        articleId.value = response.data.id
       }
+      currentVersion.value = response.data.version  // 更新版本号
       
       console.log('自动保存成功')
     } catch (error) {
-      console.error('保存失败:', error)
-      ElMessage.error('自动保存失败，请手动保存')
+      if (error.response?.status === 409) {
+        ElMessage.warning('文章已被他人修改，请刷新后重新编辑')
+        // 这里可以触发重新加载文章逻辑
+      } else {
+        console.error('保存失败:', error)
+        ElMessage.error('自动保存失败，请手动保存')
+      }
     }
   }, 2000)  // 停止输入2秒后保存
 })
@@ -1140,6 +1577,12 @@ const imageUrl = uploadResponse.data.url
 // 4. 插入到 Markdown 编辑器
 const markdownImage = `![${file.name}](http://127.0.0.1:8000${imageUrl})`
 editor.insertText(markdownImage)
+
+// 5. 如需删除图片
+await axios.delete('/api/v1/article/upload-image', {
+  params: { filename: 'a1b2c3d4.jpg' },
+  headers: { 'Authorization': `Bearer ${token}` }
+})
 ```
 
 ### 场景7: 管理分类和标签
@@ -1169,7 +1612,7 @@ await axios.put('/api/v1/meta/tags/1', {
 })
 
 // 5. 创建文章时绑定分类和标签（使用 content 字段）
-await axios.post('/api/v1/article/autosave', {
+const response = await axios.post('/api/v1/article/autosave', {
   title: '我的文章',
   summary: '文章摘要',
   content: '# 内容...',
@@ -1178,6 +1621,7 @@ await axios.post('/api/v1/article/autosave', {
 }, {
   headers: { 'Authorization': `Bearer ${token}` }
 })
+currentVersion = response.data.version  // 保存版本号
 ```
 
 ### 场景8: 管理员完整操作流程
@@ -1320,15 +1764,57 @@ axios.interceptors.response.use(
 
 ### 权限说明
 - **公开接口**：查看文章评论列表
-- **登录用户**：发表评论、回复评论、删除自己的评论、举报评论
+- **登录用户**：发表评论、回复评论、删除自己的评论、举报评论、点赞/取消点赞
 - **管理员专属**：删除任意评论、查看待处理举报、处理举报、全站评论巡查
 
 ### 核心功能概览
 - 💬 **发表评论**：支持一级评论和嵌套回复
+- 👍 **点赞功能**：用户可点赞/取消点赞评论
 - 🗑️ **软删除**：作者或管理员可删除评论
 - 🚩 **举报系统**：用户可举报不当评论
 - 👮 **管理员审核**：查看和处理举报
 - 🔍 **全站巡查**：管理员可查看所有评论
+
+### 数据模型
+
+#### Comment（评论表）
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | int | 评论ID（主键） |
+| content | text | 评论内容 |
+| user_id | int | 评论者ID（外键关联User） |
+| article_id | int | 文章ID（外键关联Article） |
+| parent_id | int/null | 父评论ID，null表示一级评论 |
+| is_audited | bool | 是否已审核（默认true） |
+| created_at | datetime | 创建时间 |
+| deleted_at | datetime/null | 删除时间（软删除） |
+
+**关系**:
+- `author`: 关联 User 表（评论者）
+- `article`: 关联 Article 表（所属文章）
+- `parent`: 自关联父评论
+- `replies`: 自关联子评论列表
+- `likes`: 关联 CommentLike 表（点赞记录）
+
+#### CommentLike（评论点赞表）
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | int | 点赞ID（主键） |
+| comment_id | int | 评论ID（外键） |
+| user_id | int | 用户ID（外键） |
+| created_at | datetime | 点赞时间 |
+
+**约束**: `(comment_id, user_id)` 唯一约束，防止重复点赞
+
+#### CommentReport（评论举报表）
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | int | 举报ID（主键） |
+| comment_id | int | 被举报评论ID |
+| reporter_id | int | 举报人ID |
+| reason | string | 举报原因（2-200字符） |
+| is_resolved | bool | 是否已处理（默认false） |
+| created_at | datetime | 举报时间 |
 
 ---
 
@@ -1362,18 +1848,23 @@ axios.interceptors.response.use(
   "author": {
     "id": 1,
     "username": "BaoZi"
-  }
+  },
+  "like_count": 0,
+  "is_liked": false
 }
 ```
 
-**错误响应**:
-- `400`: 父评论不存在或不属于该文章
-- `404`: 文章不存在
-
-**前端注意**:
-- ✅ 后审模式：评论直接可见，无需审核
-- ✅ 回复评论时，`parent_id` 填写被回复评论的 ID
-- ✅ 返回的 `author` 对象包含评论者信息
+**响应字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | int | 评论ID |
+| content | string | 评论内容 |
+| parent_id | int/null | 父评论ID，null表示一级评论 |
+| user_id | int | 评论者ID |
+| created_at | datetime | 创建时间 |
+| author | object | 评论者信息（id, username） |
+| like_count | int | 点赞数 |
+| is_liked | bool | 当前用户是否已点赞（未登录时为false） |
 
 ---
 
@@ -1394,7 +1885,9 @@ axios.interceptors.response.use(
     "author": {
       "id": 1,
       "username": "BaoZi"
-    }
+    },
+    "like_count": 5,
+    "is_liked": true
   },
   {
     "id": 2,
@@ -1405,7 +1898,9 @@ axios.interceptors.response.use(
     "author": {
       "id": 2,
       "username": "Admin"
-    }
+    },
+    "like_count": 2,
+    "is_liked": false
   }
 ]
 ```
@@ -1415,6 +1910,8 @@ axios.interceptors.response.use(
 - ✅ 按 `created_at` 升序排列（旧评论在前）
 - ✅ 扁平结构，前端需自行组装树形结构
 - ✅ 通过 `parent_id` 判断是否为回复
+- ✅ 包含点赞数 `like_count` 和当前用户点赞状态 `is_liked`
+- ✅ 未登录用户 `is_liked` 始终为 false
 
 ---
 
@@ -1441,7 +1938,40 @@ axios.interceptors.response.use(
 
 ---
 
-### 4. 举报评论
+### 4. 点赞/取消点赞
+
+**接口**: `POST /comments/{comment_id}/like`  
+**权限**: 所有登录用户
+
+**功能**: 切换点赞状态（已点赞则取消，未点赞则添加）
+
+**成功响应** (200):
+```json
+{
+  "liked": true,
+  "like_count": 6
+}
+```
+
+**响应字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| liked | bool | 当前操作后的点赞状态（true=已点赞，false=已取消） |
+| like_count | int | 最新的点赞总数 |
+
+**错误响应**:
+- `404`: 评论不存在或已被删除
+
+**前端注意**:
+- ✅ 点击点赞按钮时调用此接口，无需区分点赞/取消
+- ✅ 后端自动判断当前状态并切换
+- ✅ 返回最新的点赞数和状态，前端直接更新UI
+- ✅ 使用唯一约束防止重复点赞
+- ⚠️ 需要登录才能点赞
+
+---
+
+### 5. 举报评论
 
 **接口**: `POST /comments/{comment_id}/report`  
 **权限**: 所有登录用户
@@ -1476,7 +2006,7 @@ axios.interceptors.response.use(
 
 ---
 
-### 5. 获取待处理举报列表（管理员）
+### 6. 获取待处理举报列表（管理员）
 
 **接口**: `GET /comments/admin/reports`  
 **权限**: 仅管理员
@@ -1515,7 +2045,7 @@ axios.interceptors.response.use(
 
 ---
 
-### 6. 处理举报（管理员）
+### 7. 处理举报（管理员）
 
 **接口**: `PUT /comments/admin/reports/{report_id}/resolve`  
 **权限**: 仅管理员
@@ -1539,7 +2069,7 @@ axios.interceptors.response.use(
 
 ---
 
-### 7. 全站评论巡查（管理员）
+### 8. 全站评论巡查（管理员）
 
 **接口**: `GET /comments/admin/comments/all?page=1&size=20`  
 **权限**: 仅管理员
@@ -1635,6 +2165,7 @@ const commentTree = buildCommentTree(flatComments.data)
         @reply="handleReply"
         @delete="handleDelete"
         @report="handleReport"
+        @like="handleLike"
       />
     </div>
   </div>
@@ -1682,13 +2213,104 @@ const submitComment = async () => {
   }
 }
 
+// 点赞/取消点赞
+const handleLike = async (commentId) => {
+  try {
+    const response = await axios.post(
+      `/api/v1/comments/${commentId}/like`,
+      {},
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    )
+    
+    // 更新本地状态
+    const { liked, like_count } = response.data
+    updateCommentLikeStatus(commentId, liked, like_count)
+  } catch (error) {
+    if (error.response?.status === 404) {
+      ElMessage.error('评论不存在')
+    } else if (error.response?.status === 401) {
+      ElMessage.warning('请先登录')
+    } else {
+      ElMessage.error('操作失败')
+    }
+  }
+}
+
+// 更新评论点赞状态（递归查找）
+const updateCommentLikeStatus = (commentId, isLiked, likeCount) => {
+  const updateNode = (nodes) => {
+    for (let node of nodes) {
+      if (node.id === commentId) {
+        node.is_liked = isLiked
+        node.like_count = likeCount
+        return true
+      }
+      if (node.replies && node.replies.length > 0) {
+        if (updateNode(node.replies)) return true
+      }
+    }
+    return false
+  }
+  updateNode(commentTree.value)
+}
+
 onMounted(() => {
   loadComments()
 })
 </script>
 ```
 
-### 3. 举报功能实现
+### 3. 点赞功能实现
+
+```javascript
+// 点赞按钮组件
+const LikeButton = {
+  template: `
+    <button 
+      class="like-btn" 
+      :class="{ 'liked': comment.is_liked }"
+      @click="handleLike"
+    >
+      <span class="icon">{{ comment.is_liked ? '❤️' : '🤍' }}</span>
+      <span class="count">{{ comment.like_count }}</span>
+    </button>
+  `,
+  props: ['comment'],
+  emits: ['like'],
+  setup(props, { emit }) {
+    const handleLike = () => {
+      emit('like', props.comment.id)
+    }
+    return { handleLike }
+  }
+}
+
+// 父组件中的处理函数
+const handleLike = async (commentId) => {
+  try {
+    const response = await axios.post(
+      `/api/v1/comments/${commentId}/like`,
+      {},
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    )
+    
+    const { liked, like_count } = response.data
+    // 更新UI状态
+    updateCommentLikeStatus(commentId, liked, like_count)
+  } catch (error) {
+    if (error.response?.status === 401) {
+      ElMessage.warning('请先登录')
+      // 跳转到登录页
+    }
+  }
+}
+```
+
+### 4. 举报功能实现
 
 ```javascript
 // 举报评论
@@ -1724,7 +2346,7 @@ const showReportDialog = (commentId) => {
 }
 ```
 
-### 4. 管理员举报处理界面
+### 5. 管理员举报处理界面
 
 ```javascript
 // 获取待处理举报
@@ -1774,6 +2396,517 @@ const resolveAndDelete = async (reportId, commentId) => {
 
 ---
 
+## ⭐ 文章收藏模块
+
+### 权限说明
+- **登录用户**：收藏/取消收藏文章、查看我的收藏列表、检查收藏状态
+- **公开接口**：无（所有收藏相关接口均需登录）
+
+### 核心功能概览
+- ⭐ **收藏切换**：一键收藏/取消收藏，自动判断当前状态
+- 📋 **收藏列表**：分页查看我收藏的所有文章
+- ✅ **状态检查**：快速检查是否已收藏某篇文章
+
+---
+
+### 1. 收藏/取消收藏文章
+
+**接口**: `POST /favorites/{article_id}/favorite`  
+**权限**: 所有登录用户
+
+**功能**: 智能切换收藏状态（未收藏则收藏，已收藏则取消）
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| article_id | int | ✅ | 文章ID |
+
+**成功响应** (200) - 首次收藏:
+```json
+{
+  "favorited": true,
+  "message": "收藏成功"
+}
+```
+
+**成功响应** (200) - 取消收藏:
+```json
+{
+  "favorited": false,
+  "message": "已取消收藏"
+}
+```
+
+**错误响应**:
+- `404`: 文章不存在或未公开发布（草稿、待审核、已删除的文章无法收藏）
+- `401`: 未登录
+
+**前端注意**:
+- ✅ 接口自动判断当前收藏状态并切换
+- ✅ 只能收藏已发布且未删除的文章
+- ✅ 返回 `favorited` 字段表示操作后的状态
+- ⚠️ 需要携带 Token 认证
+
+---
+
+### 2. 获取我的收藏列表
+
+**接口**: `GET /favorites/my?page=1&size=10`  
+**权限**: 所有登录用户
+
+**查询参数**:
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| page | int | 1 | 页码（从1开始） |
+| size | int | 10 | 每页数量 |
+
+**成功响应** (200):
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "created_at": "2026-05-08T10:00:00",
+      "article": {
+        "id": 28,
+        "title": "收藏的文章标题",
+        "summary": "文章摘要...",
+        "status": "published",
+        "created_at": "2026-05-07T09:00:00"
+      }
+    }
+  ],
+  "total": 15,
+  "page": 1,
+  "size": 10,
+  "pages": 2
+}
+```
+
+**响应字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| items | array | 收藏记录列表 |
+| items[].id | int | 收藏记录ID |
+| items[].created_at | datetime | 收藏时间 |
+| items[].article | object | 被收藏的文章信息 |
+| items[].article.id | int | 文章ID |
+| items[].article.title | string | 文章标题 |
+| items[].article.summary | string | 文章摘要 |
+| items[].article.status | string | 文章状态 |
+| items[].article.created_at | datetime | 文章创建时间 |
+| total | int | 总记录数 |
+| page | int | 当前页码 |
+| size | int | 每页数量 |
+| pages | int | 总页数 |
+
+**前端注意**:
+- ✅ 按收藏时间降序排列（最新收藏在前）
+- ✅ 统一分页格式 `{items, total, page, size, pages}`
+- ✅ 包含文章的简化信息（不包含正文内容）
+- ⚠️ 如果文章被删除，可能仍会出现在收藏列表中
+
+---
+
+### 3. 检查收藏状态
+
+**接口**: `GET /favorites/check/{article_id}`  
+**权限**: 所有登录用户
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| article_id | int | ✅ | 文章ID |
+
+**成功响应** (200):
+```json
+{
+  "favorited": true
+}
+```
+
+**响应字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| favorited | bool | 当前用户是否已收藏该文章 |
+
+**前端注意**:
+- ✅ 用于在文章详情页显示收藏按钮状态
+- ✅ 返回简单的布尔值，便于UI更新
+- ⚠️ 需要登录才能调用
+
+---
+
+## 💡 收藏功能开发建议
+
+### 1. 收藏按钮组件（Vue3）
+
+```vue
+<template>
+  <button 
+    class="favorite-btn" 
+    :class="{ 'favorited': isFavorited }"
+    @click="toggleFavorite"
+    :disabled="loading"
+  >
+    <span class="icon">{{ isFavorited ? '⭐' : '☆' }}</span>
+    <span class="text">{{ isFavorited ? '已收藏' : '收藏' }}</span>
+  </button>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+
+const props = defineProps({
+  articleId: {
+    type: Number,
+    required: true
+  }
+})
+
+const isFavorited = ref(false)
+const loading = ref(false)
+
+// 检查收藏状态
+const checkFavoriteStatus = async () => {
+  try {
+    const response = await axios.get(
+      `/api/v1/favorites/check/${props.articleId}`,
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    )
+    isFavorited.value = response.data.favorited
+  } catch (error) {
+    console.error('检查收藏状态失败:', error)
+  }
+}
+
+// 切换收藏状态
+const toggleFavorite = async () => {
+  if (!token) {
+    ElMessage.warning('请先登录')
+    return
+  }
+  
+  loading.value = true
+  try {
+    const response = await axios.post(
+      `/api/v1/favorites/${props.articleId}/favorite`,
+      {},
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    )
+    
+    // 更新本地状态
+    isFavorited.value = response.data.favorited
+    ElMessage.success(response.data.message)
+  } catch (error) {
+    if (error.response?.status === 404) {
+      ElMessage.error('文章不存在或未发布')
+    } else if (error.response?.status === 401) {
+      ElMessage.warning('请先登录')
+    } else {
+      ElMessage.error('操作失败')
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  if (token) {
+    checkFavoriteStatus()
+  }
+})
+</script>
+
+<style scoped>
+.favorite-btn {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.favorite-btn.favorited {
+  background: #fff3cd;
+  border-color: #ffc107;
+  color: #856404;
+}
+
+.favorite-btn:hover:not(:disabled) {
+  background: #f8f9fa;
+}
+
+.favorite-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+</style>
+```
+
+### 2. 我的收藏页面
+
+```vue
+<template>
+  <div class="my-favorites">
+    <h2>我的收藏</h2>
+    
+    <div v-if="loading" class="loading">加载中...</div>
+    
+    <div v-else-if="favorites.length === 0" class="empty">
+      暂无收藏文章
+    </div>
+    
+    <div v-else class="favorite-list">
+      <div 
+        v-for="item in favorites" 
+        :key="item.id"
+        class="favorite-item"
+      >
+        <router-link :to="`/article/${item.article.id}`">
+          <h3>{{ item.article.title }}</h3>
+          <p>{{ item.article.summary }}</p>
+        </router-link>
+        <div class="meta">
+          <span class="time">收藏于 {{ formatDate(item.created_at) }}</span>
+          <button @click="removeFavorite(item.article.id)">取消收藏</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 分页 -->
+    <div v-if="totalPages > 1" class="pagination">
+      <button 
+        @click="loadPage(currentPage - 1)"
+        :disabled="currentPage === 1"
+      >上一页</button>
+      <span>{{ currentPage }} / {{ totalPages }}</span>
+      <button 
+        @click="loadPage(currentPage + 1)"
+        :disabled="currentPage === totalPages"
+      >下一页</button>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
+
+const favorites = ref([])
+const loading = ref(false)
+const currentPage = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+
+const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
+
+// 加载收藏列表
+const loadFavorites = async (page = 1) => {
+  loading.value = true
+  try {
+    const response = await axios.get('/api/v1/favorites/my', {
+      params: { page, size: pageSize.value },
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    
+    favorites.value = response.data.items
+    total.value = response.data.total
+    currentPage.value = response.data.page
+  } catch (error) {
+    console.error('加载收藏列表失败:', error)
+    ElMessage.error('加载失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 翻页
+const loadPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    loadFavorites(page)
+  }
+}
+
+// 取消收藏
+const removeFavorite = async (articleId) => {
+  try {
+    await axios.post(
+      `/api/v1/favorites/${articleId}/favorite`,
+      {},
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    )
+    ElMessage.success('已取消收藏')
+    // 重新加载列表
+    await loadFavorites(currentPage.value)
+  } catch (error) {
+    ElMessage.error('操作失败')
+  }
+}
+
+// 格式化日期
+const formatDate = (dateStr) => {
+  return new Date(dateStr).toLocaleDateString('zh-CN')
+}
+
+onMounted(() => {
+  loadFavorites()
+})
+</script>
+```
+
+### 3. Axios 拦截器处理未登录
+
+```javascript
+// 在文章详情页自动检查登录状态
+axios.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401) {
+      // 收藏相关接口的401错误
+      if (error.config.url.includes('/favorites/')) {
+        ElMessageBox.confirm(
+          '您需要登录才能使用收藏功能',
+          '提示',
+          {
+            confirmButtonText: '去登录',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        ).then(() => {
+          router.push('/login')
+        })
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+```
+
+### 场景9: 文章点赞功能
+
+```javascript
+// 点赞按钮组件逻辑
+const handleLike = async (articleId) => {
+  try {
+    const response = await axios.post(
+      `/api/v1/article/${articleId}/like`,
+      {},
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    )
+    
+    // 更新本地状态
+    const { liked, like_count } = response.data
+    updateArticleLikeStatus(articleId, liked, like_count)
+    ElMessage.success(liked ? '点赞成功' : '已取消点赞')
+  } catch (error) {
+    if (error.response?.status === 401) {
+      ElMessage.warning('请先登录')
+    } else if (error.response?.status === 404) {
+      ElMessage.error('文章不存在')
+    } else {
+      ElMessage.error('操作失败')
+    }
+  }
+}
+
+// 获取文章详情时检查点赞状态
+const loadArticleDetail = async (articleId) => {
+  const response = await axios.get(`/api/v1/article/${articleId}`, {
+    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+  })
+  
+  // 直接使用返回的 like_count 和 is_liked
+  articleData.value = response.data
+  isLiked.value = response.data.is_liked
+  likeCount.value = response.data.like_count
+}
+
+// 在文章详情页初始化时加载
+onMounted(() => {
+  loadArticleDetail(articleId)
+})
+```
+
+### 场景10: 文章置顶功能（管理员）
+
+```javascript
+// 管理员置顶/取消置顶文章
+const togglePin = async (articleId) => {
+  try {
+    const response = await axios.put(
+      `/api/v1/article/admin/articles/${articleId}/pin`,
+      {},
+      {
+        headers: { 'Authorization': `Bearer ${adminToken}` }
+      }
+    )
+    
+    ElMessage.success(response.data.message)
+    // 更新本地状态
+    articleData.value.is_pinned = response.data.is_pinned
+    // 重新加载列表以更新排序
+    await loadArticleList()
+  } catch (error) {
+    ElMessage.error('操作失败')
+  }
+}
+```
+
+**在文章列表中显示置顶标记：**
+
+```vue
+<template>
+  <div class="article-item" :class="{ 'pinned': article.is_pinned }">
+    <span v-if="article.is_pinned" class="pin-badge">📌 置顶</span>
+    <h3>{{ article.title }}</h3>
+    <!-- 其他内容 -->
+  </div>
+</template>
+```
+
+### 场景11: 文章归档页面
+
+```javascript
+// 获取文章归档数据
+const loadArchive = async () => {
+  const response = await axios.get('/api/v1/article/public/archive')
+  archiveData.value = response.data
+  // 格式: [{ year: 2026, month: 4, count: 15 }, ...]
+}
+
+onMounted(() => {
+  loadArchive()
+})
+```
+
+**渲染归档列表：**
+
+```vue
+<template>
+  <div class="archive-section">
+    <h2>文章归档</h2>
+    <div v-for="item in archiveData" :key="`${item.year}-${item.month}`" class="archive-item">
+      <router-link :to="`/archive/${item.year}/${item.month}`">
+        {{ item.year }}年{{ item.month }}月 ({{ item.count }}篇)
+      </router-link>
+    </div>
+  </div>
+</template>
+```
+
+---
+
 ## 🔄 后续更新计划
 
 - [ ] 文章搜索功能
@@ -1783,11 +2916,18 @@ const resolveAndDelete = async (reportId, commentId) => {
 - [x] 完整审核流程（提交/撤回/审核/驳回）
 - [x] 防灌水机制
 - [x] 评论系统（发表/回复/删除/举报）
-- [ ] 点赞与收藏
+- [x] 点赞与收藏
+- [x] 文章点赞功能
+- [x] 评论点赞功能
+- [x] 文章置顶功能
+- [x] 文章归档功能
 
 ---
 
-**最后更新时间**: 2026-04-19  
-**文档版本**: v4.1  
+**最后更新时间**: 2026-05-05  
+**文档版本**: v4.2  
 **维护者**: Backend Team
 
+##### 感谢所有贡献者！
+
+##

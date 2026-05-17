@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const isAnimating = ref(false)
@@ -14,6 +14,13 @@ export function usePageTransition() {
 
   // 获取当前路由索引的辅助函数
   const getIndex = (route) => route?.meta?.index ?? 0
+
+  // 初始化上一次路由索引
+  onMounted(() => {
+    if (window._prevRouteIndex === undefined) {
+      window._prevRouteIndex = getIndex(router.currentRoute.value)
+    }
+  })
 
   /**
    * 进入动画

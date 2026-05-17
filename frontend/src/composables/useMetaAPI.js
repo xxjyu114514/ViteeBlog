@@ -1,113 +1,226 @@
-import { createFetch } from '@vueuse/core'
-import { useUserStore } from '@/stores/user'
-import { getBaseUrl } from '@/config/apiConfig'
+import { ref } from 'vue'
+import { useBaseFetch, handleFriendlyError } from '@/api/client'
 import { buildUrl } from '@/utils/apiUtils'
 
-// 创建一个预配置的 fetch 实例
-const useBaseFetch = createFetch({
-  baseUrl: getBaseUrl(),
-  options: {
-    async beforeFetch({ options }) {
-      const userStore = useUserStore()
-      if (userStore.token) {
-        options.headers = {
-          ...options.headers,
-          Authorization: `Bearer ${userStore.token}`,
-        }
-      }
-      return { options }
-    },
-    onFetchError(ctx) {
-      // 全局处理：例如 401 自动登出
-      if (ctx.response?.status === 401) {
-        const userStore = useUserStore()
-        userStore.logout()
-        // 在composable中不能使用useRouter，改用window.location
-        window.location.href = '/login'
-      }
-      return ctx
-    },
-  },
-  fetchOptions: {
-    mode: 'cors',
-  },
-})
-
-// 统一的错误信息提取函数
-const extractFriendlyErrorMessage = (error, context = '操作') => {
-  // 开发者调试信息（保留详细错误）
-  if (error) {
-    console.error(`🐛 ${context}错误详情:`, {
-      status: error.status,
-      message: error.message,
-      data: error.data,
-      url: error.url
-    })
-  }
-  
-  // 用户友好提示
-  if (!error) {
-    return `${context}失败，请稍后重试`
-  }
-  
-  // 优先使用后端返回的具体错误详情
-  if (error.data?.detail) {
-    return error.data.detail
-  }
-  
-  // 根据HTTP状态码提供友好提示
-  switch (error.status) {
-    case 400:
-      return '输入信息有误，请检查后重试'
-    case 401:
-      return '身份验证失败，请重新登录'
-    case 403:
-      return '权限不足'
-    case 404:
-      return '请求的资源不存在'
-    case 429:
-      return '操作太频繁，请稍后再试'
-    case 500:
-      return '系统繁忙，请稍后重试'
-    case 502:
-    case 503:
-    case 504:
-      return '服务暂时不可用，请稍后重试'
-    default:
-      return `${context}失败，请稍后重试`
-  }
-}
-
 export function useMetaAPI() {
-  const userStore = useUserStore()
-
+  // 元数据操作的loading状态
+  const metaLoading = ref(false)
+  // 防重复提交锁
+  const metaSubmitLock = ref(false)
+  
   // 获取分类列表
   const getCategories = async () => {
-    const { data, error } = await useBaseFetch('/meta/categories').get().json()
+    metaLoading.value = true
     
-    if (!error.value) {
-      // 安全检查：确保data.value存在，元数据接口通常返回数组
-      const categoriesData = Array.isArray(data.value) ? data.value : []
-      return { success: true, data: categoriesData }
+    try {
+      const url = buildUrl('/meta/categories')
+      const { data, error } = await useBaseFetch(url).get().json()
+
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '获取分类') }
+      }
+
+      const safeData = Array.isArray(data.value) ? data.value : []
+      return { success: true, data: safeData }
+    } catch (err) {
+      console.error('getCategories error:', err)
+      return { success: false, message: '获取分类时发生未知错误，请稍后重试' }
+    } finally {
+      metaLoading.value = false
+    }
+  }
+
+  // 创建分类
+  const createCategory = async (categoryName) => {
+    if (metaSubmitLock.value) {
+      return { success: false, message: '操作正在进行中，请稍后...' }
     }
     
-    const errorMessage = extractFriendlyErrorMessage(error.value, '获取分类')
-    return { success: false, message: errorMessage }
+    metaLoading.value = true
+    metaSubmitLock.value = true
+    
+    try {
+      const url = buildUrl('/meta/categories')
+      // 后端期望 {name: "分类名"} 格式
+      const requestData = { name: categoryName }
+      const { data, error } = await useBaseFetch(url).post(requestData).json()
+
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '创建分类') }
+      }
+      return { success: true, data: data.value }
+    } catch (err) {
+      console.error('createCategory error:', err)
+      return { success: false, message: '创建分类时发生未知错误，请稍后重试' }
+    } finally {
+      metaLoading.value = false
+      metaSubmitLock.value = false
+    }
+  }
+
+  // 更新分类
+  const updateCategory = async (id, categoryName) => {
+    if (metaSubmitLock.value) {
+      return { success: false, message: '操作正在进行中，请稍后...' }
+    }
+    
+    metaLoading.value = true
+    metaSubmitLock.value = true
+    
+    try {
+      const url = buildUrl('/meta/categories/:id', { id })
+      // 后端期望 {name: "分类名"} 格式
+      const requestData = { name: categoryName }
+      const { data, error } = await useBaseFetch(url).put(requestData).json()
+
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '更新分类') }
+      }
+      return { success: true, data: data.value }
+    } catch (err) {
+      console.error('updateCategory error:', err)
+      return { success: false, message: '更新分类时发生未知错误，请稍后重试' }
+    } finally {
+      metaLoading.value = false
+      metaSubmitLock.value = false
+    }
+  }
+
+  // 删除分类
+  const deleteCategory = async (id) => {
+    if (metaSubmitLock.value) {
+      return { success: false, message: '操作正在进行中，请稍后...' }
+    }
+    
+    metaLoading.value = true
+    metaSubmitLock.value = true
+    
+    try {
+      const url = buildUrl('/meta/categories/:id', { id })
+      const { data, error } = await useBaseFetch(url).delete().json()
+
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '删除分类') }
+      }
+      return { success: true, data: data.value }
+    } catch (err) {
+      console.error('deleteCategory error:', err)
+      return { success: false, message: '删除分类时发生未知错误，请稍后重试' }
+    } finally {
+      metaLoading.value = false
+      metaSubmitLock.value = false
+    }
   }
 
   // 获取标签列表
   const getTags = async () => {
-    const { data, error } = await useBaseFetch('/meta/tags').get().json()
+    metaLoading.value = true
     
-    if (!error.value) {
-      // 安全检查：确保data.value存在，元数据接口通常返回数组
-      const tagsData = Array.isArray(data.value) ? data.value : []
-      return { success: true, data: tagsData }
+    try {
+      const url = buildUrl('/meta/tags')
+      const { data, error } = await useBaseFetch(url).get().json()
+
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '获取标签') }
+      }
+
+      const safeData = Array.isArray(data.value) ? data.value : []
+      return { success: true, data: safeData }
+    } catch (err) {
+      console.error('getTags error:', err)
+      return { success: false, message: '获取标签时发生未知错误，请稍后重试' }
+    } finally {
+      metaLoading.value = false
     }
-    
-    const errorMessage = extractFriendlyErrorMessage(error.value, '获取标签')
-    return { success: false, message: errorMessage }
   }
 
-  return { getCategories, getTags }
+  // 创建标签
+  const createTag = async (tagName) => {
+    if (metaSubmitLock.value) {
+      return { success: false, message: '操作正在进行中，请稍后...' }
+    }
+    
+    metaLoading.value = true
+    metaSubmitLock.value = true
+    
+    try {
+      const url = buildUrl('/meta/tags')
+      // 后端期望 {name: "标签名"} 格式
+      const requestData = { name: tagName }
+      const { data, error } = await useBaseFetch(url).post(requestData).json()
+
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '创建标签') }
+      }
+      return { success: true, data: data.value }
+    } catch (err) {
+      console.error('createTag error:', err)
+      return { success: false, message: '创建标签时发生未知错误，请稍后重试' }
+    } finally {
+      metaLoading.value = false
+      metaSubmitLock.value = false
+    }
+  }
+
+  // 更新标签
+  const updateTag = async (id, tagName) => {
+    if (metaSubmitLock.value) {
+      return { success: false, message: '操作正在进行中，请稍后...' }
+    }
+    
+    metaLoading.value = true
+    metaSubmitLock.value = true
+    
+    try {
+      const url = buildUrl('/meta/tags/:id', { id })
+      // 后端期望 {name: "标签名"} 格式
+      const requestData = { name: tagName }
+      const { data, error } = await useBaseFetch(url).put(requestData).json()
+
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '更新标签') }
+      }
+      return { success: true, data: data.value }
+    } catch (err) {
+      console.error('updateTag error:', err)
+      return { success: false, message: '更新标签时发生未知错误，请稍后重试' }
+    } finally {
+      metaLoading.value = false
+      metaSubmitLock.value = false
+    }
+  }
+
+  // 删除标签
+  const deleteTag = async (id) => {
+    if (metaSubmitLock.value) {
+      return { success: false, message: '操作正在进行中，请稍后...' }
+    }
+    
+    metaLoading.value = true
+    metaSubmitLock.value = true
+    
+    try {
+      const url = buildUrl('/meta/tags/:id', { id })
+      const { data, error } = await useBaseFetch(url).delete().json()
+
+      if (error.value) {
+        return { success: false, message: handleFriendlyError(error.value, '删除标签') }
+      }
+      return { success: true, data: data.value }
+    } catch (err) {
+      console.error('deleteTag error:', err)
+      return { success: false, message: '删除标签时发生未知错误，请稍后重试' }
+    } finally {
+      metaLoading.value = false
+      metaSubmitLock.value = false
+    }
+  }
+
+  return { 
+    getCategories, createCategory, updateCategory, deleteCategory,
+    getTags, createTag, updateTag, deleteTag,
+    // 新增的loading状态和提交锁
+    metaLoading,
+    metaSubmitLock
+  }
 }
