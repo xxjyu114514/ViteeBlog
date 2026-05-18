@@ -15,12 +15,13 @@
     <!-- 操作区域 -->
     <div class="comment-actions">
       <button 
-        class="action-btn"
-        :class="{ liked: comment.is_liked }"
+        class="action-btn" 
+        :class="{ 'liked': localIsLiked }"
         @click="handleLike"
         :disabled="likeLoading"
       >
-        👍 {{ comment.like_count || 0 }}
+        <i class="icon-like"></i>
+        {{ localLikeCount }}
       </button>
       <button 
         class="action-btn"
@@ -76,8 +77,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
+import { useRouter } from 'vue-router'
 import MarkdownIt from 'markdown-it'
 import { useCommentAPI } from '@/composables/useCommentAPI'
 
@@ -102,6 +104,7 @@ const props = defineProps({
 const emit = defineEmits(['comment-liked', 'comment-replied'])
 
 const userStore = useUserStore()
+const router = useRouter()
 const { createComment, toggleCommentLike } = useCommentAPI()
 
 // 安全获取作者信息，处理 author 字段缺失的情况
@@ -117,7 +120,53 @@ const showReplyForm = ref(false)
 const replyContent = ref('')
 const replyLoading = ref(false)
 const replyError = ref(null)
+
+// 使用本地响应式状态管理点赞状态，避免直接修改props
+const localIsLiked = ref(props.comment.is_liked)
+const localLikeCount = ref(props.comment.like_count)
+
+// 监听props变化，同步到本地状态
+watch(() => props.comment.is_liked, (newVal) => {
+  localIsLiked.value = newVal
+})
+
+watch(() => props.comment.like_count, (newVal) => {
+  localLikeCount.value = newVal
+})
+
 const likeLoading = ref(false)
+
+const handleLike = async () => {
+  if (!userStore.isAuthenticated) {
+    // 未登录用户点击点赞时跳转到登录页
+    router.push('/login')
+    return
+  }
+  
+  if (likeLoading.value) return
+  
+  likeLoading.value = true
+  
+  try {
+    const result = await toggleCommentLike(props.comment.id)
+    
+    if (result.success) {
+      // 更新本地状态
+      localIsLiked.value = result.data.is_liked
+      localLikeCount.value = result.data.like_count
+      // 触发事件通知父组件
+      emit('comment-liked', {
+        ...props.comment,
+        is_liked: result.data.is_liked,
+        like_count: result.data.like_count
+      })
+    }
+  } catch (err) {
+    console.error('Like toggle error:', err)
+  } finally {
+    likeLoading.value = false
+  }
+}
 
 // 渲染Markdown内容
 const renderedContent = computed(() => {
@@ -204,27 +253,6 @@ const submitReply = async () => {
     replyError.value = '网络错误，请检查网络连接后重试'
   } finally {
     replyLoading.value = false
-  }
-}
-
-const handleLike = async () => {
-  if (!userStore.isAuthenticated) return
-  
-  likeLoading.value = true
-  
-  try {
-    const result = await toggleCommentLike(props.comment.id)
-    
-    if (result.success) {
-      // 更新本地状态
-      props.comment.is_liked = result.data.is_liked
-      props.comment.like_count = result.data.like_count
-      emit('comment-liked', props.comment)
-    }
-  } catch (err) {
-    console.error('Like toggle error:', err)
-  } finally {
-    likeLoading.value = false
   }
 }
 

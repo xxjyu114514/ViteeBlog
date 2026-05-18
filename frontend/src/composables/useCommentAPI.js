@@ -20,9 +20,12 @@ export function useCommentAPI() {
         return { success: false, message: handleFriendlyError(error.value, '获取评论') }
       }
 
+      // 后端返回的是直接的评论数组，不是分页对象
+      const commentsArray = Array.isArray(data.value) ? data.value : []
+      
       const safeData = {
-        items: Array.isArray(data.value?.items) ? data.value.items : [],
-        total: data.value?.total || 0
+        items: commentsArray,
+        total: commentsArray.length
       }
 
       return { success: true, data: safeData }
@@ -130,9 +133,11 @@ export function useCommentAPI() {
       }
       
       return { 
-        success: true, 
-        liked: data.value.liked,
-        like_count: data.value.like_count
+        success: true,
+        data: {
+          is_liked: data.value.liked,
+          like_count: data.value.like_count
+        }
       }
     } catch (err) {
       console.error('toggleCommentLike error:', err)

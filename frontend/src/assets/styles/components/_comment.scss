@@ -223,6 +223,23 @@
   }
 }
 
+// 图标样式
+.icon-like {
+  display: inline-block;
+  margin-right: 4px;
+  font-size: 1.1em;
+  
+  &::before {
+    content: "❤️";
+    transition: transform 0.2s ease;
+  }
+}
+
+.action-btn.liked .icon-like::before {
+  color: #ef4444;
+  transform: scale(1.1);
+}
+
 // 加载状态
 .loading-comments {
   text-align: center;
