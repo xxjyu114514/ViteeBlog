@@ -186,7 +186,7 @@ Authorization: Bearer <Your_Token>
 - `500`: 邮件发送失败
 
 **前端注意**:
-- ✅ 只有已注册的邮箱才能发送重置验证码
+- ✅ 只有已注册的邮箱才能发送重置验证码 
 - ✅ 验证码有效期10分钟
 - ✅ 点击后禁用按钮，开启60秒倒计时
 
@@ -550,8 +550,8 @@ def downgrade():
 
 ---
 
-**最后更新时间**: 2026-05-05  
-**文档版本**: v4.2  
+**最后更新时间**: 2026-05-17  
+**文档版本**: v4.3  
 **维护者**: Backend Team
 
 ---
@@ -937,7 +937,7 @@ def downgrade():
 **参数说明**:
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| pass_audit | boolean | ✅ | `true`=通过，`false`=驳回 |
+| pass_audit | boolean | ✅ | `true`=恢复显示，`false`=标记违规隐藏 |
 | remark | string | 条件必填 | 驳回时必须填写理由（最多500字符） |
 
 **成功响应** (200):
@@ -1768,12 +1768,13 @@ axios.interceptors.response.use(
 - **管理员专属**：删除任意评论、查看待处理举报、处理举报、全站评论巡查
 
 ### 核心功能概览
-- 💬 **发表评论**：支持一级评论和嵌套回复
+- 💬 **发表评论**：支持一级评论和嵌套回复（先发后审，立即可见）
 - 👍 **点赞功能**：用户可点赞/取消点赞评论
 - 🗑️ **软删除**：作者或管理员可删除评论
 - 🚩 **举报系统**：用户可举报不当评论
-- 👮 **管理员审核**：查看和处理举报
-- 🔍 **全站巡查**：管理员可查看所有评论
+- 👮 **管理员巡查**：全站评论监控、标记违规、批量管理
+- 🔍 **全站巡查**：管理员可查看所有评论（包括已删除和已隐藏）
+- ✅ **先发后审**：新评论立即显示，管理员事后可标记违规隐藏
 
 ### 数据模型
 
@@ -1785,7 +1786,7 @@ axios.interceptors.response.use(
 | user_id | int | 评论者ID（外键关联User） |
 | article_id | int | 文章ID（外键关联Article） |
 | parent_id | int/null | 父评论ID，null表示一级评论 |
-| is_audited | bool | 是否已审核（默认true） |
+| is_audited | bool | 是否已审核（默认true，false表示被管理员标记为违规隐藏） |
 | created_at | datetime | 创建时间 |
 | deleted_at | datetime/null | 删除时间（软删除） |
 
@@ -1906,12 +1907,14 @@ axios.interceptors.response.use(
 ```
 
 **前端注意**:
-- ✅ 仅返回已审核且未删除的评论（`is_audited=true AND deleted_at IS NULL`）
+- ✅ 仅返回正常显示的评论（`is_audited=true AND deleted_at IS NULL`）
 - ✅ 按 `created_at` 升序排列（旧评论在前）
 - ✅ 扁平结构，前端需自行组装树形结构
 - ✅ 通过 `parent_id` 判断是否为回复
 - ✅ 包含点赞数 `like_count` 和当前用户点赞状态 `is_liked`
 - ✅ 未登录用户 `is_liked` 始终为 false
+- ✅ **分页格式**：返回 `{items, total, page, size, pages}` 统一分页结构
+- ⚠️ **先发后审机制**：新评论默认 `is_audited=True` 立即显示，管理员事后可标记违规隐藏
 
 ---
 
@@ -2111,6 +2114,90 @@ axios.interceptors.response.use(
 ---
 
 ## 💡 评论系统开发建议
+
+### 0. 先发后审机制说明
+
+**核心概念**：
+- ✅ **用户发表评论** → `is_audited=True` → **立即可见**
+- ✅ **管理员巡查** → 发现违规 → 标记 `is_audited=False` → **隐藏**
+- ✅ **管理员复查** → 误判恢复 → 设置 `is_audited=True` → **重新显示**
+
+**工作流程**：
+```
+用户发表评论
+    ↓
+is_audited = True（自动设置为已审核）
+    ↓
+评论立即可见 ✅
+    ↓
+管理员定期巡查 (/admin/comments/all)
+    ↓
+发现违规评论
+    ↓
+标记为违规隐藏 (is_audited = False)
+    ↓
+评论从公开列表中消失 ❌
+    ↓
+管理员复查后可恢复 (is_audited = True)
+    ↓
+评论重新可见 ✅
+```
+
+**管理员操作示例**：
+```javascript
+// 1. 全站巡查 - 查看所有评论
+const loadAllComments = async () => {
+  const response = await axios.get('/api/v1/comments/admin/comments/all', {
+    params: { page: 1, size: 50 },
+    headers: { 'Authorization': `Bearer ${adminToken}` }
+  })
+  return response.data.items
+}
+
+// 2. 标记单个评论违规
+const markAsViolation = async (commentId) => {
+  await axios.put(
+    `/api/v1/comments/admin/comments/${commentId}/audit`,
+    { pass_audit: false },  // false = 标记违规
+    { headers: { 'Authorization': `Bearer ${adminToken}` } }
+  )
+  ElMessage.success('已标记为违规并隐藏')
+}
+
+// 3. 批量标记违规
+const batchMarkViolations = async (commentIds) => {
+  const response = await axios.post(
+    '/api/v1/comments/admin/comments/batch-audit',
+    { 
+      comment_ids: commentIds,
+      pass_audit: false  // false = 批量标记违规
+    },
+    { headers: { 'Authorization': `Bearer ${adminToken}` } }
+  )
+  ElMessage.success(response.data.message)
+}
+
+// 4. 查看已隐藏评论（用于复查）
+const loadHiddenComments = async () => {
+  const response = await axios.get('/api/v1/comments/admin/comments/pending', {
+    params: { page: 1, size: 20 },
+    headers: { 'Authorization': `Bearer ${adminToken}` }
+  })
+  return response.data.items
+}
+
+// 5. 恢复误判的评论
+const restoreComment = async (commentId) => {
+  await axios.put(
+    `/api/v1/comments/admin/comments/${commentId}/audit`,
+    { pass_audit: true },  // true = 恢复显示
+    { headers: { 'Authorization': `Bearer ${adminToken}` } }
+  )
+  ElMessage.success('评论已恢复显示')
+}
+```
+
+---
 
 ### 1. 前端评论树形结构组装
 
@@ -2924,10 +3011,10 @@ onMounted(() => {
 
 ---
 
-**最后更新时间**: 2026-05-05  
-**文档版本**: v4.2  
+**最后更新时间**: 2026-05-17  
+**文档版本**: v4.3  
 **维护者**: Backend Team
 
 ##### 感谢所有贡献者！
 
-##
+###

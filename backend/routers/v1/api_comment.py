@@ -1,7 +1,7 @@
 import math
 from datetime import datetime
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, and_, func
 from sqlalchemy.orm import selectinload
@@ -39,7 +39,8 @@ async def create_comment(
         content=comment_in.content,
         article_id=article_id,
         user_id=user.id,
-        parent_id=comment_in.parent_id
+        parent_id=comment_in.parent_id,
+        is_audited=True  # 先发后审：评论立即发布，管理员事后可标记违规
     )
     db.add(new_comment)
     await db.commit()
@@ -59,23 +60,43 @@ async def create_comment(
     return comment_with_author
 
 
-# 2. 获取文章评论列表（扁平）
-@router.get("/articles/{article_id}/comments", response_model=List[CommentResponse])
+# 2. 获取文章评论列表（分页 + 后审机制）
+@router.get("/articles/{article_id}/comments")
 async def get_comments(
         article_id: int,
+        page: int = Query(1, ge=1, description="页码"),
+        size: int = Query(20, ge=1, le=100, description="每页数量"),
         db: AsyncSession = Depends(get_db),
         user: Optional[User] = Depends(get_current_user_optional)
 ):
+    # 基础查询：只返回已审核且未删除的评论
+    base_stmt = (
+        select(Comment)
+        .where(and_(
+            Comment.article_id == article_id,
+            Comment.is_audited == True,  # 后审机制：只返回已审核的评论
+            Comment.deleted_at == None
+        ))
+    )
+    
+    # 统计总数
+    total_res = await db.execute(select(func.count()).select_from(base_stmt.subquery()))
+    total = total_res.scalar() or 0
+    
+    # 带点赞数的分页查询
     stmt = (
         select(Comment, func.count(CommentLike.id).label("like_count"))
         .outerjoin(CommentLike, Comment.id == CommentLike.comment_id)
         .where(and_(
             Comment.article_id == article_id,
+            Comment.is_audited == True,  # 后审机制：只返回已审核的评论
             Comment.deleted_at == None
         ))
         .group_by(Comment.id)
         .options(selectinload(Comment.author))
         .order_by(Comment.created_at.asc())
+        .offset((page - 1) * size)
+        .limit(size)
     )
 
     res = await db.execute(stmt)
@@ -95,7 +116,13 @@ async def get_comments(
         comment_obj.is_liked = comment_obj.id in liked_ids
         final_list.append(comment_obj)
 
-    return final_list
+    return {
+        "items": final_list,
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": math.ceil(total / size) if total > 0 else 0
+    }
 
 
 # 3. 软删除评论
@@ -272,3 +299,109 @@ async def get_all_comments_admin(
         "size": size,
         "pages": math.ceil(total / size) if total > 0 else 0  # ✅ 统一写法
     }
+
+
+# 9. 管理员：获取已标记违规的评论列表
+@router.get("/admin/comments/pending")
+async def get_pending_comments(
+        page: int = Query(1, ge=1),
+        size: int = Query(20, ge=1),
+        admin: User = Depends(allow_admin_only),
+        db: AsyncSession = Depends(get_db)
+):
+    """获取所有被标记为违规/隐藏的评论（is_audited=False）"""
+    stmt = (
+        select(Comment)
+        .where(Comment.is_audited == False, Comment.deleted_at == None)
+        .options(selectinload(Comment.author), selectinload(Comment.article))
+        .order_by(Comment.created_at.asc())
+    )
+    
+    # 统计总数
+    total_res = await db.execute(select(func.count()).select_from(stmt.subquery()))
+    total = total_res.scalar() or 0
+    
+    # 分页查询
+    res = await db.execute(stmt.offset((page - 1) * size).limit(size))
+    items = res.scalars().all()
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": math.ceil(total / size) if total > 0 else 0
+    }
+
+
+# 10. 管理员：标记/恢复评论（隐藏违规评论或恢复误判）
+@router.put("/admin/comments/{comment_id}/audit")
+async def audit_comment(
+        comment_id: int,
+        pass_audit: bool = Body(..., embed=True, description="True为恢复显示，False为标记违规隐藏"),
+        admin: User = Depends(allow_admin_only),
+        db: AsyncSession = Depends(get_db)
+):
+    """管理员标记评论为违规（隐藏）或恢复已隐藏的评论"""
+    # 查找评论
+    res = await db.execute(select(Comment).where(Comment.id == comment_id))
+    comment = res.scalars().first()
+    
+    if not comment:
+        raise HTTPException(status_code=404, detail="评论不存在")
+    
+    if comment.deleted_at:
+        raise HTTPException(status_code=400, detail="评论已被删除")
+    
+    # 更新审核状态
+    comment.is_audited = pass_audit
+    await db.commit()
+    
+    if pass_audit:
+        action = "恢复显示"
+    else:
+        action = "标记违规并隐藏"
+    return {"message": f"评论已{action}", "is_audited": pass_audit}
+
+
+# 11. 管理员：批量标记违规评论
+@router.post("/admin/comments/batch-audit")
+async def batch_audit_comments(
+        comment_ids: List[int] = Body(..., description="评论ID列表"),
+        pass_audit: bool = Body(..., description="True为批量恢复，False为批量标记违规"),
+        admin: User = Depends(allow_admin_only),
+        db: AsyncSession = Depends(get_db)
+):
+    """批量标记多条评论为违规（隐藏）或批量恢复"""
+    if not comment_ids:
+        raise HTTPException(status_code=400, detail="评论ID列表不能为空")
+    
+    # 查询所有指定的评论（排除已删除的）
+    res = await db.execute(
+        select(Comment).where(
+            Comment.id.in_(comment_ids),
+            Comment.deleted_at == None
+        )
+    )
+    comments = res.scalars().all()
+    
+    if not comments:
+        raise HTTPException(status_code=404, detail="未找到有效的评论")
+    
+    # 批量更新审核状态
+    for comment in comments:
+        comment.is_audited = pass_audit
+    
+    await db.commit()
+    
+    if pass_audit:
+        action = "恢复"
+    else:
+        action = "标记违规隐藏"
+    return {
+        "message": f"成功{action} {len(comments)} 条评论",
+        "success_count": len(comments),
+        "total_requested": len(comment_ids)
+    }
+
+##
