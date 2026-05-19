@@ -57,6 +57,18 @@
           >
             标签管理
           </button>
+          <button 
+            class="menu-item admin-item"
+            @click="goToCommentReports"
+          >
+            举报管理
+          </button>
+          <button 
+            class="menu-item admin-item"
+            @click="goToCommentAdmin"
+          >
+            评论巡查
+          </button>
         </div>
       </div>
 
@@ -133,6 +145,14 @@ const goToPosts = () => {
 const goToSettings = () => {
   // TODO: 添加系统设置页面
   alert('系统设置功能开发中...')
+}
+
+const goToCommentReports = () => {
+  router.push('/comment-reports')
+}
+
+const goToCommentAdmin = () => {
+  router.push('/comment-admin')
 }
 
 // 返回上一页

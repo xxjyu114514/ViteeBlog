@@ -27,6 +27,14 @@
               <option value="mine">我的文章</option>
             </select>
           </div>
+          <div class="admin-nav-links">
+            <router-link to="/comment-reports" class="nav-link">
+              举报管理
+            </router-link>
+            <router-link to="/comment-admin" class="nav-link">
+              评论巡查
+            </router-link>
+          </div>
         </div>
       </div>
 
@@ -518,6 +526,404 @@ const handleBack = () => {
 }
 </script>
 
-<style scoped>
-/* 所有内联样式已移除，使用_base.scss中的通用类 */
+<style scoped lang="scss">
+@use '@/assets/styles/variables' as *;
+
+.article-manage-wrapper {
+  padding-top: 100px;
+}
+
+.back-button {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  padding: 8px 16px;
+  background: rgba($color-primary, 0.1);
+  color: $color-primary;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba($color-primary, 0.2);
+    transform: translateY(-1px);
+  }
+}
+
+.admin-controls {
+  padding: 16px;
+  background: rgba($color-primary, 0.05);
+  border-radius: 8px;
+  
+  .admin-nav-links {
+    display: flex;
+    gap: 16px;
+    
+    .nav-link {
+      display: inline-block;
+      padding: 8px 16px;
+      background: rgba($color-primary, 0.1);
+      color: $color-primary;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        background: rgba($color-primary, 0.2);
+        transform: translateY(-1px);
+      }
+    }
+  }
+}
+
+.article-list {
+  .article-item {
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    
+    .article-info {
+      .article-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      
+      .meta-text {
+        font-size: 0.875rem;
+        color: $color-secondary;
+        span {
+          margin-right: 8px;
+        }
+        
+        .status-draft {
+          color: $color-warning;
+        }
+        
+        .status-published {
+          color: $color-success;
+        }
+        
+        .status-audited {
+          color: $color-primary;
+        }
+      }
+    }
+    
+    .article-actions {
+      .btn-action {
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          transform: translateY(-1px);
+        }
+      }
+      
+      .btn-publish {
+        background: rgba($color-success, 0.1);
+        color: $color-success;
+        
+        &:hover {
+          background: rgba($color-success, 0.2);
+        }
+      }
+      
+      .btn-edit {
+        background: rgba($color-primary, 0.1);
+        color: $color-primary;
+        
+        &:hover {
+          background: rgba($color-primary, 0.2);
+        }
+      }
+      
+      .btn-delete {
+        background: rgba($color-danger, 0.1);
+        color: $color-danger;
+        
+        &:hover {
+          background: rgba($color-danger, 0.2);
+        }
+      }
+      
+      .btn-audit {
+        background: rgba($color-primary, 0.1);
+        color: $color-primary;
+        
+        &:hover {
+          background: rgba($color-primary, 0.2);
+        }
+      }
+    }
+  }
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  
+  .pagination-btn {
+    padding: 8px 16px;
+    background: rgba($color-primary, 0.1);
+    color: $color-primary;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      background: rgba($color-primary, 0.2);
+      transform: translateY(-1px);
+    }
+    
+    &:disabled {
+      background: rgba($color-secondary, 0.1);
+      color: $color-secondary;
+      cursor: not-allowed;
+    }
+  }
+  
+  .page-info {
+    font-size: 0.875rem;
+    color: $color-secondary;
+  }
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background: $color-bg;
+  padding: 24px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  
+  .modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+  
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: $color-secondary;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      color: $color-primary;
+    }
+  }
+}
+
+.modal-body {
+  .article-preview-section {
+    .preview-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    
+    .preview-loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      gap: 8px;
+      
+      .loading-spinner {
+        width: 32px;
+        height: 32px;
+        border: 4px solid rgba($color-primary, 0.1);
+        border-top: 4px solid $color-primary;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+    }
+    
+    .preview-content {
+      .preview-header {
+        .preview-article-title {
+          font-size: 1.125rem;
+          font-weight: 600;
+          margin-bottom: 8px;
+        }
+        
+        .preview-meta {
+          font-size: 0.875rem;
+          color: $color-secondary;
+          span {
+            margin-right: 8px;
+          }
+        }
+      }
+      
+      .preview-summary {
+        font-size: 0.875rem;
+        color: $color-secondary;
+        margin-bottom: 16px;
+      }
+      
+      .preview-content-area {
+        pre {
+          background: rgba($color-secondary, 0.1);
+          padding: 16px;
+          border-radius: 8px;
+          font-family: monospace;
+          white-space: pre-wrap;
+          overflow-x: auto;
+        }
+      }
+    }
+    
+    .preview-error {
+      p {
+        color: $color-danger;
+      }
+    }
+  }
+  
+  .form-group {
+    margin-bottom: 16px;
+    
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    
+    .radio-group {
+      display: flex;
+      gap: 16px;
+      
+      .radio-option {
+        display: flex;
+        align-items: center;
+        
+        input[type="radio"] {
+          margin-right: 8px;
+        }
+        
+        .radio-text {
+          font-size: 0.875rem;
+          color: $color-secondary;
+        }
+      }
+    }
+    
+    .textarea-field {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid rgba($color-secondary, 0.3);
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: $color-secondary;
+      resize: vertical;
+    }
+  }
+}
+
+.modal-footer {
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    
+    .btn-secondary {
+      padding: 8px 16px;
+      background: rgba($color-secondary, 0.1);
+      color: $color-secondary;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        background: rgba($color-secondary, 0.2);
+        transform: translateY(-1px);
+      }
+    }
+    
+    .btn-primary {
+      padding: 8px 16px;
+      background: rgba($color-primary, 0.1);
+      color: $color-primary;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        background: rgba($color-primary, 0.2);
+        transform: translateY(-1px);
+      }
+    }
+  }
+}
+
+.loading-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 50px;
+  
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 4px solid rgba($color-primary, 0.1);
+    border-top: 4px solid $color-primary;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+}
+
+.empty-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 50px;
+  
+  p {
+    font-size: 1rem;
+    color: $color-secondary;
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 </style>

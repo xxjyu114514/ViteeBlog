@@ -58,6 +58,16 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/comment-reports',
+    component: () => import('@/views/CommentReportListView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/comment-admin',
+    component: () => import('@/views/CommentAdminView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
     path: '/edit-article',
     name: 'article-edit',
     component: ArticleEditView,

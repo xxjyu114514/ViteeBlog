@@ -23,6 +23,10 @@
         <i class="icon-like"></i>
         {{ localLikeCount }}
       </button>
+      <CommentReportButton 
+        :comment-id="props.comment.id" 
+        @report-click="handleReportClick"
+      />
       <button 
         class="action-btn"
         @click="handleReply"
@@ -32,7 +36,16 @@
       </button>
     </div>
     
-    <!-- 回复表单（如果正在回复） -->
+    <!-- 举报弹窗 -->
+    <Teleport to="body">
+      <CommentReportModal
+        :comment-id="props.comment.id"
+        v-model:show="showReportModal"
+        @report-success="handleReportSuccess"
+      />
+    </Teleport>
+    
+    <!-- 回复表单（如果正在回复此评论） -->
     <div v-if="showReplyForm" class="reply-form-container">
       <textarea
         v-model="replyContent"
@@ -83,6 +96,10 @@ import { useRouter } from 'vue-router'
 import MarkdownIt from 'markdown-it'
 import { useCommentAPI } from '@/composables/useCommentAPI'
 
+// 导入举报组件
+import CommentReportButton from './CommentReportButton.vue'
+import CommentReportModal from './CommentReportModal.vue'
+
 // 初始化Markdown解析器（简化版，仅用于评论内容）
 const md = new MarkdownIt({
   html: false,
@@ -101,7 +118,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['comment-liked', 'comment-replied'])
+const emit = defineEmits(['comment-liked', 'comment-replied', 'comment-reported'])
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -263,6 +280,23 @@ const handleChildCommentLiked = (updatedComment) => {
 const handleChildCommentReplied = (newComment) => {
   emit('comment-replied', newComment)
 }
+
+// 举报弹窗显示状态
+const showReportModal = ref(false)
+
+// 举报按钮点击处理
+const handleReportClick = (commentId) => {
+  showReportModal.value = true;
+}
+
+// 举报成功处理
+const handleReportSuccess = () => {
+  // 显示成功提示（可以使用全局通知组件，这里简单用alert）
+  alert('举报成功！感谢您的监督，我们会尽快处理。')
+  // 触发事件通知父组件（可选）
+  emit('comment-reported', props.comment.id)
+}
+
 </script>
 
 <style scoped lang="scss">

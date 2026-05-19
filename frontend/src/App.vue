@@ -1,4 +1,4 @@
-<template>
+  <template>
   <Navbar />
   
   <router-view v-slot="{ Component, route }">

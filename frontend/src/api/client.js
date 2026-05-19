@@ -55,7 +55,8 @@ export const useBaseFetch = createFetch({
       // 改进逻辑：排除登录请求的401错误
       if (ctx.response?.status === 401) {
         // 检查是否为登录请求（排除/auth/login路径）
-        if (!ctx.request.url.includes('/auth/login')) {
+        const requestUrl = ctx.request?.url || '';
+        if (!requestUrl.includes('/auth/login')) {
           const userStore = useUserStore()
           userStore.logout()
           // 强制重定向到登录页
