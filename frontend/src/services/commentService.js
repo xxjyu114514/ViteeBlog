@@ -47,3 +47,24 @@ export const auditComment = (commentId, passAudit) =>
 /** POST /comments/admin/comments/batch-audit */
 export const batchAuditComments = (commentIds, passAudit) =>
   post('/comments/admin/comments/batch-audit', { comment_ids: commentIds, pass_audit: passAudit })
+
+/**
+ * 获取合并的巡查数据（举报 + 待审核评论）
+ * 前端合并两个 API 调用，后端暂未提供统一端点
+ */
+export const getMergedComments = async (params = {}) => {
+  const [reportsRes, pendingRes] = await Promise.all([
+    get('/comments/admin/reports', params),
+    get('/comments/admin/comments/pending', params),
+  ])
+  return {
+    success: reportsRes.success && pendingRes.success,
+    data: {
+      reports: reportsRes.data?.items || [],
+      pendingComments: pendingRes.data?.items || [],
+      totalReports: reportsRes.data?.total || 0,
+      totalPending: pendingRes.data?.total || 0,
+      totalPages: Math.max(reportsRes.data?.pages || 0, pendingRes.data?.pages || 0),
+    },
+  }
+}

@@ -29,6 +29,7 @@
         :article-id="articleId"
         @comment-liked="handleCommentLiked"
         @comment-replied="handleCommentReplied"
+        @comment-deleted="handleCommentDeleted"
       />
     </div>
   </div>
@@ -205,6 +206,19 @@ const handleCommentReplied = (newComment) => {
   
   // 触发事件通知父组件评论数量变化
   emit('comments-loaded', comments.value.length)
+}
+
+const handleCommentDeleted = (commentId) => {
+  const removeFromList = (list, id) => {
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (list[i].id === id) { list.splice(i, 1); return true }
+      if (list[i].replies && list[i].replies.length > 0) {
+        if (removeFromList(list[i].replies, id)) return true
+      }
+    }
+    return false
+  }
+  removeFromList(comments.value, commentId)
 }
 
 onMounted(() => {

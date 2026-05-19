@@ -44,7 +44,7 @@ const routes = [
   },
   {
     path: '/manage-articles',
-    component: () => import('@/views/ArticleManageView.vue'),
+    component: ArticleManageView,
     meta: { requiresAuth: true }
   },
   {
@@ -78,6 +78,12 @@ const routes = [
     name: 'article-edit-detail',
     component: ArticleEditView,
     meta: { index: 8, title: '编辑文章', requiresAuth: true }
+  },
+  {
+    path: '/favorites',
+    name: 'favorites',
+    component: () => import('@/views/FavoritesView.vue'),
+    meta: { index: 12, title: '我的收藏', requiresAuth: true }
   },
   {
     path: '/about-immersive',
@@ -125,19 +131,14 @@ const router = createRouter({
   }
 })
 
-// 核心：路由守卫
 router.beforeEach((to, from, next) => {
-  // 必须在守卫函数内部获取 store，否则会触发 getActivePinia() 报错
   const userStore = useUserStore()
 
   if (to.meta.requiresAuth && !userStore.isAuthenticated) {
-    // 未登录尝试进入需要权限的页面 -> 强制跳转登录
     next('/login')
   } else if (to.meta.guestOnly && userStore.isAuthenticated) {
-    // 已登录尝试进入“仅限游客”页面（如登录页） -> 强制重定向回首页
     next('/')
   } else if (to.meta.requiresAdmin && !userStore.isAdmin) {
-    // 需要管理员权限但不是管理员 -> 显示错误提示并跳转到个人中心
     alert('权限不足：此功能仅限管理员使用')
     next('/personal')
   } else {
@@ -145,7 +146,6 @@ router.beforeEach((to, from, next) => {
   }
 })
 
-// 动态修改标题
 router.afterEach((to) => {
   const baseTitle = '观测笔记'
   document.title = to.meta.title ? `${to.meta.title} - ${baseTitle}` : baseTitle

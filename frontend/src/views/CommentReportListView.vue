@@ -66,9 +66,13 @@
         </div>
 
         <div class="report-actions" v-if="!report.isResolved">
+          <label class="hide-checkbox">
+            <input type="checkbox" :checked="hideCommentIds.includes(report.comment.id)" @change="toggleHideId(report.comment.id)" />
+            同时隐藏该评论
+          </label>
           <button 
             class="btn-resolve" 
-            @click="handleResolveReport(report.id)"
+            @click="handleResolveReport(report.id, report.comment.id)"
             :disabled="resolvingIds.has(report.id)"
           >
             {{ resolvingIds.has(report.id) ? '处理中...' : '标记为已处理' }}
@@ -126,6 +130,15 @@ const totalReports = ref(0)
 const totalPages = ref(0)
 const loading = ref(false)
 const resolvingIds = ref(new Set())
+const hideCommentIds = ref([])
+
+const toggleHideId = (id) => {
+  if (hideCommentIds.value.includes(id)) {
+    hideCommentIds.value = hideCommentIds.value.filter(i => i !== id)
+  } else {
+    hideCommentIds.value.push(id)
+  }
+}
 
 // API 调用
 // 格式化日期 - 使用 utils 中的 formatDateTime
@@ -156,16 +169,23 @@ const fetchReports = async () => {
   }
 }
 
-// 处理举报（标记为已处理）
-const handleResolveReport = async (reportId) => {
+// 处理举报（标记为已处理，可选同时隐藏评论）
+const handleResolveReport = async (reportId, commentId) => {
   if (resolvingIds.value.has(reportId)) return
   
   resolvingIds.value.add(reportId)
   
   try {
+    // 1. 标记举报已处理
     const result = await commentService.resolveReport(reportId)
     
     if (result.success) {
+      // 2. 如果勾选了"同时隐藏"，调用审核接口隐藏评论
+      if (hideCommentIds.value.includes(commentId)) {
+        await commentService.auditComment(commentId, false)
+        hideCommentIds.value = hideCommentIds.value.filter(id => id !== commentId)
+      }
+      
       // 更新本地状态
       const reportIndex = reports.value.findIndex(r => r.id === reportId)
       if (reportIndex !== -1) {
@@ -415,7 +435,21 @@ onMounted(() => {
 
 .report-actions {
   margin-top: 24px;
-  text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16px;
+  
+  .hide-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    color: $text-secondary;
+    cursor: pointer;
+    user-select: none;
+    input { width: 16px; height: 16px; cursor: pointer; }
+  }
   
   .btn-resolve {
     background: linear-gradient(135deg, $color-success 0%, darken($color-success, 10%) 100%);

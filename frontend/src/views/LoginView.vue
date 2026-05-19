@@ -7,8 +7,8 @@
       </div>
       <div class="visual-content">
         <transition name="text-move" mode="out-in">
-          <div class="brand-info" :key="isLogin ? 'l-t' : 'r-t'">
-            <h1>{{ isLogin ? '观测笔记' : '加入观测' }}</h1>
+          <div class="brand-info" :key="mode">
+            <h1>{{ mode === 'login' ? '观测笔记' : mode === 'register' ? '加入观测' : '找回密码' }}</h1>
             <div class="animated-bar"></div>
             <p>DESIGN FOR OBSERVATION / 2026</p>
           </div>
@@ -19,59 +19,101 @@
     <div class="login-form-container">
       <div class="form-card" ref="cardRef">
         <transition name="slide-form" mode="out-in" @before-leave="beforeLeave" @after-leave="afterLeave" @enter="enter" @after-enter="afterEnter">
-          <div class="inner-form-wrapper" :key="isLogin ? 'login' : 'register'">
+          <div class="inner-form-wrapper" :key="mode">
             <header class="form-header">
-              <h2>{{ isLogin ? '登 录' : '注 册' }}</h2>
-              <p>{{ isLogin ? '博主账号身份验证' : '注册普通用户以发表评论' }}</p>
+              <h2 v-if="mode === 'login'">登 录</h2>
+              <h2 v-else-if="mode === 'register'">注 册</h2>
+              <h2 v-else>忘记密码</h2>
+              <p>{{ mode === 'login' ? '博主账号身份验证' : mode === 'register' ? '注册普通用户以发表评论' : '通过邮箱验证码重置密码' }}</p>
             </header>
 
             <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
             <div v-if="successMessage" class="success-message">{{ successMessage }}</div>
 
-            <form @submit.prevent="handleSubmit" class="main-form">
+            <!-- ===== 登录模式 ===== -->
+            <form v-if="mode === 'login'" @submit.prevent="handleSubmit" class="main-form">
               <div class="input-group">
                 <label>账号</label>
                 <input v-model="formData.username" type="text" placeholder="Username" required @input="clearMessages" />
               </div>
-
-              <template v-if="!isLogin">
-                <div class="input-group email-with-send">
-                  <label>电子邮箱</label>
-                  <div class="email-input-wrapper">
-                    <input v-model="formData.email" type="email" placeholder="Email Address" required @input="clearMessages" />
-                    <button type="button" class="send-code-btn" :disabled="isSendingCode || !isValidEmail(formData.email)" @click="sendVerificationCode">
-                      {{ isSendingCode ? '发送中...' : '发送验证码' }}
-                    </button>
-                  </div>
-                </div>
-                <div class="input-group">
-                  <label>邮箱验证码</label>
-                  <input v-model="formData.verificationCode" type="text" placeholder="请输入邮箱验证码" required @input="clearMessages" />
-                </div>
-              </template>
-
               <div class="input-group">
                 <label>密码</label>
                 <input v-model="formData.password" type="password" placeholder="Password" required @input="clearMessages" />
               </div>
-
-              <div v-if="isLogin" class="form-options">
+              <div class="form-options">
                 <label class="checkbox-label">
                   <input type="checkbox" v-model="formData.remember" />
                   <span class="custom-check"></span>
                   <span>记住密码</span>
                 </label>
-                <a href="#" class="forgot-link">忘记密码？</a>
+                <a href="#" class="forgot-link" @click.prevent="mode = 'forgot'">忘记密码？</a>
               </div>
-
               <button type="submit" class="submit-btn" :disabled="isSubmitting">
-                <span>{{ isSubmitting ? '请求中...' : (isLogin ? '立即登录' : '提交注册') }}</span>
+                <span>{{ isSubmitting ? '请求中...' : '立即登录' }}</span>
+              </button>
+            </form>
+
+            <!-- ===== 注册模式 ===== -->
+            <form v-else-if="mode === 'register'" @submit.prevent="handleSubmit" class="main-form">
+              <div class="input-group">
+                <label>账号</label>
+                <input v-model="formData.username" type="text" placeholder="Username" required @input="clearMessages" />
+              </div>
+              <div class="input-group email-with-send">
+                <label>电子邮箱</label>
+                <div class="email-input-wrapper">
+                  <input v-model="formData.email" type="email" placeholder="Email Address" required @input="clearMessages" />
+                  <button type="button" class="send-code-btn" :disabled="isSendingCode || !isValidEmail(formData.email)" @click="sendVerificationCode">
+                    {{ isSendingCode ? '发送中...' : '发送验证码' }}
+                  </button>
+                </div>
+              </div>
+              <div class="input-group">
+                <label>邮箱验证码</label>
+                <input v-model="formData.verificationCode" type="text" placeholder="请输入邮箱验证码" required @input="clearMessages" />
+              </div>
+              <div class="input-group">
+                <label>密码</label>
+                <input v-model="formData.password" type="password" placeholder="Password" required @input="clearMessages" />
+              </div>
+              <button type="submit" class="submit-btn" :disabled="isSubmitting">
+                <span>{{ isSubmitting ? '请求中...' : '提交注册' }}</span>
+              </button>
+            </form>
+
+            <!-- ===== 找回密码模式 ===== -->
+            <form v-else @submit.prevent="handleForgotSubmit" class="main-form">
+              <div class="input-group email-with-send">
+                <label>电子邮箱</label>
+                <div class="email-input-wrapper">
+                  <input v-model="forgotForm.email" type="email" placeholder="注册时使用的邮箱" required @input="clearMessages" />
+                  <button type="button" class="send-code-btn" :disabled="forgotSending || !isValidEmail(forgotForm.email)" @click="sendForgotCode">
+                    {{ forgotSending ? '发送中...' : '发送验证码' }}
+                  </button>
+                </div>
+              </div>
+              <div class="input-group">
+                <label>邮箱验证码</label>
+                <input v-model="forgotForm.code" type="text" placeholder="请输入邮箱验证码" required @input="clearMessages" />
+              </div>
+              <div class="input-group">
+                <label>新密码</label>
+                <input v-model="forgotForm.newPassword" type="password" placeholder="至少6个字符" required minlength="6" @input="clearMessages" />
+              </div>
+              <button type="submit" class="submit-btn" :disabled="forgotSubmitting">
+                <span>{{ forgotSubmitting ? '重置中...' : '重置密码' }}</span>
               </button>
             </form>
 
             <div class="switch-area">
-              <span>{{ isLogin ? '没有账号?' : '已有账号?' }}</span>
-              <button @click="toggleMode" class="btn-toggle">{{ isLogin ? '去注册' : '去登录' }}</button>
+              <template v-if="mode === 'forgot'">
+                <span>想起密码了？</span>
+                <button @click="mode = 'login'" class="btn-toggle">去登录</button>
+              </template>
+              <template v-else>
+                <span>{{ mode === 'login' ? '没有账号?' : '已有账号?' }}</span>
+                <button @click="toggleMode" class="btn-toggle">{{ mode === 'login' ? '去注册' : '去登录' }}</button>
+              </template>
             </div>
           </div>
         </transition>
@@ -87,17 +129,17 @@ import * as authService from '@/services/authService'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter(), userStore = useUserStore()
-const isLogin = ref(true), isSubmitting = ref(false), isSendingCode = ref(false) 
+const mode = ref('login')
+const isSubmitting = ref(false), isSendingCode = ref(false)
 const errorMessage = ref(''), successMessage = ref(''), cardRef = ref(null)
-let startHeight = 0 
+let startHeight = 0
 
-/* JS 高度缓动控制 */
 const beforeLeave = () => {
   if (!cardRef.value) return
-  cardRef.value.style.transition = '' 
+  cardRef.value.style.transition = ''
   startHeight = cardRef.value.getBoundingClientRect().height
   cardRef.value.style.height = `${startHeight}px`
-  cardRef.value.style.overflow = 'hidden' 
+  cardRef.value.style.overflow = 'hidden'
 }
 const afterLeave = () => { if (cardRef.value) cardRef.value.style.height = 'auto' }
 const enter = () => {
@@ -105,7 +147,7 @@ const enter = () => {
   nextTick(() => {
     const targetHeight = cardRef.value.getBoundingClientRect().height
     cardRef.value.style.height = `${startHeight}px`
-    cardRef.value.offsetHeight 
+    cardRef.value.offsetHeight
     cardRef.value.style.transition = 'height 1.0s cubic-bezier(0.1, 0.9, 0.2, 1)'
     cardRef.value.style.height = `${targetHeight}px`
   })
@@ -118,8 +160,11 @@ const afterEnter = () => {
 }
 
 const formData = reactive({ username: '', email: '', password: '', verificationCode: '', remember: false })
+const forgotForm = reactive({ email: '', code: '', newPassword: '' })
+const forgotSubmitting = ref(false), forgotSending = ref(false)
+
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-const toggleMode = () => { isLogin.value = !isLogin.value; clearMessages() }
+const toggleMode = () => { mode.value = mode.value === 'login' ? 'register' : 'login'; clearMessages() }
 const clearMessages = () => { errorMessage.value = ''; successMessage.value = '' }
 
 const sendVerificationCode = async () => {
@@ -141,7 +186,7 @@ const handleSubmit = async () => {
   if (isSubmitting.value) return
   isSubmitting.value = true; clearMessages()
   try {
-    if (isLogin.value) {
+    if (mode.value === 'login') {
       const result = await authService.login(formData.username, formData.password)
       if (result.success) {
         userStore.setAuth(result.data.accessToken, result.data.user)
@@ -154,7 +199,7 @@ const handleSubmit = async () => {
     } else {
       const result = await authService.register({
         user_in: { username: formData.username, email: formData.email, password: formData.password },
-        email_code: formData.verificationCode
+        email_code: formData.verificationCode,
       })
       if (result.success) {
         successMessage.value = '注册成功！正在自动登录...'
@@ -165,7 +210,7 @@ const handleSubmit = async () => {
           setTimeout(() => router.push('/personal'), 1500)
         } else {
           errorMessage.value = loginResult.message || '自动登录失败，请手动登录'
-          setTimeout(() => { isLogin.value = true; errorMessage.value = '' }, 3000)
+          setTimeout(() => { mode.value = 'login'; errorMessage.value = '' }, 3000)
         }
       } else {
         errorMessage.value = result.message || '注册失败，请检查输入信息'
@@ -177,10 +222,39 @@ const handleSubmit = async () => {
     isSubmitting.value = false
   }
 }
+
+const sendForgotCode = async () => {
+  if (!isValidEmail(forgotForm.email)) return errorMessage.value = '请输入有效的邮箱地址'
+  forgotSending.value = true; clearMessages()
+  try {
+    const result = await authService.sendForgotCode(forgotForm.email)
+    if (result.success) {
+      successMessage.value = '验证码已发送至您的邮箱，请注意查收'
+      setTimeout(() => { if (successMessage.value.includes('验证码')) successMessage.value = '' }, 3000)
+    } else {
+      errorMessage.value = result.message || '发送验证码失败'
+    }
+  } catch { errorMessage.value = '网络连接异常' }
+  finally { forgotSending.value = false }
+}
+
+const handleForgotSubmit = async () => {
+  if (forgotSubmitting.value) return
+  forgotSubmitting.value = true; clearMessages()
+  try {
+    const result = await authService.resetPassword(forgotForm.email, forgotForm.code, forgotForm.newPassword)
+    if (result.success) {
+      successMessage.value = '密码重置成功！请使用新密码登录'
+      setTimeout(() => { mode.value = 'login'; clearMessages() }, 2000)
+    } else {
+      errorMessage.value = result.message || '重置密码失败'
+    }
+  } catch { errorMessage.value = '网络连接异常' }
+  finally { forgotSubmitting.value = false }
+}
 </script>
 
 <style lang="scss" scoped>
-/* 样式完美保留原有的一致性，无任何改动 */
 .login-page {
   display: flex; width: 100vw; height: 100vh; overflow: hidden; background-color: #050505;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -192,7 +266,7 @@ const handleSubmit = async () => {
     width: 100%; height: 100%; position: absolute; top: 0; left: 0;
     .bg-image { width: 100%; height: 100%; object-fit: cover; }
     .bottom-shadow-overlay {
-      position: absolute; bottom: 0; left: 0; width: 100%; height: 35%; 
+      position: absolute; bottom: 0; left: 0; width: 100%; height: 35%;
       background: linear-gradient(0deg, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.4) 50%, rgba(0, 0, 0, 0) 100%);
     }
   }
@@ -206,16 +280,16 @@ const handleSubmit = async () => {
   }
 }
 .login-form-container {
-  flex: 0.55; min-width: 340px; height: 100%; background: #ededed; display: flex; align-items: center; justify-content: center; 
+  flex: 0.55; min-width: 340px; height: 100%; background: #ededed; display: flex; align-items: center; justify-content: center;
   padding: clamp(60px, 7vh, 90px) clamp(16px, 2.5vw, 40px) clamp(20px, 4vh, 40px) clamp(16px, 2.5vw, 40px); box-sizing: border-box;
   box-shadow: -10px 0 30px rgba(0, 0, 0, 0.15); z-index: 5; overflow: hidden;
   @media (max-width: 1024px) { flex: 1; }
   .form-card {
-    width: 100%; max-width: clamp(320px, 24vw, 420px); max-height: calc(100vh - clamp(80px, 10vh, 130px)); overflow-y: auto; 
+    width: 100%; max-width: clamp(320px, 24vw, 420px); max-height: calc(100vh - clamp(80px, 10vh, 130px)); overflow-y: auto;
     background: rgba(255, 255, 255, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 12px; padding: clamp(20px, 3vh, 34px) clamp(16px, 2vw, 32px); 
+    border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 12px; padding: clamp(20px, 3vh, 34px) clamp(16px, 2vw, 32px);
     box-sizing: border-box; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04), 0 24px 48px rgba(0, 0, 0, 0.12); will-change: height;
-    scrollbar-width: none; -ms-overflow-style: none; 
+    scrollbar-width: none; -ms-overflow-style: none;
     &::-webkit-scrollbar { display: none; width: 0 !important; height: 0 !important; background: transparent; }
   }
   .inner-form-wrapper { width: 100%; display: flex; flex-direction: column; }
@@ -227,11 +301,11 @@ const handleSubmit = async () => {
 }
 .main-form {
   .input-group {
-    display: flex; flex-direction: column; margin-bottom: clamp(10px, 1.6vh, 16px); 
+    display: flex; flex-direction: column; margin-bottom: clamp(10px, 1.6vh, 16px);
     label { font-size: clamp(0.7rem, 0.75vw, 0.8rem); font-weight: 600; color: #222222; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; padding-left: 2px; }
     input[type="text"], input[type="email"], input[type="password"] {
       width: 100%; height: clamp(34px, 4vh, 42px); padding: 0 clamp(10px, 1.2vw, 16px); font-size: clamp(0.85rem, 0.9vw, 0.95rem);
-      border: 1px solid rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.7); border-radius: 8px; color: #111111; transition: all 0.25s ease; box-sizing: border-box; text-align: left; 
+      border: 1px solid rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.7); border-radius: 8px; color: #111111; transition: all 0.25s ease; box-sizing: border-box; text-align: left;
       &:focus { outline: none; border-color: #0091ff; background: #ffffff; box-shadow: 0 0 0 3px rgba(0, 145, 255, 0.08); }
     }
   }
@@ -239,14 +313,14 @@ const handleSubmit = async () => {
     display: flex; gap: clamp(6px, 1vw, 10px); input { flex: 1; }
     .send-code-btn {
       padding: 0 clamp(10px, 1.2vw, 18px); height: clamp(34px, 4vh, 42px); font-size: clamp(0.75rem, 0.8vw, 0.85rem);
-      border: 1px solid #111111; background: #111111; color: #ffffff; border-radius: 8px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.2s ease; box-sizing: border-box; display: flex; align-items: center; justify-content: center; 
+      border: 1px solid #111111; background: #111111; color: #ffffff; border-radius: 8px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.2s ease; box-sizing: border-box; display: flex; align-items: center; justify-content: center;
       &:hover:not(:disabled) { background: #333333; border-color: #333333; }
       &:disabled { background: rgba(0, 0, 0, 0.05); border-color: rgba(0, 0, 0, 0.05); color: #888888; cursor: not-allowed; }
     }
   }
 }
 .form-options {
-  display: flex; align-items: center; justify-content: space-between; margin-bottom: clamp(12px, 2vh, 20px); font-size: clamp(0.75rem, 0.8vw, 0.85rem); padding: 0 2px; 
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: clamp(12px, 2vh, 20px); font-size: clamp(0.75rem, 0.8vw, 0.85rem); padding: 0 2px;
   .checkbox-label {
     display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; color: #333333; input { display: none; }
     .custom-check {
@@ -255,7 +329,7 @@ const handleSubmit = async () => {
     }
     input:checked + .custom-check { background: #0091ff; border-color: #0091ff; &:after { opacity: 1; } }
   }
-  .forgot-link { color: #555555; text-decoration: none; transition: color 0.2s ease; &:hover { color: #0091ff; text-decoration: underline; } }
+  .forgot-link { color: #555555; text-decoration: none; cursor: pointer; transition: color 0.2s ease; &:hover { color: #0091ff; text-decoration: underline; } }
 }
 .submit-btn {
   width: 100%; height: clamp(36px, 4.2vh, 44px); font-size: clamp(0.85rem, 0.9vw, 1rem); background: #0091ff; color: #ffffff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; transition: background-color 0.25s ease, box-shadow 0.25s ease;

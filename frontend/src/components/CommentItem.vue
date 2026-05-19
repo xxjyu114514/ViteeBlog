@@ -34,6 +34,9 @@
       >
         回复
       </button>
+      <button v-if="canDelete" class="action-btn btn-del" @click="handleDelete" :disabled="deleteLoading">
+        {{ deleteLoading ? '删除中...' : '删除' }}
+      </button>
     </div>
     
     <!-- 举报弹窗 -->
@@ -44,6 +47,17 @@
         @report-success="handleReportSuccess"
       />
     </Teleport>
+    
+    <!-- 删除确认弹窗 -->
+    <ConfirmModal
+      :show="showDeleteConfirm"
+      title="删除评论"
+      message="确定要删除此评论吗？删除后不可恢复。"
+      confirm-text="删除"
+      :danger="true"
+      @confirm="handleDelete"
+      @cancel="showDeleteConfirm = false"
+    />
     
     <!-- 回复表单（如果正在回复此评论） -->
     <div v-if="showReplyForm" class="reply-form-container">
@@ -84,6 +98,7 @@
         :article-id="articleId"
         @comment-liked="handleChildCommentLiked"
         @comment-replied="handleChildCommentReplied"
+        @comment-deleted="(id) => emit('comment-deleted', id)"
       />
     </div>
   </div>
@@ -93,12 +108,12 @@
 import { ref, computed, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { useRouter } from 'vue-router'
-import { createComment as createCommentApi, likeComment } from '@/services/commentService'
+import { createComment as createCommentApi, likeComment, deleteComment as deleteCommentApi } from '@/services/commentService'
 import { renderInline } from '@/utils'
 
-// 导入举报组件
 import CommentReportButton from './CommentReportButton.vue'
 import CommentReportModal from './CommentReportModal.vue'
+import ConfirmModal from './ConfirmModal.vue'
 
 const props = defineProps({
   comment: {
@@ -111,7 +126,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['comment-liked', 'comment-replied', 'comment-reported'])
+const emit = defineEmits(['comment-liked', 'comment-replied', 'comment-reported', 'comment-deleted'])
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -144,6 +159,24 @@ watch(() => props.comment.likeCount, (newVal) => {
 })
 
 const likeLoading = ref(false)
+const deleteLoading = ref(false)
+const showDeleteConfirm = ref(false)
+
+const canDelete = computed(() => {
+  return userStore.isAuthenticated && (userStore.isAdmin || userStore.userInfo?.id === props.comment.userId)
+})
+
+const handleDelete = async () => {
+  showDeleteConfirm.value = false
+  deleteLoading.value = true
+  const result = await deleteCommentApi(props.comment.id)
+  if (result.success) {
+    emit('comment-deleted', props.comment.id)
+  } else {
+    alert(result.message || '删除失败')
+  }
+  deleteLoading.value = false
+}
 
 const handleLike = async () => {
   if (!userStore.isAuthenticated) {
@@ -362,4 +395,6 @@ const handleReportSuccess = () => {
   color: #ef4444;
   font-size: 0.85rem;
 }
+
+.btn-del { color: #ef4444; &:hover { text-decoration: underline; } }
 </style>
