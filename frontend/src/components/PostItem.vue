@@ -3,7 +3,7 @@
     <div class="post-meta meta-text">
       <span class="date">{{ formatDate(post.published_at) }}</span>
       <span class="dot">·</span>
-      <span class="views">{{ post.view_count }} 阅读</span>
+      <span class="views">{{ post.viewCount }} 阅读</span>
     </div>
     <h2 class="post-title title-large" v-html="renderedTitle"></h2>
     <p class="post-summary text-clamp-2">{{ post.summary }}</p>
@@ -16,7 +16,7 @@
 <script setup>
 import { defineProps, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import MarkdownIt from 'markdown-it'
+import { formatDate, renderInline } from '@/utils'
 
 const props = defineProps({
   post: Object
@@ -24,27 +24,10 @@ const props = defineProps({
 
 const router = useRouter()
 
-// 初始化Markdown解析器（简化版，仅用于标题）
-const md = new MarkdownIt({
-  html: false,
-  linkify: true
-})
-
-// 格式化日期
-const formatDate = (dateString) => {
-  if (!dateString) return '未知时间'
-  const date = new Date(dateString)
-  return date.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  })
-}
-
-// 渲染标题
+// 渲染标题（支持 Markdown 语法）
 const renderedTitle = computed(() => {
   if (!props.post?.title) return ''
-  return md.renderInline(props.post.title)
+  return renderInline(props.post.title)
 })
 
 // 处理点击事件

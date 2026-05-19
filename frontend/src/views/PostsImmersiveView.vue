@@ -101,8 +101,8 @@
                 v-else 
                 class="user-info"
               >
-                <span class="username">{{ userStore.user?.username || '用户' }}</span>
-                <span class="role-badge">{{ userStore.user?.role === 'admin' ? '管理员' : '普通用户' }}</span>
+                <span class="username">{{ userStore.userInfo?.username || '用户' }}</span>
+                <span class="role-badge">{{ userStore.userInfo?.role === 'admin' ? '管理员' : '普通用户' }}</span>
               </div>
               
               <h3 
@@ -143,34 +143,24 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePrimaryPageWheel } from '@/composables/usePrimaryPageWheel'
-import { useArticleAPI } from '@/composables/useArticleAPI'
+import { getPublicArticles } from '@/services/articleService'
 import { useUserStore } from '@/stores/user'
 
-// 滚轮导航逻辑
 const { handleWheel } = usePrimaryPageWheel('posts-immersive')
-
-// 路由和状态管理
 const router = useRouter()
 const userStore = useUserStore()
 
-// 文章数据状态
 const articles = ref([])
 const loading = ref(false)
 const error = ref(null)
 
-// 初始化文章API
-const { getPublicArticles } = useArticleAPI()
-
-// 加载文章列表（只加载前6篇用于展示）
 const loadArticles = async () => {
   loading.value = true
   error.value = null
-  
   try {
-    const result = await getPublicArticles(null, 1, 6)
-    
+    const result = await getPublicArticles({ page: 1, size: 6 })
     if (result.success) {
-      articles.value = result.data.items || []
+      articles.value = result.data?.items || []
     } else {
       error.value = result.message || '获取文章列表失败'
     }
@@ -182,18 +172,8 @@ const loadArticles = async () => {
   }
 }
 
-// 跳转到文章详情页
-const goToArticle = (articleId) => {
-  router.push(`/article/${articleId}`)
-}
+const goToArticle = (articleId) => router.push(`/article/${articleId}`)
+const navToSubList = () => router.push('/posts')
 
-// 导航到完整文章列表
-const navToSubList = () => {
-  router.push('/posts')
-}
-
-// 组件挂载时加载文章
-onMounted(() => {
-  loadArticles()
-})
+onMounted(() => { loadArticles() })
 </script>

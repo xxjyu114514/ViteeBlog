@@ -32,7 +32,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { useCommentAPI } from '@/composables/useCommentAPI'
+import { createComment as createCommentApi } from '@/services/commentService'
 
 const props = defineProps({
   articleId: {
@@ -44,7 +44,6 @@ const props = defineProps({
 const emit = defineEmits(['comment-submitted'])
 
 const userStore = useUserStore()
-const { createComment } = useCommentAPI()
 const commentContent = ref('')
 const loading = ref(false)
 const error = ref(null)
@@ -71,9 +70,9 @@ const handleSubmit = async () => {
   error.value = null
   
   try {
-    const result = await createComment(
-      { content: commentContent.value.trim() },
-      props.articleId
+    const result = await createCommentApi(
+      props.articleId,
+      { content: commentContent.value.trim() }
     )
     
     if (result.success) {

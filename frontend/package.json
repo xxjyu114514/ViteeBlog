@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@vueuse/core": "^14.2.1",
+    "dompurify": "^3.4.5",
     "highlight.js": "^11.11.1",
     "markdown-it": "^14.1.0",
     "path": "^0.12.7",

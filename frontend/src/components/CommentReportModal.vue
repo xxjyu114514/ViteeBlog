@@ -59,7 +59,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { useCommentAPI } from '@/composables/useCommentAPI'
+import { reportComment as reportCommentApi } from '@/services/commentService'
 
 const props = defineProps({
   commentId: {
@@ -141,8 +141,7 @@ const handleSubmit = async () => {
   error.value = ''
   
   try {
-    const { reportComment } = useCommentAPI()
-    const result = await reportComment(props.commentId, reason)
+    const result = await reportCommentApi(props.commentId, reason)
     
     if (result.success) {
       emit('report-success')

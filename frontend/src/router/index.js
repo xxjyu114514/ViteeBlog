@@ -114,13 +114,6 @@ const routes = [
     name: 'personal',
     component: PersonalCenterView,
     meta: { index: 5, title: '个人中心', requiresAuth: true }
-  },
-  // API测试页面路由
-  {
-    path: '/api-test',
-    name: 'api-test',
-    component: () => import('@/views/ApiTestView.vue'),
-    meta: { requiresAuth: true, title: 'API测试工具' }
   }
 ]
 

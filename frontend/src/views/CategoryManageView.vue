@@ -97,16 +97,10 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { useMetaAPI } from '@/composables/useMetaAPI'
+import * as metaService from '@/services/metaService'
 
 const router = useRouter()
 const userStore = useUserStore()
-const {
-  getCategories,
-  createCategory,
-  updateCategory,
-  deleteCategory
-} = useMetaAPI()
 
 const categories = ref([])
 const loading = ref(false)
@@ -121,7 +115,7 @@ const showModal = ref(false)
 const fetchCategories = async () => {
   loading.value = true
   try {
-    const result = await getCategories()
+    const result = await metaService.getCategories()
     if (result.success) {
       categories.value = result.data || []
     } else {
@@ -170,7 +164,7 @@ const createCategoryHandler = async () => {
   
   creating.value = true
   try {
-    const result = await createCategory(categoryName.value.trim())
+    const result = await metaService.createCategory(categoryName.value.trim())
     if (result.success) {
       await fetchCategories()
       closeModal()
@@ -194,7 +188,7 @@ const updateCategoryHandler = async () => {
   
   updatingId.value = editingCategory.value.id
   try {
-    const result = await updateCategory(editingCategory.value.id, categoryName.value.trim())
+    const result = await metaService.updateCategory(editingCategory.value.id, categoryName.value.trim())
     if (result.success) {
       await fetchCategories()
       closeModal()
@@ -217,7 +211,7 @@ const deleteCategoryHandler = async (categoryId) => {
   
   deletingId.value = categoryId
   try {
-    const result = await deleteCategory(categoryId)
+    const result = await metaService.deleteCategory(categoryId)
     if (result.success) {
       await fetchCategories()
     } else {

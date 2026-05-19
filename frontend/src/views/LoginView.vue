@@ -83,15 +83,15 @@
 <script setup>
 import { ref, reactive, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthAPI } from '@/composables/useAuthAPI'
+import * as authService from '@/services/authService'
 import { useUserStore } from '@/stores/user'
 
-const router = useRouter(), authAPI = useAuthAPI(), userStore = useUserStore()
+const router = useRouter(), userStore = useUserStore()
 const isLogin = ref(true), isSubmitting = ref(false), isSendingCode = ref(false) 
 const errorMessage = ref(''), successMessage = ref(''), cardRef = ref(null)
 let startHeight = 0 
 
-/* JS 高度缓动控制（保持原有完美逻辑） */
+/* JS 高度缓动控制 */
 const beforeLeave = () => {
   if (!cardRef.value) return
   cardRef.value.style.transition = '' 
@@ -126,11 +126,13 @@ const sendVerificationCode = async () => {
   if (!isValidEmail(formData.email)) return errorMessage.value = '请输入有效的邮箱地址'
   isSendingCode.value = true; errorMessage.value = ''
   try {
-    const { data, error } = await authAPI.sendRegisterCode(formData.email)
-    if (!error.value && data.value) {
+    const result = await authService.sendRegisterCode(formData.email)
+    if (result.success) {
       successMessage.value = '验证码已发送至您的邮箱，请注意查收'
       setTimeout(() => { if (successMessage.value.includes('验证码')) successMessage.value = '' }, 3000)
-    } else errorMessage.value = error.value?.friendlyMessage || '发送验证码失败，请稍后重试'
+    } else {
+      errorMessage.value = result.message || '发送验证码失败，请稍后重试'
+    }
   } catch { errorMessage.value = '网络连接异常，请检查网络后重试' }
   finally { isSendingCode.value = false }
 }
@@ -140,27 +142,35 @@ const handleSubmit = async () => {
   isSubmitting.value = true; clearMessages()
   try {
     if (isLogin.value) {
-      const result = await authAPI.login(formData.username, formData.password)
+      const result = await authService.login(formData.username, formData.password)
       if (result.success) {
+        userStore.setAuth(result.data.accessToken, result.data.user)
         successMessage.value = '登录成功！正在跳转到个人中心...'
         setTimeout(() => router.push('/personal'), 1500)
-      } else { errorMessage.value = result.message || '登录失败，请检查用户名 and 密码'; isSubmitting.value = false }
+      } else {
+        errorMessage.value = result.message || '登录失败，请检查用户名和密码'
+        isSubmitting.value = false
+      }
     } else {
-      const { data, error } = await authAPI.register({
+      const result = await authService.register({
         user_in: { username: formData.username, email: formData.email, password: formData.password },
         email_code: formData.verificationCode
       })
-      if (!error.value && data.value) {
+      if (result.success) {
         successMessage.value = '注册成功！正在自动登录...'
-        const loginResult = await authAPI.login(formData.username, formData.password)
+        const loginResult = await authService.login(formData.username, formData.password)
         if (loginResult.success) {
+          userStore.setAuth(loginResult.data.accessToken, loginResult.data.user)
           successMessage.value = '注册并登录成功！正在跳转到首页...'
           setTimeout(() => router.push('/personal'), 1500)
         } else {
           errorMessage.value = loginResult.message || '自动登录失败，请手动登录'
           setTimeout(() => { isLogin.value = true; errorMessage.value = '' }, 3000)
         }
-      } else { errorMessage.value = error.value?.friendlyMessage || '注册失败，请检查输入信息'; isSubmitting.value = false }
+      } else {
+        errorMessage.value = result.message || '注册失败，请检查输入信息'
+        isSubmitting.value = false
+      }
     }
   } catch {
     errorMessage.value = '无法连接到服务器，请确保后端已启动并在 http://127.0.0.1:8000 运行'

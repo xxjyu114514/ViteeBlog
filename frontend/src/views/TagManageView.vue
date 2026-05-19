@@ -96,15 +96,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useMetaAPI } from '@/composables/useMetaAPI'
+import * as metaService from '@/services/metaService'
 
 const router = useRouter()
-const {
-  getTags,
-  createTag,
-  updateTag,
-  deleteTag
-} = useMetaAPI()
 
 const loading = ref(false)
 const tags = ref([])
@@ -116,7 +110,7 @@ const deletingId = ref(null)
 const fetchTags = async () => {
   loading.value = true
   try {
-    const result = await getTags()
+    const result = await metaService.getTags()
     if (result.success) {
       tags.value = result.data || []
     } else {
@@ -164,7 +158,7 @@ const handleCreateOrUpdateTag = async () => {
     // 更新标签
     updatingId.value = editingTag.value.id
     try {
-      const result = await updateTag(editingTag.value.id, tagName.value.trim())
+      const result = await metaService.updateTag(editingTag.value.id, tagName.value.trim())
       if (result.success) {
         await fetchTags()
         closeModal()
@@ -181,7 +175,7 @@ const handleCreateOrUpdateTag = async () => {
     // 创建标签
     creating.value = true
     try {
-      const result = await createTag(tagName.value.trim())
+      const result = await metaService.createTag(tagName.value.trim())
       if (result.success) {
         await fetchTags()
         closeModal()
@@ -203,7 +197,7 @@ const handleDelete = async (tagId) => {
   
   deletingId.value = tagId
   try {
-    const result = await deleteTag(tagId)
+    const result = await metaService.deleteTag(tagId)
     if (result.success) {
       await fetchTags()
     } else {

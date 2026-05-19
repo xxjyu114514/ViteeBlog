@@ -71,7 +71,7 @@
         >
           <div class="message-header">
             <span class="message-author">{{ message.name }}</span>
-            <span class="message-time">{{ formatTime(message.created_at) }}</span>
+            <span class="message-time">{{ formatTime(message.createdAt) }}</span>
           </div>
           <div class="message-content">
             {{ message.content }}

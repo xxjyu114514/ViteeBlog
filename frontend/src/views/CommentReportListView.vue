@@ -24,18 +24,18 @@
         v-for="report in reports" 
         :key="report.id"
         class="report-card"
-        :class="{ 'resolved': report.is_resolved }"
+        :class="{ 'resolved': report.isResolved }"
       >
         <div class="report-header">
           <div class="report-info">
             <span class="report-id">举报 #{{ report.id }}</span>
-            <span class="report-time">{{ formatDate(report.created_at) }}</span>
+            <span class="report-time">{{ formatDateTime(report.createdAt) }}</span>
           </div>
           <div class="report-status">
             <span 
-              :class="['status-badge', { 'resolved': report.is_resolved }]"
+              :class="['status-badge', { 'resolved': report.isResolved }]"
             >
-              {{ report.is_resolved ? '已处理' : '待处理' }}
+              {{ report.isResolved ? '已处理' : '待处理' }}
             </span>
           </div>
         </div>
@@ -65,7 +65,7 @@
           </div>
         </div>
 
-        <div class="report-actions" v-if="!report.is_resolved">
+        <div class="report-actions" v-if="!report.isResolved">
           <button 
             class="btn-resolve" 
             @click="handleResolveReport(report.id)"
@@ -104,9 +104,10 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { useCommentAPI } from '@/composables/useCommentAPI'
 import { useUserStore } from '@/stores/user'
 import { useRouter } from 'vue-router'
+import * as commentService from '@/services/commentService'
+import { formatDateTime } from '@/utils'
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -127,26 +128,14 @@ const loading = ref(false)
 const resolvingIds = ref(new Set())
 
 // API 调用
-const { getAdminReports, resolveReport } = useCommentAPI()
-
-// 格式化日期
-const formatDate = (dateString) => {
-  const date = new Date(dateString)
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
+// 格式化日期 - 使用 utils 中的 formatDateTime
 
 // 获取举报列表
 const fetchReports = async () => {
   loading.value = true
   
   try {
-    const result = await getAdminReports({
+    const result = await commentService.getAdminReports({
       page: currentPage.value,
       size: pageSize.value
     })
@@ -174,13 +163,13 @@ const handleResolveReport = async (reportId) => {
   resolvingIds.value.add(reportId)
   
   try {
-    const result = await resolveReport(reportId)
+    const result = await commentService.resolveReport(reportId)
     
     if (result.success) {
       // 更新本地状态
       const reportIndex = reports.value.findIndex(r => r.id === reportId)
       if (reportIndex !== -1) {
-        reports.value[reportIndex].is_resolved = true
+        reports.value[reportIndex].isResolved = true
       }
     } else {
       console.error('Failed to resolve report:', result.message)

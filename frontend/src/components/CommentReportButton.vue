@@ -24,18 +24,17 @@ const props = defineProps({
 const userStore = useUserStore()
 const router = useRouter()
 
+const emit = defineEmits(['report-click'])
+
 const handleReportClick = () => {
   if (!userStore.isAuthenticated) {
-    // 显示友好的未登录提示
     alert('请先登录后再进行举报操作');
     return
   }
   
-  // 触发自定义事件，由父组件处理举报逻辑
   emit('report-click', props.commentId)
 }
 
-const emit = defineEmits(['report-click'])
 </script>
 
 <style scoped lang="scss">

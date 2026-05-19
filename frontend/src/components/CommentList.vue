@@ -37,7 +37,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import CommentItem from './CommentItem.vue'
-import { useCommentAPI } from '@/composables/useCommentAPI'
+import { getCommentsByArticle as getCommentsApi } from '@/services/commentService'
 
 const props = defineProps({
   articleId: {
@@ -48,7 +48,6 @@ const props = defineProps({
 
 const emit = defineEmits(['comments-loaded'])
 
-const { getCommentsByArticle } = useCommentAPI()
 const comments = ref([])
 const loading = ref(false)
 const error = ref(null)
@@ -58,7 +57,7 @@ const loadComments = async () => {
   error.value = null
   
   try {
-    const result = await getCommentsByArticle(props.articleId)
+    const result = await getCommentsApi(props.articleId)
     
     if (result.success) {
       // 调试：输出原始数据
@@ -107,9 +106,9 @@ const buildCommentTree = (flatComments) => {
   flatComments.forEach(comment => {
     const commentWithReplies = commentMap.get(comment.id)
     
-    if (comment.parent_id) {
+    if (comment.parentId) {
       // 这是一个回复评论
-      const parent = commentMap.get(comment.parent_id)
+      const parent = commentMap.get(comment.parentId)
       if (parent) {
         parent.replies.push(commentWithReplies)
       } else {
@@ -134,13 +133,13 @@ const buildCommentTree = (flatComments) => {
   }
   
   // 按时间倒序排列顶级评论（最新的在前面）
-  rootComments.sort((a, b) => parseDate(b.created_at) - parseDate(a.created_at))
+  rootComments.sort((a, b) => parseDate(b.createdAt) - parseDate(a.createdAt))
   
   // 对每个顶级评论的回复也按时间倒序排列
   const sortReplies = (comments) => {
     comments.forEach(comment => {
       if (comment.replies && comment.replies.length > 0) {
-        comment.replies.sort((a, b) => parseDate(b.created_at) - parseDate(a.created_at))
+        comment.replies.sort((a, b) => parseDate(b.createdAt) - parseDate(a.createdAt))
         sortReplies(comment.replies) // 递归排序嵌套回复
       }
     })
@@ -156,8 +155,8 @@ const handleCommentLiked = (updatedComment) => {
   const updateCommentInList = (commentList, commentId, updatedData) => {
     for (let i = 0; i < commentList.length; i++) {
       if (commentList[i].id === commentId) {
-        commentList[i].is_liked = updatedData.is_liked
-        commentList[i].like_count = updatedData.like_count
+        commentList[i].is_liked = updatedData.isLiked
+        commentList[i].like_count = updatedData.likeCount
         return true
       }
       
@@ -197,11 +196,11 @@ const handleCommentReplied = (newComment) => {
   }
   
   // 如果是顶级评论（没有parent_id），添加到列表顶部
-  if (!newComment.parent_id) {
+  if (!newComment.parentId) {
     comments.value.unshift(newComment)
   } else {
     // 否则找到父评论并添加回复
-    addReplyToParent(comments.value, newComment.parent_id, newComment)
+    addReplyToParent(comments.value, newComment.parentId, newComment)
   }
   
   // 触发事件通知父组件评论数量变化

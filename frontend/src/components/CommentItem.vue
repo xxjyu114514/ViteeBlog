@@ -6,7 +6,7 @@
         {{ getInitials(authorInfo.username) }}
       </div>
       <span class="username">{{ authorInfo.username }}</span>
-      <span class="time">{{ formatDate(comment.created_at) }}</span>
+      <span class="time">{{ formatRelativeTime(comment.createdAt) }}</span>
     </div>
     
     <!-- 评论内容 -->
@@ -93,19 +93,12 @@
 import { ref, computed, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { useRouter } from 'vue-router'
-import MarkdownIt from 'markdown-it'
-import { useCommentAPI } from '@/composables/useCommentAPI'
+import { createComment as createCommentApi, likeComment } from '@/services/commentService'
+import { renderInline } from '@/utils'
 
 // 导入举报组件
 import CommentReportButton from './CommentReportButton.vue'
 import CommentReportModal from './CommentReportModal.vue'
-
-// 初始化Markdown解析器（简化版，仅用于评论内容）
-const md = new MarkdownIt({
-  html: false,
-  linkify: true,
-  typographer: true
-})
 
 const props = defineProps({
   comment: {
@@ -122,7 +115,6 @@ const emit = defineEmits(['comment-liked', 'comment-replied', 'comment-reported'
 
 const userStore = useUserStore()
 const router = useRouter()
-const { createComment, toggleCommentLike } = useCommentAPI()
 
 // 安全获取作者信息，处理 author 字段缺失的情况
 const authorInfo = computed(() => {
@@ -139,15 +131,15 @@ const replyLoading = ref(false)
 const replyError = ref(null)
 
 // 使用本地响应式状态管理点赞状态，避免直接修改props
-const localIsLiked = ref(props.comment.is_liked)
-const localLikeCount = ref(props.comment.like_count)
+const localIsLiked = ref(props.comment.isLiked)
+const localLikeCount = ref(props.comment.likeCount)
 
 // 监听props变化，同步到本地状态
-watch(() => props.comment.is_liked, (newVal) => {
+watch(() => props.comment.isLiked, (newVal) => {
   localIsLiked.value = newVal
 })
 
-watch(() => props.comment.like_count, (newVal) => {
+watch(() => props.comment.likeCount, (newVal) => {
   localLikeCount.value = newVal
 })
 
@@ -165,17 +157,17 @@ const handleLike = async () => {
   likeLoading.value = true
   
   try {
-    const result = await toggleCommentLike(props.comment.id)
+    const result = await likeComment(props.comment.id)
     
     if (result.success) {
       // 更新本地状态
-      localIsLiked.value = result.data.is_liked
-      localLikeCount.value = result.data.like_count
+      localIsLiked.value = result.data.isLiked
+      localLikeCount.value = result.data.likeCount
       // 触发事件通知父组件
       emit('comment-liked', {
         ...props.comment,
-        is_liked: result.data.is_liked,
-        like_count: result.data.like_count
+        isLiked: result.data.isLiked,
+        likeCount: result.data.likeCount,
       })
     }
   } catch (err) {
@@ -188,7 +180,7 @@ const handleLike = async () => {
 // 渲染Markdown内容
 const renderedContent = computed(() => {
   if (!props.comment.content) return ''
-  return md.renderInline(props.comment.content)
+  return renderInline(props.comment.content)
 })
 
 // 获取用户名首字母
@@ -197,8 +189,8 @@ const getInitials = (username) => {
   return username.charAt(0).toUpperCase()
 }
 
-// 格式化日期
-const formatDate = (dateString) => {
+// 格式化日期（相对时间）
+const formatRelativeTime = (dateString) => {
   if (!dateString) return '刚刚'
   const date = new Date(dateString)
   const now = new Date()
@@ -250,12 +242,12 @@ const submitReply = async () => {
   replyError.value = null
   
   try {
-    const result = await createComment(
+    const result = await createCommentApi(
+      props.articleId,
       { 
         content: replyContent.value.trim(),
         parent_id: props.comment.id
-      },
-      props.articleId
+      }
     )
     
     if (result.success) {

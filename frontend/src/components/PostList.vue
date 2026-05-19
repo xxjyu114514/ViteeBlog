@@ -48,14 +48,12 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import PostItem from './PostItem.vue'
-import { useArticleAPI } from '@/composables/useArticleAPI'
+import { getPublicArticles } from '@/services/articleService'
 
 const currentTab = ref('latest')
 const articles = ref([])
 const loading = ref(true)
 const error = ref(null)
-
-const { getPublicArticles } = useArticleAPI()
 
 // 加载文章数据
 const loadArticles = async () => {
@@ -63,16 +61,11 @@ const loadArticles = async () => {
   error.value = null
   
   const result = await getPublicArticles()
-  console.log('📝 获取公开文章结果:', result) // 调试日志
   
   if (result.success) {
-    // 后端返回的是分页对象 {items: [], total: number, page: number, size: number}
-    // 需要提取 items 数组
-    articles.value = result.data.items || []
-    console.log('📚 文章列表数据:', articles.value) // 调试日志
+    articles.value = result.data?.items || []
   } else {
     error.value = result.message
-    console.error('❌ 获取文章列表失败:', result.message) // 调试日志
   }
   loading.value = false
 }
@@ -81,7 +74,7 @@ const loadArticles = async () => {
 const filteredArticles = computed(() => {
   if (currentTab.value === 'hot') {
     // 热门文章按阅读量排序
-    return [...articles.value].sort((a, b) => b.view_count - a.view_count)
+    return [...articles.value].sort((a, b) => b.viewCount - a.view_count)
   } else {
     // 最新文章按发布时间排序（已经是降序）
     return articles.value
