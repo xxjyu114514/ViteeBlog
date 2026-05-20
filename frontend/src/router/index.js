@@ -16,8 +16,15 @@ const PersonalCenterView = () => import('../views/PersonalCenterView.vue')
 const ArticleDetailView = () => import('../views/ArticleDetailView.vue')
 const ArticleManageView = () => import('../views/ArticleManageView.vue')
 const ArticleEditView = () => import('../views/ArticleEditView.vue')
+const TestScssView = () => import('../views/test_scss.vue')
 
 const routes = [
+  {
+    path: '/test-scss',
+    name: 'test-scss',
+    component: TestScssView,
+    meta: { index: 99, title: 'SCSS 测试页面' }
+  },
   {
     path: '/',
     name: 'home',
@@ -115,7 +122,7 @@ const routes = [
     component: LoginView,
     meta: { index: 4, title: '账号登录', guestOnly: true }
   },
-  {
+  { 
     path: '/personal',
     name: 'personal',
     component: PersonalCenterView,
