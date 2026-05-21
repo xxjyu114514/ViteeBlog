@@ -1,6 +1,6 @@
 <template>
-  <nav :class="['navbar-fixed', { 'is-immersive': isImmersiveMode }]">
-    <div v-if="isImmersiveMode" class="dynamic-blur-layer"></div>
+  <nav class="navbar-fixed is-immersive">
+    <div class="dynamic-blur-layer"></div>
     
     <div class="nav-container container flex-between">
       <div class="logo-section">
@@ -42,11 +42,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
-const route = useRoute()
 const userStore = useUserStore()
 
 const menuItems = [
@@ -55,11 +52,6 @@ const menuItems = [
   { name: '关于', path: '/about-immersive' },
   { name: '留言', path: '/message-immersive' }
 ]
-
-// 统一判定沉浸模式
-const isImmersiveMode = computed(() => {
-  return ['/', '/posts-immersive', '/about-immersive', '/message-immersive', '/login', '/personal'].includes(route.path)
-})
 
 import "./navbar.scss"
 </script>

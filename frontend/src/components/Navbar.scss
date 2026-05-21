@@ -8,17 +8,10 @@
   align-items: center;
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 
-  // --- 默认：常规页面（白底黑线） ---
-  background: var(--bg-white);
-  color: var(--text-main);
-  border-bottom: 1px solid var(--text-main);
-
-  // --- 沉浸模式：首页 & 登录页 & 个人中心 ---
-  &.is-immersive {
-    background: transparent; 
-    color: var(--bg-white);
-    border-bottom: none !important;
-  }
+  // 移除默认的白底黑线样式，只保留透明背景
+  background: transparent; 
+  color: var(--bg-white);
+  border-bottom: none !important;
 }
 
 .dynamic-blur-layer {
