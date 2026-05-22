@@ -186,7 +186,7 @@ Authorization: Bearer <Your_Token>
 - `500`: 邮件发送失败
 
 **前端注意**:
-- ✅ 只有已注册的邮箱才能发送重置验证码 
+- ✅ 只有已注册的邮箱才能发送重置验证码
 - ✅ 验证码有效期10分钟
 - ✅ 点击后禁用按钮，开启60秒倒计时
 
@@ -550,8 +550,8 @@ def downgrade():
 
 ---
 
-**最后更新时间**: 2026-05-17  
-**文档版本**: v4.3  
+**最后更新时间**: 2026-05-05  
+**文档版本**: v4.2  
 **维护者**: Backend Team
 
 ---
@@ -573,9 +573,6 @@ def downgrade():
 - ♻️ **恢复功能**：可从回收站恢复误删文章
 - 💥 **硬删除**：永久粉碎文章记录
 - 🖼️ **图片管理**：支持上传和删除图片
-- ⭐ **文章点赞**：用户可点赞/取消点赞文章
-- 📌 **文章置顶**：管理员可置顶重要文章
-- 📅 **文章归档**：按年月统计文章数量
 
 ### 文章状态流转
 
@@ -697,8 +694,6 @@ def downgrade():
 |------|------|------|
 | cover_image | string | 封面图片URL，可为 null |
 | view_count | int | 文章阅读量，每次访问自动+1 |
-| like_count | int | 文章点赞数 |
-| is_liked | bool | 当前用户是否已点赞（未登录时为false） |
 | author | object | 作者信息（id, username） |
 
 **权限说明**:
@@ -937,7 +932,7 @@ def downgrade():
 **参数说明**:
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| pass_audit | boolean | ✅ | `true`=恢复显示，`false`=标记违规隐藏 |
+| pass_audit | boolean | ✅ | `true`=通过，`false`=驳回 |
 | remark | string | 条件必填 | 驳回时必须填写理由（最多500字符） |
 
 **成功响应** (200):
@@ -1062,148 +1057,6 @@ def downgrade():
 - ⚠️ 执行前必须二次确认
 - ⚠️ 删除后无法撤销
 - ℹ️ 硬删除仅删除数据库记录，不再处理物理文件
-
----
-
-### 14. 文章点赞/取消点赞
-
-**接口**: `POST /article/{article_id}/like`  
-**权限**: 所有登录用户
-
-**功能**: 智能切换点赞状态（未点赞则点赞，已点赞则取消）
-
-**路径参数**:
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| article_id | int | ✅ | 文章ID |
-
-**成功响应** (200) - 首次点赞:
-```json
-{
-  "liked": true,
-  "like_count": 1
-}
-```
-
-**成功响应** (200) - 取消点赞:
-```json
-{
-  "liked": false,
-  "like_count": 0
-}
-```
-
-**响应字段说明**:
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| liked | bool | 当前操作后的点赞状态（true=已点赞，false=已取消） |
-| like_count | int | 最新的点赞总数 |
-
-**错误响应**:
-- `404`: 文章不存在
-- `401`: 未登录
-
-**前端注意**:
-- ✅ 接口自动判断当前点赞状态并切换
-- ✅ 返回最新的点赞数和状态，前端直接更新UI
-- ✅ 使用唯一约束防止重复点赞
-- ⚠️ 需要携带 Token 认证
-
----
-
-### 15. 获取文章点赞数
-
-**接口**: `GET /article/{article_id}/like/count`  
-**权限**: 公开
-
-**路径参数**:
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| article_id | int | ✅ | 文章ID |
-
-**成功响应** (200):
-```json
-{
-  "article_id": 1,
-  "like_count": 10
-}
-```
-
-**前端注意**:
-- ✅ 无需登录即可获取点赞数
-- ✅ 用于在文章列表页显示点赞统计
-
----
-
-### 16. 【管理员】置顶/取消置顶文章
-
-**接口**: `PUT /article/admin/articles/{article_id}/pin`  
-**权限**: 仅管理员
-
-**功能**: 切换文章置顶状态
-
-**路径参数**:
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| article_id | int | ✅ | 文章ID |
-
-**成功响应** (200) - 置顶:
-```json
-{
-  "message": "已置顶",
-  "is_pinned": true
-}
-```
-
-**成功响应** (200) - 取消置顶:
-```json
-{
-  "message": "已取消置顶",
-  "is_pinned": false
-}
-```
-
-**前端注意**:
-- ✅ 置顶文章会在列表顶部显示（按 `is_pinned` 降序排列）
-- ✅ 可在公开列表、我的文章列表、全站列表中看到置顶效果
-- ⚠️ 仅管理员可操作
-
----
-
-### 17. 获取文章归档（按年月统计）
-
-**接口**: `GET /article/public/archive`  
-**权限**: 公开
-
-**功能**: 获取已发布文章的年月统计数据
-
-**成功响应** (200):
-```json
-[
-  {
-    "year": 2026,
-    "month": 4,
-    "count": 15
-  },
-  {
-    "year": 2026,
-    "month": 5,
-    "count": 8
-  }
-]
-```
-
-**响应字段说明**:
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| year | int | 年份 |
-| month | int | 月份（1-12） |
-| count | int | 该月发布的文章数量 |
-
-**前端注意**:
-- ✅ 仅统计已发布且未删除的文章
-- ✅ 按年月升序排列
-- ✅ 可用于生成归档页面或侧边栏统计
 
 ---
 
@@ -1768,13 +1621,12 @@ axios.interceptors.response.use(
 - **管理员专属**：删除任意评论、查看待处理举报、处理举报、全站评论巡查
 
 ### 核心功能概览
-- 💬 **发表评论**：支持一级评论和嵌套回复（先发后审，立即可见）
+- 💬 **发表评论**：支持一级评论和嵌套回复
 - 👍 **点赞功能**：用户可点赞/取消点赞评论
 - 🗑️ **软删除**：作者或管理员可删除评论
 - 🚩 **举报系统**：用户可举报不当评论
-- 👮 **管理员巡查**：全站评论监控、标记违规、批量管理
-- 🔍 **全站巡查**：管理员可查看所有评论（包括已删除和已隐藏）
-- ✅ **先发后审**：新评论立即显示，管理员事后可标记违规隐藏
+- 👮 **管理员审核**：查看和处理举报
+- 🔍 **全站巡查**：管理员可查看所有评论
 
 ### 数据模型
 
@@ -1786,7 +1638,7 @@ axios.interceptors.response.use(
 | user_id | int | 评论者ID（外键关联User） |
 | article_id | int | 文章ID（外键关联Article） |
 | parent_id | int/null | 父评论ID，null表示一级评论 |
-| is_audited | bool | 是否已审核（默认true，false表示被管理员标记为违规隐藏） |
+| is_audited | bool | 是否已审核（默认true） |
 | created_at | datetime | 创建时间 |
 | deleted_at | datetime/null | 删除时间（软删除） |
 
@@ -1867,6 +1719,15 @@ axios.interceptors.response.use(
 | like_count | int | 点赞数 |
 | is_liked | bool | 当前用户是否已点赞（未登录时为false） |
 
+**错误响应**:
+- `400`: 父评论不存在或不属于该文章
+- `404`: 文章不存在
+
+**前端注意**:
+- ✅ 后审模式：评论直接可见，无需审核
+- ✅ 回复评论时，`parent_id` 填写被回复评论的 ID
+- ✅ 返回的 `author` 对象包含评论者信息
+
 ---
 
 ### 2. 获取文章评论列表
@@ -1907,14 +1768,12 @@ axios.interceptors.response.use(
 ```
 
 **前端注意**:
-- ✅ 仅返回正常显示的评论（`is_audited=true AND deleted_at IS NULL`）
+- ✅ 仅返回已审核且未删除的评论（`is_audited=true AND deleted_at IS NULL`）
 - ✅ 按 `created_at` 升序排列（旧评论在前）
 - ✅ 扁平结构，前端需自行组装树形结构
 - ✅ 通过 `parent_id` 判断是否为回复
 - ✅ 包含点赞数 `like_count` 和当前用户点赞状态 `is_liked`
 - ✅ 未登录用户 `is_liked` 始终为 false
-- ✅ **分页格式**：返回 `{items, total, page, size, pages}` 统一分页结构
-- ⚠️ **先发后审机制**：新评论默认 `is_audited=True` 立即显示，管理员事后可标记违规隐藏
 
 ---
 
@@ -2114,90 +1973,6 @@ axios.interceptors.response.use(
 ---
 
 ## 💡 评论系统开发建议
-
-### 0. 先发后审机制说明
-
-**核心概念**：
-- ✅ **用户发表评论** → `is_audited=True` → **立即可见**
-- ✅ **管理员巡查** → 发现违规 → 标记 `is_audited=False` → **隐藏**
-- ✅ **管理员复查** → 误判恢复 → 设置 `is_audited=True` → **重新显示**
-
-**工作流程**：
-```
-用户发表评论
-    ↓
-is_audited = True（自动设置为已审核）
-    ↓
-评论立即可见 ✅
-    ↓
-管理员定期巡查 (/admin/comments/all)
-    ↓
-发现违规评论
-    ↓
-标记为违规隐藏 (is_audited = False)
-    ↓
-评论从公开列表中消失 ❌
-    ↓
-管理员复查后可恢复 (is_audited = True)
-    ↓
-评论重新可见 ✅
-```
-
-**管理员操作示例**：
-```javascript
-// 1. 全站巡查 - 查看所有评论
-const loadAllComments = async () => {
-  const response = await axios.get('/api/v1/comments/admin/comments/all', {
-    params: { page: 1, size: 50 },
-    headers: { 'Authorization': `Bearer ${adminToken}` }
-  })
-  return response.data.items
-}
-
-// 2. 标记单个评论违规
-const markAsViolation = async (commentId) => {
-  await axios.put(
-    `/api/v1/comments/admin/comments/${commentId}/audit`,
-    { pass_audit: false },  // false = 标记违规
-    { headers: { 'Authorization': `Bearer ${adminToken}` } }
-  )
-  ElMessage.success('已标记为违规并隐藏')
-}
-
-// 3. 批量标记违规
-const batchMarkViolations = async (commentIds) => {
-  const response = await axios.post(
-    '/api/v1/comments/admin/comments/batch-audit',
-    { 
-      comment_ids: commentIds,
-      pass_audit: false  // false = 批量标记违规
-    },
-    { headers: { 'Authorization': `Bearer ${adminToken}` } }
-  )
-  ElMessage.success(response.data.message)
-}
-
-// 4. 查看已隐藏评论（用于复查）
-const loadHiddenComments = async () => {
-  const response = await axios.get('/api/v1/comments/admin/comments/pending', {
-    params: { page: 1, size: 20 },
-    headers: { 'Authorization': `Bearer ${adminToken}` }
-  })
-  return response.data.items
-}
-
-// 5. 恢复误判的评论
-const restoreComment = async (commentId) => {
-  await axios.put(
-    `/api/v1/comments/admin/comments/${commentId}/audit`,
-    { pass_audit: true },  // true = 恢复显示
-    { headers: { 'Authorization': `Bearer ${adminToken}` } }
-  )
-  ElMessage.success('评论已恢复显示')
-}
-```
-
----
 
 ### 1. 前端评论树形结构组装
 
@@ -2878,120 +2653,6 @@ axios.interceptors.response.use(
 )
 ```
 
-### 场景9: 文章点赞功能
-
-```javascript
-// 点赞按钮组件逻辑
-const handleLike = async (articleId) => {
-  try {
-    const response = await axios.post(
-      `/api/v1/article/${articleId}/like`,
-      {},
-      {
-        headers: { 'Authorization': `Bearer ${token}` }
-      }
-    )
-    
-    // 更新本地状态
-    const { liked, like_count } = response.data
-    updateArticleLikeStatus(articleId, liked, like_count)
-    ElMessage.success(liked ? '点赞成功' : '已取消点赞')
-  } catch (error) {
-    if (error.response?.status === 401) {
-      ElMessage.warning('请先登录')
-    } else if (error.response?.status === 404) {
-      ElMessage.error('文章不存在')
-    } else {
-      ElMessage.error('操作失败')
-    }
-  }
-}
-
-// 获取文章详情时检查点赞状态
-const loadArticleDetail = async (articleId) => {
-  const response = await axios.get(`/api/v1/article/${articleId}`, {
-    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-  })
-  
-  // 直接使用返回的 like_count 和 is_liked
-  articleData.value = response.data
-  isLiked.value = response.data.is_liked
-  likeCount.value = response.data.like_count
-}
-
-// 在文章详情页初始化时加载
-onMounted(() => {
-  loadArticleDetail(articleId)
-})
-```
-
-### 场景10: 文章置顶功能（管理员）
-
-```javascript
-// 管理员置顶/取消置顶文章
-const togglePin = async (articleId) => {
-  try {
-    const response = await axios.put(
-      `/api/v1/article/admin/articles/${articleId}/pin`,
-      {},
-      {
-        headers: { 'Authorization': `Bearer ${adminToken}` }
-      }
-    )
-    
-    ElMessage.success(response.data.message)
-    // 更新本地状态
-    articleData.value.is_pinned = response.data.is_pinned
-    // 重新加载列表以更新排序
-    await loadArticleList()
-  } catch (error) {
-    ElMessage.error('操作失败')
-  }
-}
-```
-
-**在文章列表中显示置顶标记：**
-
-```vue
-<template>
-  <div class="article-item" :class="{ 'pinned': article.is_pinned }">
-    <span v-if="article.is_pinned" class="pin-badge">📌 置顶</span>
-    <h3>{{ article.title }}</h3>
-    <!-- 其他内容 -->
-  </div>
-</template>
-```
-
-### 场景11: 文章归档页面
-
-```javascript
-// 获取文章归档数据
-const loadArchive = async () => {
-  const response = await axios.get('/api/v1/article/public/archive')
-  archiveData.value = response.data
-  // 格式: [{ year: 2026, month: 4, count: 15 }, ...]
-}
-
-onMounted(() => {
-  loadArchive()
-})
-```
-
-**渲染归档列表：**
-
-```vue
-<template>
-  <div class="archive-section">
-    <h2>文章归档</h2>
-    <div v-for="item in archiveData" :key="`${item.year}-${item.month}`" class="archive-item">
-      <router-link :to="`/archive/${item.year}/${item.month}`">
-        {{ item.year }}年{{ item.month }}月 ({{ item.count }}篇)
-      </router-link>
-    </div>
-  </div>
-</template>
-```
-
 ---
 
 ## 🔄 后续更新计划
@@ -3004,17 +2665,660 @@ onMounted(() => {
 - [x] 防灌水机制
 - [x] 评论系统（发表/回复/删除/举报）
 - [x] 点赞与收藏
-- [x] 文章点赞功能
-- [x] 评论点赞功能
-- [x] 文章置顶功能
-- [x] 文章归档功能
 
 ---
 
-**最后更新时间**: 2026-05-17  
-**文档版本**: v4.3  
+---
+
+## 👥 社交关注系统
+
+### 功能概述
+社交关注系统允许用户之间建立关注关系，支持关注/取消关注、查看关注列表和粉丝列表等功能。
+
+**核心特性**:
+- 🔔 **关注/取消关注**: 一键关注感兴趣的用户
+- 📋 **关注列表**: 查看自己或他人关注的用户
+- 👥 **粉丝列表**: 查看自己或他人的粉丝
+- 🔄 **互关状态**: 智能显示当前用户是否已关注列表中的人
+- 📊 **分页查询**: 支持高效的分页加载
+
+---
+
+### ⚙️ 通用规范
+
+**Base URL**: `/api/v1/social`  
+**鉴权**: 所有接口均需登录（携带 `Authorization: Bearer <Token>`）  
+**分页格式**: 统一使用 `{total, items}` 结构
+
+---
+
+### 1. 关注用户
+
+**接口**: `POST /social/follow/{user_id}`  
+**权限**: 所有登录用户
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_id | int | ✅ | 要关注的目标用户ID |
+
+**请求头**:
+```
+Authorization: Bearer <Token>
+```
+
+**成功响应** (200):
+```json
+{
+  "message": "关注成功"
+}
+```
+
+**错误响应**:
+- `400`: 你不能关注你自己 / 你已经关注了该用户
+- `404`: 目标用户不存在或已注销
+- `500`: 关注操作失败
+
+**前端注意**:
+- ✅ 关注前检查 `user_id != current_user.id`
+- ✅ 重复关注会返回友好提示，不会报错
+- ✅ 关注成功后自动更新用户的 `following_count` 和目标的 `followers_count`
+
+---
+
+### 2. 取消关注
+
+**接口**: `DELETE /social/follow/{user_id}`  
+**权限**: 所有登录用户
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_id | int | ✅ | 要取消关注的目标用户ID |
+
+**请求头**:
+```
+Authorization: Bearer <Token>
+```
+
+**成功响应** (200):
+```json
+{
+  "message": "已取消关注"
+}
+```
+
+**错误响应**:
+- `400`: 你尚未关注该用户
+- `500`: 取消关注失败
+
+**前端注意**:
+- ✅ 取消关注后自动递减计数
+- ✅ 使用 `max(0, count - 1)` 防止负数
+- ✅ 建议在用户个人主页显示"已关注"按钮，点击后调用此接口
+
+---
+
+### 3. 获取某人的关注列表
+
+**接口**: `GET /social/following/{user_id}?page=1&size=10`  
+**权限**: 所有登录用户（未登录也可查看，但无 `is_following` 字段）
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_id | int | ✅ | 目标用户ID |
+
+**查询参数**:
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| page | int | 1 | 页码（从1开始） |
+| size | int | 10 | 每页数量（最大50） |
+
+**请求头**:
+```
+Authorization: Bearer <Token>  // 可选，登录后才有 is_following 字段
+```
+
+**成功响应** (200):
+```json
+{
+  "total": 25,
+  "items": [
+    {
+      "id": 3,
+      "username": "tech_guru",
+      "email": "tech@example.com",
+      "role": "common",
+      "created_at": "2026-04-20T10:00:00",
+      "avatar": null,
+      "is_following": true  // 仅登录后可见，表示当前用户是否关注了此人
+    },
+    {
+      "id": 5,
+      "username": "code_master",
+      "email": "code@example.com",
+      "role": "common",
+      "created_at": "2026-04-22T15:30:00",
+      "avatar": null,
+      "is_following": false
+    }
+  ]
+}
+```
+
+**响应字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| total | int | 关注总数 |
+| items | array | 用户列表 |
+| is_following | boolean | 当前用户是否关注了该用户（仅登录后返回） |
+
+**前端注意**:
+- ✅ 未登录时 `is_following` 字段不返回或为 `false`
+- ✅ 登录后后端会批量查询当前用户与列表中用户的关注关系
+- ✅ 空列表防护：当 `target_ids` 为空时，跳过 SQL 查询避免报错
+- ✅ 可用于展示"他关注的人"页面
+
+---
+
+### 4. 获取某人的粉丝列表
+
+**接口**: `GET /social/followers/{user_id}?page=1&size=10`  
+**权限**: 所有登录用户（未登录也可查看，但无 `is_following` 字段）
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_id | int | ✅ | 目标用户ID |
+
+**查询参数**:
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| page | int | 1 | 页码（从1开始） |
+| size | int | 10 | 每页数量（最大50） |
+
+**请求头**:
+```
+Authorization: Bearer <Token>  // 可选，登录后才有 is_following 字段
+```
+
+**成功响应** (200):
+```json
+{
+  "total": 100,
+  "items": [
+    {
+      "id": 8,
+      "username": "fan_user_1",
+      "email": "fan1@example.com",
+      "role": "common",
+      "created_at": "2026-04-18T09:00:00",
+      "avatar": null,
+      "is_following": true  // 当前用户是否回关了此粉丝
+    },
+    {
+      "id": 12,
+      "username": "fan_user_2",
+      "email": "fan2@example.com",
+      "role": "common",
+      "created_at": "2026-04-19T11:20:00",
+      "avatar": null,
+      "is_following": false
+    }
+  ]
+}
+```
+
+**前端注意**:
+- ✅ `is_following` 表示当前用户是否关注了这些粉丝（回关状态）
+- ✅ 可用于实现"互相关注"标识
+- ✅ 空列表防护同上
+- ✅ 可用于展示"他的粉丝"页面
+
+---
+
+### 🚀 开发注意事项
+
+#### 1. 关注状态实时更新
+- ✅ 关注/取消关注后，前端应立即更新 UI 状态
+- ✅ 建议维护本地缓存，避免频繁请求
+- ✅ 在用户个人主页、文章作者信息等场景动态显示关注按钮
+
+#### 2. 分页加载优化
+- ✅ 使用无限滚动或传统分页器
+- ✅ 首次加载建议 `size=10`，后续可增加到 `20-50`
+- ✅ 当 `items.length < size` 时，说明已到最后一页
+
+#### 3. 互关逻辑处理
+- ✅ 如果 `is_following=true`，显示"已关注"或"互相关注"
+- ✅ 如果 `is_following=false`，显示"关注"按钮
+- ✅ 在自己的粉丝列表中，如果 `is_following=true`，可显示"已回关"
+
+#### 4. 性能优化
+- ✅ 后端已使用 `IN` 查询批量检查关注关系，避免 N+1 问题
+- ✅ 前端应避免在循环中单独请求每个用户的关注状态
+- ✅ 可使用虚拟列表渲染大量粉丝/关注列表
+
+#### 5. 边界情况处理
+- ⚠️ 不能关注自己（后端已校验）
+- ⚠️ 不能关注已注销的用户（`is_active=False`）
+- ⚠️ 重复关注会返回友好提示，前端应隐藏错误弹窗
+- ⚠️ 取消关注不存在的记录会返回 400，前端应静默处理
+
+---
+
+## 💬 频道广场聊天系统
+
+### 功能概述
+频道广场是一个实时聊天系统，支持多频道管理、图文混合消息、引用回复、消息撤回等功能。
+
+**核心特性**:
+- 📢 **多频道管理**: 管理员可创建/删除频道，用户自由选择加入
+- 🖼️ **多媒体支持**: 支持文本、图片、视频等多种媒体类型
+- 💬 **引用回复**: 支持单级引用回复，方便上下文讨论
+- ↩️ **消息撤回**: 2分钟内可撤回消息，撤回后可重新编辑
+- 🔄 **无限滚动**: 基于游标的分页加载，流畅的聊天体验
+- 🔒 **权限控制**: 仅管理员可管理频道，所有登录用户可发言
+
+---
+
+### ⚙️ 通用全局规范
+
+**Base URL**: `/api/v1`  
+**鉴权**: 除特定管理员接口外，所有请求均需携带请求头 `Authorization: Bearer <Token>`  
+**媒体附件白名单**: URL 必须符合 `http://`, `https://`, `/storage/`, `data:` 四大前缀，否则返回 422  
+**内容清洗**: 纯空格内容会被后端自动转为 null（拒绝空气消息）
+
+---
+
+### 一、频道管理（仅限管理员）
+
+#### 1. 创建频道
+
+**接口**: `POST /channels`  
+**权限**: 仅管理员
+
+**请求体**:
+```json
+{
+  "name": "技术交流平台"
+}
+```
+
+**成功响应** (201):
+```json
+{
+  "id": 1,
+  "name": "技术交流平台",
+  "created_at": "2026-05-22T19:44:30",
+  "allowed_user_ids": null
+}
+```
+
+**错误响应**:
+- `400`: 频道名称已存在
+- `403`: 权限不足
+
+**前端注意**:
+- ✅ 频道名称必须唯一
+- ✅ 保存返回的 `id` 用于后续操作
+
+---
+
+#### 2. 获取所有频道列表
+
+**接口**: `GET /channels`  
+**权限**: 所有登录用户
+
+**成功响应** (200):
+```json
+[
+  {
+    "id": 1,
+    "name": "技术交流平台",
+    "created_at": "2026-05-22T19:44:30",
+    "allowed_user_ids": null
+  }
+]
+```
+
+**前端注意**:
+- ✅ 按创建时间升序排列
+- ✅ 可用于频道切换下拉菜单
+
+---
+
+#### 3. 更新频道名称
+
+**接口**: `PUT /channels/{channel_id}`  
+**权限**: 仅管理员
+
+**请求体**:
+```json
+{
+  "name": "新技术讨论区"
+}
+```
+
+**成功响应** (200):
+```json
+{
+  "message": "频道名称已更新"
+}
+```
+
+**错误响应**:
+- `400`: 频道名称已存在
+- `403`: 权限不足
+- `404`: 频道不存在
+
+---
+
+#### 4. 删除频道
+
+**接口**: `DELETE /channels/{channel_id}`  
+**权限**: 仅管理员
+
+**成功响应** (204): `No Content`
+
+**⚠️ 高危警示**:
+- ❌ **物理删除**：频道及其所有留言将被永久删除（CASCADE 级联删除）
+- ❌ **不可恢复**：删除后无法找回数据
+- ✅ **前端必须弹出二次确认框**，要求用户输入频道名称进行匹配验证
+
+**错误响应**:
+- `403`: 权限不足
+- `404`: 频道不存在
+
+---
+
+### 二、核心发言与留言流（全员开放）
+
+#### 5. 发送频道留言
+
+**接口**: `POST /channels/{channel_id}/messages`  
+**权限**: 所有登录用户
+
+**请求体示例**（纯文本）:
+```json
+{
+  "content": "大家好，今天我们来讨论一下 FastAPI 的性能优化",
+  "media_attachments": null,
+  "quote_message_id": null
+}
+```
+
+**请求体示例**（图文混合 + 引用回复）:
+```json
+{
+  "content": "我同意你的观点",
+  "media_attachments": [
+    {
+      "type": "image",
+      "url": "/storage/images/abc123.jpg"
+    }
+  ],
+  "quote_message_id": 5
+}
+```
+
+**参数说明**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| content | string | 条件必填 | 文本内容（最多2000字符），与 media_attachments 至少填一个 |
+| media_attachments | array | 条件必填 | 媒体附件数组，与 content 至少填一个 |
+| quote_message_id | int | ❌ | 引用的消息ID（可选） |
+
+**media_attachments 结构**:
+```json
+{
+  "type": "image",  // 可选值: "image", "video", "file"
+  "url": "/storage/images/abc123.jpg"  // 必须符合白名单规则
+}
+```
+
+**成功响应** (201):
+```json
+{
+  "id": 7,
+  "channel_id": 2,
+  "user_id": 5,
+  "content": "这是一条测试消息",
+  "media_attachments": [
+    {
+      "type": "image",
+      "url": "/storage/images/abc123.jpg"
+    }
+  ],
+  "created_at": "2026-05-22T19:53:34",
+  "sender": {
+    "id": 5,
+    "username": "user114514",
+    "avatar": null
+  },
+  "quote_message_id": null,
+  "quoted_message": null
+}
+```
+
+**🔒 安全校验**:
+1. ✅ **空气消息防护**：content 和 media_attachments 不能同时为空
+2. ✅ **内容清洗**：纯空格内容会被自动转为 null
+3. ✅ **长度限制**：content 最多2000字符
+4. ✅ **URL白名单**：仅支持 `http://`, `https://`, `/storage/`, `data:` 前缀
+
+**错误响应**:
+- `400`: 文本内容与媒体附件不能同时为空 / 引用的消息不存在
+- `403`: 权限不足
+- `404`: 频道不存在
+- `422`: 参数验证失败（URL格式不合法等）
+
+**前端注意**:
+- ✅ 发送前校验：至少填写文本或附件之一
+- ✅ 采用"先传文件拿到 URL，再发消息绑定 URL"的两阶段解耦设计
+- ✅ 发送后自动滚动到底部
+- ✅ 引用回复时显示被引用消息的预览
+
+---
+
+#### 6. 获取频道留言流（游标分页）
+
+**接口**: `GET /channels/{channel_id}/messages?limit=50&before_id=null`  
+**权限**: 所有登录用户
+
+**查询参数**:
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| limit | int | 50 | 每页数量（最大100） |
+| before_id | int | null | 游标ID，获取此ID之前的历史消息（用于向上滚动加载） |
+
+**成功响应** (200):
+```json
+{
+  "items": [
+    {
+      "id": 9,
+      "channel_id": 2,
+      "user_id": 3,
+      "content": "历史消息",
+      "media_attachments": null,
+      "created_at": "2026-05-22T19:59:00",
+      "sender": {
+        "id": 3,
+        "username": "testuser",
+        "avatar": null
+      },
+      "quote_message_id": null,
+      "quoted_message": null
+    },
+    {
+      "id": 10,
+      "channel_id": 2,
+      "user_id": 5,
+      "content": "最新消息",
+      "media_attachments": null,
+      "created_at": "2026-05-22T20:00:00",
+      "sender": {
+        "id": 5,
+        "username": "user114514",
+        "avatar": null
+      },
+      "quote_message_id": null,
+      "quoted_message": null
+    }
+  ],
+  "has_more": true,
+  "next_cursor": 9
+}
+```
+
+**✅ 瀑布流联动逻辑（重要）**:
+
+1. **首次加载**：不传 `before_id`，后端返回最新 50 条消息
+2. **数组排序**：`items` 内部已按**时间升序**排列（ID 从小到大，旧消息在上，新消息在下）
+3. **直接渲染**：前端无需倒序，直接追加到聊天窗口底部
+4. **向上滚动触顶**：当 `has_more=true` 时，将 `next_cursor` 作为 `before_id` 继续请求更早的历史记录
+5. **加载完成**：当 `has_more=false` 时，说明已加载完所有历史消息
+
+**响应字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| items | array | 消息列表（按时间升序排列） |
+| has_more | boolean | 是否还有更多历史消息 |
+| next_cursor | int/null | 下一页的游标ID（传入 before_id 参数） |
+
+**前端注意**:
+- ✅ 符合主流聊天软件（微信、Slack）体验：最新消息在最底下，往上翻看历史
+- ✅ 已撤回的消息不会出现在列表中
+- ✅ 使用虚拟列表（Virtual List）渲染，避免几千个 DOM 节点硬卡
+
+---
+
+### 三、撤回与重新编辑（仅限作者本人）
+
+#### 7. 消息撤回
+
+**接口**: `POST /channels/messages/{message_id}/withdraw`  
+**权限**: 消息作者本人
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| message_id | int | ✅ | 消息ID |
+
+**成功响应** (200):
+```json
+{
+  "status": "success",
+  "message": "消息撤回成功",
+  "message_id": 123
+}
+```
+
+**⏱️ 撤回规则**:
+- ✅ 仅能撤回自己发送的消息
+- ✅ 撤回时限：发送后2分钟内（后端采用服务器本地时钟校验）
+- ✅ 撤回后消息从留言流中隐去（软删除）
+- ✅ 超出时限锁死并返回 400
+
+**错误响应**:
+- `400`: 超过2分钟撤回时限 / 消息已被撤回
+- `403`: 无权撤回他人消息
+- `404`: 消息不存在
+
+**前端注意**:
+- ⚠️ 必须在消息旁边显示倒计时（2分钟）
+- ✅ 超时后隐藏撤回按钮
+- ✅ 撤回成功后，前端应立刻闪现"重新编辑"气泡
+
+---
+
+#### 8. 获取撤回内容（重新编辑反填）
+
+**接口**: `GET /channels/messages/{message_id}/re-edit`  
+**权限**: 消息作者本人
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| message_id | int | ✅ | 已撤回的消息ID |
+
+**成功响应** (200):
+```json
+{
+  "content": "这是撤回前的内容",
+  "media_attachments": [
+    {
+      "type": "image",
+      "url": "/storage/images/abc123.jpg"
+    }
+  ]
+}
+```
+
+**错误响应**:
+- `400`: 消息未被撤回 / 不是撤回者本人
+- `403`: 权限不足
+- `404`: 消息不存在
+
+**前端注意**:
+- ✅ 撤回成功后立即调用此接口获取原内容
+- ✅ 将内容一键反填回输入框，允许用户修改后重新发送
+- ⚠️ 仅在撤回后的短时间内有效（建议2分钟内）
+
+---
+
+### 四、防灌水频率控制
+
+#### 9. 获取个人待审核文章数
+
+**接口**: `GET /article/my/pending-count`  
+**权限**: 所有登录用户
+
+**成功响应** (200):
+```json
+{
+  "pending_count": 2
+}
+```
+
+**策略**:
+- ✅ 普通用户待审核池上限为 3 篇
+- ✅ 前端在路由跳转或点击"提交审核"前，应优先读取此阈值拦截恶意灌水
+
+---
+
+### 🚀 极简开发备忘（前端必读）
+
+#### 1. 多媒体发送流程
+采用**两阶段解耦设计**：
+1. 先调用上传图片接口拿到 URL
+2. 再调用发送消息接口绑定 URL
+
+#### 2. 防爆舱渲染
+聊天室信息流极大时，**必须使用虚拟列表（Virtual List）滚动**，严禁几千个 DOM 节点硬卡。
+
+#### 3. 引用跳转逻辑
+- 点击留言中的 `quoted_message` 区域，前端应计算其 `id` 并高亮跳转至对应时序流位置
+- 若引用的消息已被撤回，文本统一硬编码显示 `[该消息已被撤回]`
+
+#### 4. 消息状态管理
+- ✅ 前端应维护本地消息缓存，避免重复请求
+- ✅ 新消息到达时自动滚动到底部
+- ✅ 使用 WebSocket 可实现实时更新（当前版本暂不支持）
+
+#### 5. 安全性
+- ⚠️ 所有媒体URL必须经过白名单校验
+- ⚠️ 防止 XSS 攻击：对用户输入的内容进行转义
+- ⚠️ 频率限制：防止恶意刷屏（后端已实现）
+
+---
+
+**最后更新时间**: 2026-05-22  
+**文档版本**: v5.0  
 **维护者**: Backend Team
 
 ##### 感谢所有贡献者！
 
-###
+##
