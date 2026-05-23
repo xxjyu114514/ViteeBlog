@@ -27,6 +27,7 @@ class UserOut(UserBase):
     id: int
     role: UserRole
     created_at: datetime
+    avatar: Optional[str] = None
 
     # Pydantic 2.0 的配置写法，允许从 ORM 对象转换
     model_config = ConfigDict(from_attributes=True)
