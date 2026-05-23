@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional
 
+
 class UserSocialOut(BaseModel):
     id: int
     username: str = Field(..., description="用户名")
