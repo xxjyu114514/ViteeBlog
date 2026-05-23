@@ -1,6 +1,9 @@
 import traceback
+import uuid
+import os
+import aiofiles
 from datetime import datetime
-from fastapi import APIRouter, Depends, status, HTTPException, Body
+from fastapi import APIRouter, Depends, status, HTTPException, Body, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from dependencies import get_db, allow_admin_only, get_current_user
@@ -194,7 +197,7 @@ async def delete_account(
     if current_user.role == UserRole.ADMIN:
         raise HTTPException(status_code=400, detail="管理员账号不能注销，请先转让管理员权限")
 
-    current_user.is_active = False  # SQLAlchemy Boolean 类型应使用布尔值
+    current_user.is_active = False
     current_user.deleted_at = datetime.now()
     await db.commit()
 
@@ -214,12 +217,49 @@ async def restore_account(
         raise HTTPException(status_code=404, detail="用户不存在")
 
     # 2. 检查该用户是否确实已注销
-    if target_user.is_active and target_user.deleted_at is None:  # SQLAlchemy Boolean 类型应使用布尔值
+    if target_user.is_active and target_user.deleted_at is None:
         raise HTTPException(status_code=400, detail="该账号未被注销，无需恢复")
 
     # 3. 恢复账号
-    target_user.is_active = True  # SQLAlchemy Boolean 类型应使用布尔值
+    target_user.is_active = True
     target_user.deleted_at = None
     await db.commit()
 
     return {"message": f"账号 {target_user.username} 已恢复"}
+
+
+@router.post("/upload-avatar", summary="上传用户头像")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    # 1. 校验文件类型
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="只能上传图片文件")
+
+    # 2. 生成唯一文件名
+    ext = os.path.splitext(file.filename)[1]
+    unique_name = f"avatar_{uuid.uuid4().hex}{ext}"
+
+    # 3. 存储到 storage/avatars/ 目录
+    avatar_dir = "storage/avatars"
+    os.makedirs(avatar_dir, exist_ok=True)
+    file_path = os.path.join(avatar_dir, unique_name)
+
+    # 4. 保存文件
+    try:
+        content = await file.read()
+        if len(content) > 2 * 1024 * 1024:  # 头像限制 2MB
+            raise HTTPException(status_code=400, detail="头像大小不能超过2MB")
+        async with aiofiles.open(file_path, "wb") as f:
+            await f.write(content)
+    except Exception:
+        raise HTTPException(status_code=500, detail="头像保存失败")
+
+    # 5. 更新用户 avatar 字段
+    avatar_url = f"/storage/avatars/{unique_name}"
+    current_user.avatar = avatar_url
+    await db.commit()
+
+    return {"url": avatar_url, "message": "头像上传成功"}
