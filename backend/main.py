@@ -4,14 +4,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings
 from core.database import init_db, IS_LITE
-from routers.v1 import api_auth, api_article, api_meta, api_comment, api_favorite
+from routers.v1 import api_auth, api_article,api_meta,api_comment,api_favorite,api_channel,api_social
 from fastapi.staticfiles import StaticFiles
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
         title="ViteeBlog API",
-        description="基于 FastAPI 的个人博客后端 system",
+        description="基于 FastAPI 的个人博客后端系统",
         version="1.0.0"
     )
 
@@ -36,8 +36,9 @@ def create_app() -> FastAPI:
     app.include_router(api_article.router, prefix="/api/v1/article", tags=["文章业务"])
     app.include_router(api_meta.router, prefix="/api/v1/meta", tags=["分类与标签管理"])
     app.include_router(api_comment.router, prefix="/api/v1/comments", tags=["评论管理"])
-    app.include_router(api_favorite.router, prefix="/api/v1/favorites", tags=["文章收藏"])
-
+    app.include_router(api_favorite.router, prefix="/api/v1/favorites", tags=["文章收藏"])  # 已新增
+    app.include_router(api_channel.router, prefix="/api/v1/channels", tags=["频道广场聊天系统"])
+    app.include_router(api_social.router, prefix="/api/v1/social", tags=["社交关注"])
 
     # 4. 挂载静态文件目录
     app.mount("/storage", StaticFiles(directory="storage"), name="storage")

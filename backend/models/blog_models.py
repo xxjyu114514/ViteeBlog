@@ -1,5 +1,5 @@
 import enum
-from typing import List, Optional
+from typing import List , Optional
 import sqlalchemy as sa
 from sqlalchemy import String, Text, ForeignKey, Integer, Boolean, Table, Column, Enum, DateTime, text, func, \
     UniqueConstraint
@@ -28,7 +28,9 @@ article_tag = Table(
 
 
 class User(Base):
-    """用户表：支持权限隔离与登录锁定"""
+    """用户表：支持权限隔离、登录锁定与社交关注"""
+    __tablename__ = "user"
+    
     username: Mapped[str] = mapped_column(String(50), unique=True, index=True, comment="用户名")
     email: Mapped[str] = mapped_column(String(100), unique=True, index=True, comment="邮箱")
     password: Mapped[str] = mapped_column(String(255), comment="加密哈希密码")
@@ -38,9 +40,21 @@ class User(Base):
     login_attempts: Mapped[int] = mapped_column(Integer, server_default="0", comment="失败尝试次数")
     last_fail_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, comment="上次失败时间")
 
+    # 社交关注统计字段
+    following_count: Mapped[int] = mapped_column(Integer, server_default="0", default=0, comment="关注数")
+    followers_count: Mapped[int] = mapped_column(Integer, server_default="0", default=0, comment="粉丝数")
+
     articles: Mapped[List["Article"]] = relationship(back_populates="author", cascade="all, delete-orphan",
                                                      foreign_keys="Article.user_id")
     comment_likes: Mapped[List["CommentLike"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    
+    # 社交关注关系映射
+    following_relations: Mapped[List["UserFollow"]] = relationship(
+        "UserFollow", foreign_keys="UserFollow.follower_id", back_populates="follower", cascade="all, delete-orphan"
+    )
+    follower_relations: Mapped[List["UserFollow"]] = relationship(
+        "UserFollow", foreign_keys="UserFollow.followed_id", back_populates="followed", cascade="all, delete-orphan"
+    )
 
 
 class Article(Base):
@@ -202,3 +216,73 @@ class VerificationCode(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=text("CURRENT_TIMESTAMP"),
                                                  onupdate=text("CURRENT_TIMESTAMP"))
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+
+class UserFollow(Base):
+    """用户关注关系表"""
+    __tablename__ = "user_follow"
+    
+    follower_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), index=True, comment="关注者ID")
+    followed_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), index=True, comment="被关注者ID")
+    
+    follower: Mapped["User"] = relationship("User", foreign_keys=[follower_id], back_populates="following_relations")
+    followed: Mapped["User"] = relationship("User", foreign_keys=[followed_id], back_populates="follower_relations")
+    
+    __table_args__ = (
+        UniqueConstraint("follower_id", "followed_id", name="uq_user_follow"),
+    )
+
+
+# ==============================================================================
+# 频道广场系统核心模型
+# ==============================================================================
+
+class Channel(Base):
+    """频道表：只有管理员可增删改。目前全员开放，仅预留权限字段"""
+    __tablename__ = "channel"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True, comment="主键ID")
+    name: Mapped[str] = mapped_column(String(100), unique=True, index=True, comment="频道名称")
+    
+    # 已自动继承并复用 Base 类自带的 created_at/updated_at 时间字段，不进行重复定义
+
+    # 允许访问的用户ID列表(预留)，使用原生 list 避免 typing.List 命名冲突
+    allowed_user_ids: Mapped[Optional[list]] = mapped_column(sa.JSON, nullable=True, comment="允许访问的用户ID列表(预留)")
+
+    # 关系映射：一个频道包含多条留言，使用小写 list 避免与 typing.List 冲突
+    messages: Mapped[list["ChannelMessage"]] = relationship("ChannelMessage", back_populates="channel", cascade="all, delete-orphan")
+
+
+class ChannelMessage(Base):
+    """频道留言表：绝对扁平的时序流，支持媒体附件、单级引用与撤回"""
+    __tablename__ = "channel_message"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True, comment="主键ID")
+    channel_id: Mapped[int] = mapped_column(ForeignKey("channel.id", ondelete="CASCADE"), index=True, comment="所属频道ID")
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), index=True, comment="发言人ID")
+    
+    content: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="留言文本内容")
+    
+    # 动态支持图片、视频等多媒体列表，使用原生 list 对应 JSON 数组
+    media_attachments: Mapped[Optional[list]] = mapped_column(sa.JSON, nullable=True, comment="媒体附件列表")
+    
+    # 扁平流下的单级引用（自关联，上一条被引用的留言ID）
+    quote_message_id: Mapped[Optional[int]] = mapped_column(ForeignKey("channel_message.id", ondelete="SET NULL"), nullable=True, index=True, comment="引用的上一条留言ID")
+    
+    # 已自动继承并复用 Base 类自带的 created_at 字段
+    
+    # 撤回功能时间戳（取代物理删除）
+    withdrawn_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, comment="撤回时间(若不为空则代表已被撤回)")
+
+    # 关系映射
+    channel: Mapped["Channel"] = relationship("Channel", back_populates="messages")
+    
+    # 单向查询：显式指定 foreign_keys，防止多外键引发的 AmbiguousForeignKeyError 报错
+    sender: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+    
+    # 自关联关系：获取引用的上一条留言，使用 remote_side 指定本地主键
+    quoted_message: Mapped[Optional["ChannelMessage"]] = relationship(
+        "ChannelMessage", 
+        remote_side=[id], 
+        foreign_keys=[quote_message_id]
+    )
