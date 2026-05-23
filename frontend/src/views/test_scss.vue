@@ -1,650 +1,241 @@
 <template>
-  <div class="demo-container">
-    <!-- ==================== 导航栏 ==================== -->
-    <nav class="industrial-nav">
-      <div class="logo-section">
-        <span class="logo-text">SYS.TERMINAL</span>
-        <span class="logo-badge">v2.4.1</span>
-      </div>
+  <div class="test-page">
+    <!-- 页面标题 -->
+    <header class="page-header">
+      <h1 class="page-title">CSS 样式测试页面</h1>
+      <p class="page-subtitle">用于开发和测试新的 UI 组件样式</p>
+    </header>
 
-      <div class="nav-menu">
-        <div
-          v-for="(item, index) in navItems"
-          :key="index"
-          class="nav-item"
-          :class="{ active: activeNav === index }"
-          @click="activeNav = index"
-        >
-          {{ item }}
-        </div>
-      </div>
-
-      <div class="nav-actions">
-        <button class="btn-outline-sm">EXPORT</button>
-        <button class="btn-primary-sm">CONNECT</button>
-      </div>
-    </nav>
-
-    <!-- ==================== 英雄区 ==================== -->
-    <section class="hero-section">
-      <div class="hero-content">
-        <div class="hero-badge">
-          <span class="badge-line"></span>
-          SYSTEM STATUS: OPERATIONAL
-        </div>
-        <h1 class="hero-title">
-          Modular Infrastructure<br>
-          <span class="hero-accent">Real-time Monitor</span>
-        </h1>
-        <p class="hero-desc">
-          High-density data visualization with tactical-grade precision.
-          Monitor system metrics, track anomalies, and deploy countermeasures in milliseconds.
-        </p>
-        <div class="hero-actions">
-          <button class="btn-primary">INITIALIZE SCAN</button>
-          <button class="btn-outline">VIEW DOCS</button>
-        </div>
-      </div>
-
-      <div class="hero-stats">
-        <div class="stat-block">
-          <div class="stat-number">2,847</div>
-          <div class="stat-label">Active Nodes</div>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat-block">
-          <div class="stat-number">99.7%</div>
-          <div class="stat-label">Uptime</div>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat-block">
-          <div class="stat-number">1.2ms</div>
-          <div class="stat-label">Latency</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==================== 颜色系统 ==================== -->
-    <section class="section">
-      <div class="section-header">
-        <h2 class="section-title">Color Palette</h2>
-        <div class="section-line"></div>
-        <p class="section-sub">8-color tactical system with functional semantics</p>
-      </div>
-
-      <div class="color-grid">
-        <div class="color-swatch" v-for="color in colors" :key="color.name">
-          <div class="color-box" :class="color.class"></div>
-          <div class="color-label">{{ color.hex }}</div>
-          <div class="color-name">{{ color.name }}</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==================== 文字排版 ==================== -->
-    <section class="section">
-      <div class="section-header">
-        <h2 class="section-title">Typography</h2>
-        <div class="section-line"></div>
-        <p class="section-sub">Structured type system for rapid scanning</p>
-      </div>
-
-      <div class="two-col-layout">
-        <div class="card-ghost">
-          <div class="subsection-header-sm">
-            <span class="indicator-line-sm"></span>
-            <h4>Headings & Body</h4>
-          </div>
-          <div class="type-demo">
-            <div class="type-item">
-              <span class="type-tag">H1</span>
-              <span class="text-h1">Heading One</span>
-            </div>
-            <div class="type-item">
-              <span class="type-tag">H2</span>
-              <span class="text-h2">Heading Two</span>
-            </div>
-            <div class="type-item">
-              <span class="type-tag">H3</span>
-              <span class="text-h3">Heading Three</span>
-            </div>
-            <div class="type-item">
-              <span class="type-tag">BODY</span>
-              <span class="text-body">Body text for paragraphs</span>
-            </div>
-            <div class="type-item">
-              <span class="type-tag">CAPT</span>
-              <span class="text-caption">Caption and small text</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="card-ghost">
-          <div class="subsection-header-sm">
-            <span class="indicator-line-sm"></span>
-            <h4>Data Panel</h4>
-          </div>
-          <div class="type-demo">
-            <div class="type-item">
-              <span class="type-tag">LABEL</span>
-              <span class="text-label">Temperature</span>
-            </div>
-            <div class="type-item">
-              <span class="type-tag">METRIC</span>
-              <span class="text-metric">36.5</span>
-            </div>
-            <div class="type-item">
-              <span class="type-tag">UNIT</span>
-              <span class="text-unit">°C</span>
-            </div>
-            <div class="type-item">
-              <span class="type-tag">S-MET</span>
-              <span class="text-metric-sm">1,024</span>
-            </div>
-            <div class="type-item">
-              <span class="type-tag">B-SM</span>
-              <span class="text-body-sm">Secondary body text with moderate emphasis</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==================== 按钮系统 ==================== -->
-    <section class="section">
-      <div class="section-header">
-        <h2 class="section-title">Button System</h2>
-        <div class="section-line"></div>
-        <p class="section-sub">Electronic feedback with 0.08s response time</p>
-      </div>
-
-      <div class="subsection">
-        <div class="subsection-header">
-          <span class="indicator-line"></span>
-          <h3>Solid Buttons</h3>
-        </div>
-        <div class="button-demo">
-          <button class="btn-primary">PRIMARY</button>
-          <button class="btn-secondary">SECONDARY</button>
-          <button class="btn-success">SUCCESS</button>
-          <button class="btn-warning">WARNING</button>
-          <button class="btn-error">ERROR</button>
-        </div>
-      </div>
-
-      <div class="subsection">
-        <div class="subsection-header">
-          <span class="indicator-line"></span>
-          <h3>Size Variants</h3>
-        </div>
-        <div class="button-demo">
-          <button class="btn-primary">DEFAULT</button>
-          <button class="btn-primary-sm">COMPACT</button>
-          <button class="btn-outline">OUTLINE</button>
-          <button class="btn-outline-sm">OUTLINE SM</button>
-        </div>
-      </div>
-
-      <div class="subsection">
-        <div class="subsection-header">
-          <span class="indicator-line"></span>
-          <h3>Ghost & Block</h3>
-        </div>
-        <div class="button-demo">
-          <button class="btn-ghost">GHOST</button>
-          <button class="btn-ghost-sm">GHOST SM</button>
-          <button class="btn-error-block">CRITICAL ACTION</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==================== 输入框系统 ==================== -->
-    <section class="section">
-      <div class="section-header">
-        <h2 class="section-title">Input System</h2>
-        <div class="section-line"></div>
-        <p class="section-sub">Box-shadow focus ring with zero layout shift</p>
-      </div>
-
-      <div class="two-col-layout">
-        <div class="demo-card">
-          <div class="subsection-header-sm">
-            <span class="indicator-line-sm"></span>
-            <h4>Text Inputs</h4>
-          </div>
-          <div class="input-demo" style="flex-direction: column; align-items: flex-start;">
-            <input type="text" class="input-industrial" placeholder="Enter node ID...">
-            <input type="text" class="input-industrial" placeholder="Disabled input" disabled>
-            <div class="input-tip">FOCUS: box-shadow ring, no reflow</div>
-          </div>
-        </div>
-
-        <div class="demo-card">
-          <div class="subsection-header-sm">
-            <span class="indicator-line-sm"></span>
-            <h4>Search Box</h4>
-          </div>
-          <div class="search-box-industrial">
-            <input type="text" placeholder="Search modules...">
-            <button>SCAN</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==================== 分子组件 ==================== -->
-    <section class="section">
-      <div class="section-header">
-        <h2 class="section-title">Molecular Components</h2>
-        <div class="section-line"></div>
-        <p class="section-sub">Composable UI units</p>
-      </div>
-
-      <div class="two-col-layout">
-        <div class="demo-card">
-          <div class="subsection-header-sm">
-            <span class="indicator-line-sm"></span>
-            <h4>User Card</h4>
-          </div>
-          <div class="user-card-industrial" v-for="user in users" :key="user.name" style="margin-bottom: 12px;">
-            <div class="avatar-industrial"></div>
-            <div class="user-info">
-              <div class="user-name">{{ user.name }}</div>
-              <div class="user-role">{{ user.role }}</div>
-            </div>
-            <button class="follow-btn">TRACK</button>
-          </div>
-        </div>
-
-        <div class="demo-card">
-          <div class="subsection-header-sm">
-            <span class="indicator-line-sm"></span>
-            <h4>Rating</h4>
-          </div>
-          <div class="rating-industrial" style="margin-bottom: 20px;">
-            <div class="stars">
-              <span v-for="i in 5" :key="i" class="star" :class="{ active: i <= rating }" @click="rating = i">◆</span>
-            </div>
-            <div class="rating-text">{{ rating }} / 5 — Threat Level {{ threatLevel }}</div>
-          </div>
-
-          <div class="subsection-header-sm" style="margin-top: 24px;">
-            <span class="indicator-line-sm"></span>
-            <h4>Menu</h4>
-          </div>
-          <div class="menu-industrial">
-            <div class="menu-item-industrial" :class="{ active: activeMenu === 0 }" @click="activeMenu = 0">
-              <span class="menu-icon">◈</span>
-              System Overview
-              <span class="menu-arrow">→</span>
-            </div>
-            <div class="menu-item-industrial" :class="{ active: activeMenu === 1 }" @click="activeMenu = 1">
-              <span class="menu-icon">◇</span>
-              Network Graph
-              <span class="menu-arrow">→</span>
-            </div>
-            <div class="menu-item-industrial" :class="{ active: activeMenu === 2 }" @click="activeMenu = 2">
-              <span class="menu-icon">◆</span>
-              Security Logs
-              <span class="menu-arrow">→</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==================== 文章列表 ==================== -->
-    <section class="section">
-      <div class="section-header">
-        <h2 class="section-title">Article List</h2>
-        <div class="section-line"></div>
-        <p class="section-sub">High-density information scanning pattern</p>
-      </div>
-
-      <div class="article-list-industrial">
-        <div class="article-item-industrial" v-for="(article, index) in articles" :key="index">
-          <div class="article-rank">{{ String(index + 1).padStart(2, '0') }}</div>
-          <div class="article-content">
-            <div class="article-title">{{ article.title }}</div>
-            <div class="article-meta">
-              <span>{{ article.author }}</span>
-              <span class="meta-divider">|</span>
-              <span>{{ article.date }}</span>
-              <span class="meta-divider">|</span>
-              <span>{{ article.readTime }}</span>
-            </div>
-            <div class="article-summary">{{ article.summary }}</div>
-          </div>
-          <div class="article-link">READ →</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==================== 表单 ==================== -->
-    <section class="section">
-      <div class="section-header">
-        <h2 class="section-title">Form System</h2>
-        <div class="section-line"></div>
-        <p class="section-sub">Validation with tactical feedback</p>
-      </div>
-
-      <div class="form-industrial">
-        <div class="form-group-industrial">
-          <label>Node Identifier <span class="required">*</span></label>
-          <input type="text" placeholder="e.g., NODE-0421">
-          <div class="helper-text">Alphanumeric, 8-16 characters</div>
-        </div>
-
-        <div class="form-group-industrial">
-          <label>Access Key <span class="required">*</span></label>
-          <input type="text" placeholder="Enter encryption key">
-          <div class="helper-text">256-bit key required</div>
-        </div>
-
-        <div class="form-group-industrial error">
-          <label>Port Number <span class="required">*</span></label>
-          <input type="text" value="99999">
-          <div class="error-text">Invalid port range (1-65535)</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==================== 模板布局 ==================== -->
-    <section class="section">
-      <div class="section-header">
-        <h2 class="section-title">Template Layouts</h2>
-        <div class="section-line"></div>
-        <p class="section-sub">Modular page structures</p>
-      </div>
-
-      <div class="subsection">
-        <div class="subsection-header">
-          <span class="indicator-line"></span>
-          <h3>Two-Column with Sidebar</h3>
-        </div>
-        <div class="layout-two-col-industrial">
-          <div class="sidebar-industrial">
-            <div class="sidebar-menu-item active">Dashboard</div>
-            <div class="sidebar-menu-item">Analytics</div>
-            <div class="sidebar-menu-item">Nodes</div>
-            <div class="sidebar-divider"></div>
-            <div class="sidebar-menu-item">Settings</div>
-            <div class="sidebar-menu-item">Logs</div>
-          </div>
-          <div class="main-content-industrial">
-            <div class="content-card">
-              <div class="text-label">System Load</div>
-              <div class="text-metric-sm">47%</div>
-            </div>
-            <div class="content-card">
-              <div class="text-label">Active Threads</div>
-              <div class="text-metric-sm">128</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="subsection">
-        <div class="subsection-header">
-          <span class="indicator-line"></span>
-          <h3>3-Column Mini Cards</h3>
-        </div>
-        <div class="grid-3-col">
-          <div class="mini-card">
-            CPU
-            <span class="mini-num">23%</span>
-          </div>
-          <div class="mini-card">
-            MEMORY
-            <span class="mini-num">8.2GB</span>
-          </div>
-          <div class="mini-card">
-            DISK IO
-            <span class="mini-num">340MB/s</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="subsection">
-        <div class="subsection-header">
-          <span class="indicator-line"></span>
-          <h3>Feature Grid</h3>
-        </div>
-        <div class="grid-3-col-industrial">
-          <div class="grid-card" v-for="feature in features" :key="feature.title">
-            <div class="grid-icon">{{ feature.icon }}</div>
-            <div class="grid-title">{{ feature.title }}</div>
-            <div class="grid-desc">{{ feature.desc }}</div>
-            <div class="grid-link">CONFIGURE →</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==================== 仪表盘页面 ==================== -->
-    <section class="section">
-      <div class="section-header">
-        <h2 class="section-title">Dashboard Page</h2>
-        <div class="section-line"></div>
-        <div class="section-sub" style="display: flex; align-items: center;">
-          Real-time monitoring panel
-          <button class="demo-focus-btn" @click="showOverlay = !showOverlay">
-            {{ showOverlay ? 'CLOSE FOCUS' : 'TRIGGER FOCUS' }}
+    <!-- 主要内容区域 -->
+    <main class="main-content">
+      
+      <!-- 按钮组件区域 -->
+      <section class="component-section">
+        <h2 class="section-title">按钮 (Buttons)</h2>
+        <div class="button-group">
+          <button class="btn btn-primary">主要按钮</button>
+          <button class="btn btn-secondary">次要按钮</button>
+          <button class="btn btn-accent">强调按钮</button>
+          <button class="btn btn-success">成功按钮</button>
+          <button class="btn btn-warning">警告按钮</button>
+          <button class="btn btn-error">错误按钮</button>
+          <button class="btn btn-outline">边框按钮</button>
+          <button class="btn btn-text">文本按钮</button>
+          <button class="btn btn-disabled" disabled>禁用按钮</button>
+          <!-- 新增的大渐变按钮 -->
+          <button class="btn btn-gradient-large">
+            <span class="btn-icon">⚡</span>
+            <span class="btn-text-right">渐变大按钮</span>
           </button>
         </div>
-      </div>
+      </section>
 
-      <div class="dashboard-industrial" :class="{ 'has-overlay': showOverlay }">
-        <div class="focus-overlay-demo" v-if="showOverlay">
-          <div class="focus-content">
-            <div class="focus-close" @click="showOverlay = false">✕</div>
-            <div class="focus-title">CRITICAL ALERT</div>
-            <div class="focus-desc">
-              Anomaly detected in Node Cluster 7. Traffic spike of 340% above baseline.
-              Immediate investigation required.
+      <!-- 卡片组件区域 -->
+      <section class="component-section">
+        <h2 class="section-title">卡片 (Cards)</h2>
+        <div class="card-container">
+          <!-- 基础卡片 -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">基础卡片</h3>
             </div>
-            <button class="btn-primary" @click="showOverlay = false">ACKNOWLEDGE</button>
-            <button class="btn-ghost" style="margin-left: 8px;" @click="showOverlay = false">DISMISS</button>
-          </div>
-        </div>
-
-        <div class="stats-grid-industrial">
-          <div class="stat-card-industrial" v-for="stat in dashboardStats" :key="stat.label">
-            <div class="stat-label">{{ stat.label }}</div>
-            <div class="stat-value">{{ stat.value }}</div>
-            <div class="stat-trend">{{ stat.trend }}</div>
-          </div>
-        </div>
-
-        <div class="activity-industrial">
-          <div class="activity-header">
-            <span>SYSTEM ACTIVITY</span>
-            <span class="text-caption">Last 24 hours</span>
-          </div>
-          <div class="activity-list">
-            <div class="activity-item" v-for="(activity, index) in activities" :key="index">
-              <span class="activity-dot"></span>
-              <span>{{ activity.event }}</span>
-              <span class="activity-time">{{ activity.time }}</span>
+            <div class="card-body">
+              <p class="card-text">这是卡片的主要内容区域，用于展示信息。</p>
+            </div>
+            <div class="card-footer">
+              <button class="btn btn-sm">操作按钮</button>
             </div>
           </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- ==================== 设置页面 ==================== -->
-    <section class="section">
-      <div class="section-header">
-        <h2 class="section-title">Settings Page</h2>
-        <div class="section-line"></div>
-        <p class="section-sub">Tactical configuration panel</p>
-      </div>
-
-      <div class="settings-industrial">
-        <div class="settings-group">
-          <div class="settings-title">// NOTIFICATIONS</div>
-          <div class="setting-row">
-            <span>Alert Sounds</span>
-            <div class="setting-control">
-              <span class="toggle-on">ENABLED</span>
-              <span class="setting-hint">WAV</span>
+          <!-- 图文卡片 -->
+          <div class="card card-featured">
+            <div class="card-image">
+              <img src="https://via.placeholder.com/300x200" alt="示例图片" class="card-img">
+            </div>
+            <div class="card-content">
+              <div class="card-meta">
+                <span class="card-tag">标签</span>
+                <time class="card-time">2024-01-01</time>
+              </div>
+              <h3 class="card-title">图文卡片标题</h3>
+              <p class="card-description">这是图文卡片的描述内容，通常会更详细一些。</p>
+              <div class="card-actions">
+                <button class="btn btn-sm btn-outline">查看详情</button>
+              </div>
             </div>
           </div>
-          <div class="setting-row">
-            <span>Desktop Push</span>
-            <div class="setting-control">
-              <span class="toggle-on">ENABLED</span>
-              <span class="setting-hint">HTTPS</span>
+
+          <!-- 用户卡片 -->
+          <div class="card card-user">
+            <div class="user-avatar">
+              <img src="https://via.placeholder.com/60x60" alt="用户头像" class="avatar-img">
             </div>
-          </div>
-          <div class="setting-row">
-            <span>Email Digest</span>
-            <div class="setting-control">
-              <span class="toggle-off">DISABLED</span>
+            <div class="user-info">
+              <h4 class="user-name">用户名</h4>
+              <p class="user-role">角色信息</p>
+              <div class="user-stats">
+                <span class="stat-item">文章: <strong>25</strong></span>
+                <span class="stat-item">粉丝: <strong>150</strong></span>
+              </div>
             </div>
           </div>
         </div>
+      </section>
 
-        <div class="settings-group">
-          <div class="settings-title">// SECURITY</div>
-          <div class="setting-row">
-            <span>2FA Authentication</span>
-            <div class="setting-control">
-              <span class="toggle-on">ACTIVE</span>
-              <span class="setting-hint">TOTP</span>
+      <!-- 表单组件区域 -->
+      <section class="component-section">
+        <h2 class="section-title">表单 (Forms)</h2>
+        <form class="form">
+          <div class="form-group">
+            <label class="form-label" for="username">用户名</label>
+            <input type="text" id="username" class="form-input" placeholder="请输入用户名">
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label" for="email">邮箱</label>
+            <input type="email" id="email" class="form-input" placeholder="请输入邮箱地址">
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label" for="message">消息</label>
+            <textarea id="message" class="form-textarea" placeholder="请输入您的消息"></textarea>
+          </div>
+          
+          <div class="form-checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" class="checkbox-input">
+              <span class="checkbox-text">同意服务条款</span>
+            </label>
+          </div>
+          
+          <div class="form-radio-group">
+            <label class="radio-label">
+              <input type="radio" name="gender" class="radio-input" value="male">
+              <span class="radio-text">男</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="gender" class="radio-input" value="female">
+              <span class="radio-text">女</span>
+            </label>
+          </div>
+        </form>
+      </section>
+
+      <!-- 文字样式区域 -->
+      <section class="component-section">
+        <h2 class="section-title">文字样式 (Typography)</h2>
+        <div class="typography-demo">
+          <h1 class="text-h1">一级标题 H1</h1>
+          <h2 class="text-h2">二级标题 H2</h2>
+          <h3 class="text-h3">三级标题 H3</h3>
+          <h4 class="text-h4">四级标题 H4</h4>
+          <h5 class="text-h5">五级标题 H5</h5>
+          <h6 class="text-h6">六级标题 H6</h6>
+          
+          <p class="text-paragraph">这是段落文本。段落文本应该有良好的可读性，行高适中，字间距合理。</p>
+          
+          <p class="text-secondary">这是次要文本，通常用于描述性内容或辅助信息。</p>
+          
+          <p class="text-tertiary">这是三级文本，通常用于更不重要的信息。</p>
+          
+          <p class="text-disabled">这是禁用状态的文本。</p>
+          
+          <div class="text-links">
+            <a href="#" class="text-link">这是一个链接</a>
+            <a href="#" class="text-link link-hover">悬停链接</a>
+            <a href="#" class="text-link link-active">激活链接</a>
+          </div>
+          
+          <div class="text-emphasis">
+            <strong class="text-bold">粗体文本</strong>
+            <em class="text-italic">斜体文本</em>
+            <code class="text-code">代码文本</code>
+            <mark class="text-highlight">高亮文本</mark>
+          </div>
+        </div>
+      </section>
+
+      <!-- 列表组件区域 -->
+      <section class="component-section">
+        <h2 class="section-title">列表 (Lists)</h2>
+        <div class="lists-demo">
+          <ul class="list-unstyled">
+            <li class="list-item">无样式列表项 1</li>
+            <li class="list-item">无样式列表项 2</li>
+            <li class="list-item">无样式列表项 3</li>
+          </ul>
+          
+          <ol class="list-numbered">
+            <li class="list-item">有序列表项 1</li>
+            <li class="list-item">有序列表项 2</li>
+            <li class="list-item">有序列表项 3</li>
+          </ol>
+          
+          <ul class="list-bulleted">
+            <li class="list-item">项目符号列表项 1</li>
+            <li class="list-item">项目符号列表项 2</li>
+            <li class="list-item">项目符号列表项 3</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 状态指示器区域 -->
+      <section class="component-section">
+        <h2 class="section-title">状态和指示器 (Status & Indicators)</h2>
+        <div class="status-demo">
+          <div class="badge badge-primary">主要</div>
+          <div class="badge badge-secondary">次要</div>
+          <div class="badge badge-success">成功</div>
+          <div class="badge badge-warning">警告</div>
+          <div class="badge badge-error">错误</div>
+          
+          <div class="loading-spinner"></div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: 65%"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 文章卡片区域 -->
+      <section class="component-section">
+        <h2 class="section-title">文章卡片 (Article Cards)</h2>
+        <div class="articles-grid-single">
+          <!-- 单个文章卡片 - 长度增加3倍 -->
+          <div class="article-card article-card-extended">
+            <div class="article-card__header">
+              <h3 class="article-card__title">
+                <a href="#">如何构建现代化的博客系统</a>
+              </h3>
+            </div>
+            <div class="article-card__meta">
+              <div class="article-card__author">
+                <img src="https://via.placeholder.com/24x24" alt="作者头像" class="article-card__avatar">
+                <span>张三</span>
+              </div>
+              <time>2024-01-15</time>
+              <span>5 分钟阅读</span>
+            </div>
+            <div class="article-card__content">
+              <p class="article-card__excerpt">
+                这是一篇关于如何构建现代化博客系统的详细教程，涵盖了前端架构、后端设计、数据库优化等多个方面。本文将深入探讨从零开始搭建一个完整的博客平台所需要的技术栈选择、架构设计、性能优化策略以及安全防护措施。
+              </p>
+            </div>
+            <div class="article-card__footer">
+              <div class="article-card__stats">
+                <span>👍 24</span>
+                <span>💬 8</span>
+                <span>👁️ 156</span>
+              </div>
+              <a href="#" class="article-card__tag article-card__tag-half-width">技术教程</a>
             </div>
           </div>
-          <div class="setting-row">
-            <span>Session Timeout</span>
-            <div class="setting-control">
-              <span class="setting-hint">15 min</span>
-            </div>
-          </div>
         </div>
-      </div>
-    </section>
-
-    <!-- ==================== 页脚 ==================== -->
-    <footer class="system-footer">
-      <div class="footer-line"></div>
-      <div class="footer-content">
-        <div>
-          <div class="footer-logo">SYS.TERMINAL</div>
-          <div class="footer-desc">
-            Modular infrastructure monitoring platform. Designed for high-density data operations.
-          </div>
-        </div>
-        <div class="footer-buttons">
-          <button class="btn-outline-sm">DOCS</button>
-          <button class="btn-primary-sm">UPGRADE</button>
-        </div>
-      </div>
-      <div class="footer-copyright">
-        <span>SYS.TERMINAL v2.4.1</span>
-        <span>BUILD: 2026-05-21-0421</span>
-      </div>
-    </footer>
+      </section>
+    </main>
   </div>
 </template>
 
-<script>
-export default {
-  name: 'DesignSystemDemo',
-  data() {
-    return {
-      activeNav: 1,
-      activeMenu: 0,
-      rating: 4,
-      showOverlay: false,
-
-      navItems: ['TERMINAL', 'MONITOR', 'ANALYTICS', 'SECURITY'],
-
-      colors: [
-        { name: 'Primary', class: 'primary', hex: '#53b0ff' },
-        { name: 'Primary Deep', class: 'primary-deep', hex: '#000eff' },
-        { name: 'Secondary', class: 'secondary', hex: '#7200ff' },
-        { name: 'Accent', class: 'accent', hex: '#f86eff' },
-        { name: 'Warning', class: 'warning', hex: '#ffec7b' },
-        { name: 'Success', class: 'success', hex: '#51ffd6' },
-        { name: 'Error', class: 'error', hex: '#ff0072' },
-      ],
-
-      users: [
-        { name: 'K. Reeves', role: 'SysAdmin' },
-        { name: 'M. ONeill', role: 'SecOps' },
-      ],
-
-      articles: [
-        {
-          title: 'Protocol Hardening: Mitigating Side-Channel Attacks',
-          author: 'C. Voss',
-          date: '2026-05-18',
-          readTime: '8 min',
-          summary: 'Analysis of recent attack vectors targeting unencrypted metadata in distributed node networks and countermeasure deployment strategies.'
-        },
-        {
-          title: 'Grid Topology Optimization for Sub-2ms Latency',
-          author: 'J. Chen',
-          date: '2026-05-15',
-          readTime: '12 min',
-          summary: 'Refactored routing algorithms reduce inter-node latency by 34% in mesh configurations exceeding 500 active endpoints.'
-        },
-        {
-          title: 'Firmware v4.2.0: Changelog and Migration Guide',
-          author: 'Ops Team',
-          date: '2026-05-10',
-          readTime: '6 min',
-          summary: 'New encryption handshake protocol, improved failover logic, and deprecated API endpoint removal schedule.'
-        },
-      ],
-
-      features: [
-        {
-          icon: '◈',
-          title: 'Real-time Metrics',
-          desc: 'Sub-second data pipeline with configurable polling intervals. Zero interpolation artifacts.'
-        },
-        {
-          icon: '◆',
-          title: 'Threat Detection',
-          desc: 'Behavioral anomaly engine with 97.3% detection rate. False positive suppression via ML filtering.'
-        },
-        {
-          icon: '◇',
-          title: 'Auto-scaling',
-          desc: 'Dynamic node allocation based on load prediction models. Scale from 10 to 10,000 nodes in under 60s.'
-        },
-      ],
-
-      dashboardStats: [
-        { label: 'Active Nodes', value: '2,847', trend: '↑ 12.4%' },
-        { label: 'Throughput', value: '340MB/s', trend: '↑ 8.1%' },
-        { label: 'Error Rate', value: '0.03%', trend: '↓ 0.01%' },
-        { label: 'Response Time', value: '1.2ms', trend: '↓ 3.2%' },
-      ],
-
-      activities: [
-        { event: 'Node CLUSTER-7 auto-scaled to 48 instances', time: '14:32:05' },
-        { event: 'Security scan completed: 0 vulnerabilities', time: '14:28:11' },
-        { event: 'Firmware update staged for CLUSTER-3', time: '14:15:44' },
-        { event: 'Anomaly detected: Traffic spike +340%', time: '13:58:02' },
-        { event: 'Backup completed: 2.4TB in 18.3s', time: '13:45:00' },
-      ],
-    }
-  },
-  computed: {
-    threatLevel() {
-      const levels = ['NONE', 'LOW', 'MODERATE', 'HIGH', 'CRITICAL']
-      return levels[this.rating - 1] || 'NONE'
-    }
-  }
-}
-</script>
-
-
-
-
 <style lang="scss" scoped>
-// 请确保此处的引入路径与你的项目结构一致（如果 tokens 在同级目录，可改为 ./design-tokens.scss）
+// 引入设计令牌
 @import './test_scss.scss';
 </style>
