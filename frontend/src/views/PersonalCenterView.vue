@@ -7,7 +7,13 @@
     <div class="container-grid">
       <div class="glass-card user-info-card">
         <header class="user-info">
-          <div class="avatar-placeholder">{{ userStore.userInfo?.username?.charAt(0).toUpperCase() }}</div>
+          <div class="avatar-wrapper">
+            <img v-if="avatarUrl" :src="avatarUrl" class="avatar-img" />
+            <span v-else class="avatar-letter">{{ userStore.userInfo?.username?.charAt(0).toUpperCase() }}</span>
+            <input type="file" ref="fileInputRef" accept="image/*" style="display:none" @change="handleAvatarUpload" />
+            <button class="avatar-upload-btn" @click="fileInputRef?.click()">更换头像</button>
+            <div v-if="avatarUploading" class="avatar-uploading">上传中...</div>
+          </div>
           <div class="details">
             <h2>{{ userStore.userInfo?.username }}</h2>
             <span class="role-badge">{{ userStore.userInfo?.role === 'admin' ? '管理员' : '普通用户' }}</span>
@@ -39,6 +45,7 @@
         <div class="menu-section">
           <button class="menu-item" @click="goToPosts">浏览所有文章</button>
           <button class="menu-item" @click="goToFavorites">我的收藏</button>
+          <button class="menu-item" @click="goToSocial">社交关系</button>
           <button class="menu-item" @click="goToSettings">系统设置</button>
         </div>
       </div>
@@ -102,6 +109,29 @@ const pwdMessage = ref('')
 const pwdError = ref(false)
 const pwdForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
+const avatarUrl = ref(userStore.userInfo?.avatar ? API_BASE.replace('/api/v1', '') + userStore.userInfo.avatar : null)
+const fileInputRef = ref(null)
+const avatarUploading = ref(false)
+
+const handleAvatarUpload = async (e) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  if (!file.type.startsWith('image/')) { alert('请选择图片文件'); return }
+  if (file.size > 2 * 1024 * 1024) { alert('头像不能超过2MB'); return }
+  avatarUploading.value = true
+  const r = await authService.uploadAvatar(file)
+  if (r.success) {
+    const url = API_BASE.replace('/api/v1', '') + r.data.url
+    avatarUrl.value = url
+    if (userStore.userInfo) userStore.userInfo.avatar = r.data.url
+  } else {
+    alert(r.message || '上传失败')
+  }
+  avatarUploading.value = false
+  e.target.value = ''
+}
+
 const handleChangePwd = async () => {
   pwdMessage.value = ''
   if (!pwdForm.oldPassword || !pwdForm.newPassword || !pwdForm.confirmPassword) {
@@ -146,6 +176,7 @@ const goToCategoryManage = () => router.push('/categories')
 const goToTagManage = () => router.push('/tags')
 const goToPosts = () => router.push('/posts')
 const goToFavorites = () => router.push('/favorites')
+const goToSocial = () => router.push('/social')
 const goToSettings = () => alert('系统设置功能开发中...')
 const goToCommentReports = () => router.push('/comment-reports')
 const goToCommentAdmin = () => router.push('/comment-admin')
@@ -176,4 +207,10 @@ const handleBack = () => router.go(-1)
 .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
 .btn-cancel { padding: 8px 20px; border: 1px solid $border-color; border-radius: 6px; background: white; cursor: pointer; }
 .btn-submit { padding: 8px 20px; border: none; border-radius: 6px; background: $color-primary; color: white; cursor: pointer; &:disabled { opacity: 0.6; } }
+
+.avatar-wrapper { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.avatar-img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; cursor: pointer; border: 2px solid $border-color; }
+.avatar-letter { width: 72px; height: 72px; border-radius: 50%; background: $color-primary; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 700; }
+.avatar-upload-btn { font-size: 0.8rem; color: $color-primary; background: none; border: none; cursor: pointer; padding: 2px 8px; &:hover { text-decoration: underline; } }
+.avatar-uploading { font-size: 0.8rem; color: $text-secondary; }
 </style>

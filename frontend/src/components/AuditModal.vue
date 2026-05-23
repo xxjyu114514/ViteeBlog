@@ -204,7 +204,7 @@ watch(() => props.show, (val) => {
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
-    color: $color-secondary;
+    color: $text-secondary;
 
     &:hover { color: $color-primary; }
   }
@@ -302,10 +302,10 @@ watch(() => props.show, (val) => {
     display: flex; justify-content: flex-end; gap: 16px;
     
     .btn-secondary {
-      padding: 8px 16px; background: rgba($color-secondary, 0.1);
-      color: $color-secondary; border-radius: 8px; font-weight: 500;
+      padding: 8px 16px; background: rgba($text-secondary, 0.1);
+      color: $text-secondary; border-radius: 8px; font-weight: 500;
       border: none; cursor: pointer; transition: all 0.2s ease;
-      &:hover { background: rgba($color-secondary, 0.2); }
+      &:hover { background: rgba($text-secondary, 0.2); }
     }
     
     .btn-primary {

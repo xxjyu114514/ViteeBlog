@@ -5,7 +5,10 @@
     <div class="container-narrow">
       <div class="flex-between mb-30">
         <h1 class="title-large">{{ userStore.isAdmin ? '全站文章管理' : '我的文章' }}</h1>
-        <button class="btn-primary" @click="handleCreateNew">新建文章</button>
+        <div class="header-right">
+          <span v-if="pendingCount > 0" class="pending-badge">待审核 {{ pendingCount }} 篇</span>
+          <button class="btn-primary" @click="handleCreateNew">新建文章</button>
+        </div>
       </div>
 
       <div v-if="userStore.isAdmin" class="admin-controls mb-20">
@@ -94,6 +97,7 @@ const viewMode = ref('all')
 const currentPage = ref(1)
 const pageSize = ref(20)
 const totalArticles = ref(0)
+const pendingCount = ref(0)
 
 const emptyMessage = computed(() => {
   if (userStore.isAdmin) return viewMode.value === 'all' ? '全站暂无文章' : '您暂无文章'
@@ -148,7 +152,12 @@ const onAuditSuccess = () => fetchArticles(currentPage.value)
 const goToPage = (page) => { if (page >= 1 && page <= totalPages.value) fetchArticles(page) }
 const handleBack = () => router.go(-1)
 
-onMounted(async () => { if (!userStore.isAdmin) viewMode.value = 'mine'; await fetchArticles(1) })
+onMounted(async () => {
+  if (!userStore.isAdmin) viewMode.value = 'mine'
+  const r = await articleService.getMyPendingCount()
+  if (r.success) pendingCount.value = r.data.pendingCount ?? r.data.pending_count ?? 0
+  await fetchArticles(1)
+})
 </script>
 
 <style scoped lang="scss">
@@ -157,7 +166,7 @@ onMounted(async () => { if (!userStore.isAdmin) viewMode.value = 'mine'; await f
 .back-button { position: fixed; top: 16px; left: 16px; padding: 8px 16px; background: rgba($color-primary, 0.1); color: $color-primary; border-radius: 8px; cursor: pointer; font-weight: 500; &:hover { background: rgba($color-primary, 0.2); transform: translateY(-1px); } }
 .admin-controls { padding: 16px; background: rgba($color-primary, 0.05); border-radius: 8px; .admin-nav-links { display: flex; gap: 16px; } .nav-link { display: inline-block; padding: 8px 16px; background: rgba($color-primary, 0.1); color: $color-primary; border-radius: 8px; text-decoration: none; font-weight: 500; &:hover { background: rgba($color-primary, 0.2); } } }
 .article-list .article-item { padding: 16px; border-radius: 8px; margin-bottom: 16px; }
-.meta-text { font-size: 0.875rem; color: $color-secondary; span { margin-right: 8px; } }
+.meta-text { font-size: 0.875rem; color: $text-secondary; span { margin-right: 8px; } }
 .status-draft { color: $color-warning; }
 .status-published { color: $color-success; }
 .status-audited { color: $color-primary; }
@@ -170,10 +179,12 @@ onMounted(async () => { if (!userStore.isAdmin) viewMode.value = 'mine'; await f
 .btn-audit { background: rgba($color-primary, 0.1); color: $color-primary; &:hover { background: rgba($color-primary, 0.2); } }
 .btn-pin { background: rgba($color-purple, 0.1); color: $color-purple; &:hover { background: rgba($color-purple, 0.2); } }
 .pagination { display: flex; justify-content: center; align-items: center; gap: 16px; }
-.pagination-btn { padding: 8px 16px; background: rgba($color-primary, 0.1); color: $color-primary; border-radius: 8px; font-weight: 500; border: none; cursor: pointer; &:hover { background: rgba($color-primary, 0.2); } &:disabled { background: rgba($color-secondary, 0.1); color: $color-secondary; cursor: not-allowed; } }
-.page-info { font-size: 0.875rem; color: $color-secondary; }
+.pagination-btn { padding: 8px 16px; background: rgba($color-primary, 0.1); color: $color-primary; border-radius: 8px; font-weight: 500; border: none; cursor: pointer; &:hover { background: rgba($color-primary, 0.2); } &:disabled { background: rgba($text-secondary, 0.1); color: $text-secondary; cursor: not-allowed; } }
+.page-info { font-size: 0.875rem; color: $text-secondary; }
 .loading-state { display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 16px; margin-top: 50px; }
 .loading-spinner { width: 32px; height: 32px; border: 4px solid rgba($color-primary, 0.1); border-top: 4px solid $color-primary; border-radius: 50%; animation: spin 1s linear infinite; }
-.empty-state { display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 16px; margin-top: 50px; p { font-size: 1rem; color: $color-secondary; } }
+.empty-state { display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 16px; margin-top: 50px; p { font-size: 1rem; color: $text-secondary; } }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.pending-badge { padding: 4px 12px; background: rgba($color-warning, 0.1); color: $color-warning; border-radius: 20px; font-size: 0.85rem; font-weight: 500; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 </style>

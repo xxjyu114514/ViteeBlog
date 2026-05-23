@@ -21,6 +21,9 @@
           <div class="article-meta flex-between">
             <div class="meta-info">
               <span class="author">作者: {{ getAuthorName() }}</span>
+              <button v-if="canFollow" class="btn-follow" @click="toggleFollow" :disabled="followLoading">
+                {{ followLoading ? '...' : (isFollowing ? '✓ 已关注' : '+ 关注') }}
+              </button>
               <span class="publish-date">{{ formatDateTime(article.publishedAt) }}</span>
               <span class="view-count">阅读: {{ article.viewCount || 0 }} 次</span>
               <span class="like-count">
@@ -60,6 +63,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { getArticleDetail as fetchArticleDetail, softDeleteArticle, loadArticleContent, toggleArticleLike, getArticleLikeCount } from '@/services/articleService'
 import { toggleFavorite, checkFavoriteStatus } from '@/services/favoriteService'
+import { followUser, unfollowUser } from '@/services/socialService'
 import CommentForm from '@/components/CommentForm.vue'
 import CommentList from '@/components/CommentList.vue'
 import { formatDateTime, renderMarkdown, renderInline } from '@/utils'
@@ -80,6 +84,11 @@ const favoriteLoading = ref(false)
 const isLiked = ref(false)
 const likeCount = ref(0)
 const likeLoading = ref(false)
+const isFollowing = ref(false)
+const followLoading = ref(false)
+const authorId = ref(null)
+
+const canFollow = computed(() => userStore.isAuthenticated && authorId.value && authorId.value !== userStore.userInfo?.id)
 
 const getAuthorName = () => {
   if (article.value?.author?.username) return article.value.author.username
@@ -108,6 +117,7 @@ const loadArticle = async () => {
     }
     if (result.data.isLiked !== undefined) isLiked.value = result.data.isLiked
     if (result.data.likeCount !== undefined) likeCount.value = result.data.likeCount
+    authorId.value = result.data.author?.id || result.data.userId
   } else { error.value = result.message }
   loading.value = false
 }
@@ -146,6 +156,14 @@ const toggleLike = async () => {
   likeLoading.value = false
 }
 
+const toggleFollow = async () => {
+  if (!authorId.value || followLoading.value) return
+  followLoading.value = true
+  const r = isFollowing.value ? await unfollowUser(authorId.value) : await followUser(authorId.value)
+  if (r.success) isFollowing.value = !isFollowing.value
+  followLoading.value = false
+}
+
 const goBack = () => router.push('/')
 const handleBack = () => router.go(-1)
 
@@ -162,6 +180,7 @@ onMounted(() => { loadArticle() })
   .meta-info { display: flex; gap: 16px; color: #6b7280; font-size: 0.95rem; }
   .like-count { display: inline-flex; }
   .btn-like { background: none; border: none; cursor: pointer; font-size: 0.95rem; padding: 0; color: #6b7280; &:hover { color: #ef4444; } &.liked { color: #ef4444; } }
+  .btn-follow { background: none; border: 1px solid #3b82f6; border-radius: 4px; padding: 2px 10px; font-size: 0.8rem; cursor: pointer; color: #3b82f6; white-space: nowrap; &:hover { background: #3b82f6; color: white; } &:disabled { opacity: 0.5; } }
   .admin-actions { display: flex; gap: 12px; }
   .btn-action { padding: 6px 16px; border: none; border-radius: 6px; font-size: 0.9rem; cursor: pointer; }
   .btn-edit { background: #dbeafe; color: #2563eb; &:hover { background: #bfdbfe; } }

@@ -2,7 +2,7 @@
  * 认证服务 — /api/v1/auth/*
  * 所有函数返回 ApiResponse 格式
  */
-import { get, post, put, del } from '@/api/client'
+import { get, post, put, del, uploadFile } from '@/api/client'
 
 /** POST /auth/login */
 export const login = (username, password) =>
@@ -39,3 +39,7 @@ export const updateUserRole = (userId, newRole) =>
 /** PUT /auth/admin/users/{userId}/restore */
 export const restoreUser = (userId) =>
   put(`/auth/admin/users/${userId}/restore`)
+
+/** POST /auth/upload-avatar */
+export const uploadAvatar = (file) =>
+  uploadFile('/auth/upload-avatar', file, 'file')

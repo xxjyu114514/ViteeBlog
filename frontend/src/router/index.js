@@ -117,6 +117,12 @@ const routes = [
     meta: { index: 30, title: '留言板' }
   },
   {
+    path: '/social',
+    name: 'social',
+    component: () => import('@/views/SocialView.vue'),
+    meta: { index: 13, title: '社交关系', requiresAuth: true }
+  },
+  {
     path: '/login',
     name: 'login',
     component: LoginView,

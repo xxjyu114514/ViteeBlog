@@ -81,3 +81,7 @@ export const loadArticleContent = async (contentPath) => {
   const result = await fetchFileContent(contentPath)
   return result.success ? { success: true, data: result.data } : result
 }
+
+/** GET /article/my/pending-count */
+export const getMyPendingCount = () =>
+  get('/article/my/pending-count')
