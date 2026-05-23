@@ -9,7 +9,8 @@ from sqlalchemy import select, func
 from dependencies import get_db, allow_admin_only, get_current_user
 from schemas.user_schema import (
     UserCreate, UserLogin, UserOut, Token, EmailCodeRequest,
-    VerifyCodeRequest, PasswordChange, ForgotPasswordRequest, ResetPasswordRequest
+    VerifyCodeRequest, PasswordChange, ForgotPasswordRequest, ResetPasswordRequest,
+    ProfileUpdate
 )
 from repository.auth_repo import AuthRepository
 from core.security import generate_verification_code
@@ -263,3 +264,28 @@ async def upload_avatar(
     await db.commit()
 
     return {"url": avatar_url, "message": "头像上传成功"}
+
+
+@router.put("/update-profile", summary="修改个人资料")
+async def update_profile(
+    profile_in: ProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    # 1. 如果传了 username，检查是否重名
+    if profile_in.username:
+        existing = await db.execute(
+            select(User).where(User.username == profile_in.username, User.id != current_user.id)
+        )
+        if existing.scalars().first():
+            raise HTTPException(status_code=400, detail="该昵称已被占用")
+        current_user.username = profile_in.username
+
+    # 2. 如果传了 avatar，直接更新
+    if profile_in.avatar:
+        current_user.avatar = profile_in.avatar
+
+    await db.commit()
+    await db.refresh(current_user)
+
+    return {"message": "个人资料更新成功", "username": current_user.username, "avatar": current_user.avatar}

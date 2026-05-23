@@ -67,3 +67,8 @@ class ResetPasswordRequest(BaseModel):
     email: EmailStr = Field(..., description="邮箱")
     code: str = Field(..., min_length=6, max_length=6, description="验证码")
     new_password: str = Field(..., min_length=6, max_length=128, description="新密码")
+
+
+class ProfileUpdate(BaseModel):
+    username: Optional[str] = Field(None, min_length=3, max_length=50, description="新昵称")
+    avatar: Optional[str] = Field(None, description="头像URL")

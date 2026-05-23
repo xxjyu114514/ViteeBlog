@@ -34,7 +34,7 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(50), unique=True, index=True, comment="用户名")
     email: Mapped[str] = mapped_column(String(100), unique=True, index=True, comment="邮箱")
     password: Mapped[str] = mapped_column(String(255), comment="加密哈希密码")
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole), server_default="common", comment="用户角色")
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole), server_default="COMMON", comment="用户角色")
     avatar: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, comment="头像路径")
     is_active: Mapped[bool] = mapped_column(Boolean, server_default="1", comment="激活状态")
     login_attempts: Mapped[int] = mapped_column(Integer, server_default="0", comment="失败尝试次数")

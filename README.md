@@ -374,6 +374,51 @@ Authorization: Bearer <Admin_Token>
 
 ---
 
+### 3.1 修改个人资料
+
+**接口**: `PUT /auth/update-profile`  
+**权限**: 所有登录用户
+
+**请求头**:
+```
+Authorization: Bearer <Your_Token>
+```
+
+**请求体**:
+```json
+{
+  "username": "NewUsername",
+  "avatar": "/storage/avatars/avatar_test.jpg"
+}
+```
+
+**参数说明**:
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| username | string | ❌ | 新昵称（3-50个字符），可选 |
+| avatar | string | ❌ | 头像URL，可选 |
+
+**成功响应** (200):
+```json
+{
+  "message": "个人资料更新成功",
+  "username": "NewUsername",
+  "avatar": "/storage/avatars/avatar_test.jpg"
+}
+```
+
+**错误响应**:
+- `400`: 该昵称已被占用
+- `401`: 未授权（Token无效或过期）
+
+**前端注意**:
+- ✅ 可以只传 `username` 或只传 `avatar`，也可以同时修改
+- ✅ 修改昵称时会检查是否与其他用户重名
+- ✅ 头像URL通常通过上传接口获取后传入
+- ⚠️ 用户名长度要求：3-50个字符
+
+---
+
 ### Token 使用示例
 
 ```javascript
