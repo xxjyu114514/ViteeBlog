@@ -66,7 +66,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { getChannels, getMessages, sendMessage, withdrawMessage, createChannel } from '@/services/channelService'
@@ -87,6 +87,7 @@ const nextCursor = ref(null)
 const messageAreaRef = ref(null)
 const showCreateChannel = ref(false)
 const newChannelName = ref('')
+let pollTimer = null
 
 const getFileUrl = (path) => path ? API_BASE.replace('/api/v1', '') + path : ''
 
@@ -101,6 +102,31 @@ const selectChannel = async (ch) => {
   currentChannel.value = ch; messages.value = []; hasMore.value = false; nextCursor.value = null
   await loadMessages()
   scrollToBottom()
+  startPolling()
+}
+
+const startPolling = () => {
+  stopPolling()
+  pollTimer = setInterval(pollForNewMessages, 5000)
+}
+
+const stopPolling = () => {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+}
+
+const pollForNewMessages = async () => {
+  if (!currentChannel.value || messages.value.length === 0) return
+  const newestId = messages.value[messages.value.length - 1].id
+  const r = await getMessages(currentChannel.value.id, { limit: 10 })
+  if (r.success) {
+    const raw = r.data.items || []
+    const sorted = [...raw].sort((a, b) => a.id - b.id)
+    const newOnes = sorted.filter(m => m.id > newestId)
+    if (newOnes.length > 0) {
+      messages.value = [...messages.value, ...newOnes]
+      scrollToBottom()
+    }
+  }
 }
 
 const loadMessages = async () => {
@@ -143,6 +169,7 @@ const handleCreateChannel = async () => {
 }
 
 onMounted(() => { fetchChannels() })
+onUnmounted(() => { stopPolling() })
 </script>
 
 <style scoped lang="scss">
