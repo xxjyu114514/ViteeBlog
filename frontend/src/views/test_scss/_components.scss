@@ -12,6 +12,7 @@
   background: $bg-surface;
   border: $border-white-light;
   border-radius: 0;
+  
 
   .section-title {
     font-family: $font-mono;
@@ -162,4 +163,251 @@
   height: 1px;
   background: $divider-emphasis;
   margin: $space-xl 0;
+}
+
+// ============================================================
+//   个人主页大按钮（Hero Button）
+//   深毛玻璃 + 仿文章卡片全幅渐变（常态显示）+ 右侧 1/4 极淡白
+//   ============================================================
+
+.hero-button {
+  // 2:1 比例，高度 120px
+  width: 240px;
+  height: 120px;
+  flex-shrink: 0;
+
+  // 核心修复：白色渐变放在 background 多图层中，与玻璃底色共享 backdrop-filter
+  // 这样整块区域都有毛玻璃效果，包括右侧白色渐变部分
+  background:
+    // 图层1（上层）：白色渐变
+    linear-gradient(to right,
+      transparent 0%,
+      transparent 65%,
+      rgba(255, 255, 255, 0.04) 78%,
+      rgba(255, 255, 255, 0.10) 90%,
+      rgba(255, 255, 255, 0.15) 98%,
+      rgba(255, 255, 255, 0.18) 100%
+    ),
+    // 图层2（下层）：深色玻璃底色
+    rgba(66, 66, 73, 0.82);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  position: relative;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: border-color $transition-base, box-shadow $transition-base, transform 0.12s ease-out;
+  overflow: hidden;
+
+  // 边缘渐变（仿文章卡片，1px 超出边框的发光）
+  &::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    bottom: -1px;
+    background: linear-gradient(to right,
+      transparent 0%,
+      transparent 65%,
+      rgba(255, 255, 255, 0.04) 78%,
+      rgba(255, 255, 255, 0.10) 90%,
+      rgba(255, 255, 255, 0.15) 98%,
+      rgba(255, 255, 255, 0.18) 100%
+    );
+    pointer-events: none;
+    z-index: 1;
+    opacity: 1;
+    border: 1px solid transparent;
+  }
+
+  // 左上角冷色装饰线
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 32px;
+    background: $color-primary;
+    opacity: 0.5;
+    transition: opacity $transition-base;
+    z-index: 2;
+  }
+
+  &:hover {
+    border-color: rgba($color-primary, 0.2);
+    box-shadow: $glow-brand;
+    &::after { opacity: 1; }
+  }
+
+  // 全局点击效果
+  &:active {
+    opacity: 0.7;
+  }
+
+  // 内部布局
+  .hero-button__inner {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 0 $space-lg;
+  }
+
+  // 左侧图标
+  .hero-button__icon {
+    font-size: 2rem;
+    line-height: 1;
+    opacity: 0.9;
+    flex-shrink: 0;
+  }
+
+  // 文字组推到右侧靠边框
+  .hero-button__text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    margin-left: 4rem;
+  }
+
+  .hero-button__label {
+    font-family: $font-mono;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: $text-primary;
+    letter-spacing: 0.03em;
+    line-height: 1.2;
+  }
+
+  .hero-button__sub {
+    font-family: $font-mono;
+    font-size: 0.7rem;
+    color: $text-tertiary;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+}
+
+// 展示容器 — 带模拟背景让毛玻璃可见
+.hero-button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-xl;
+  justify-content: center;
+  align-items: center;
+  padding: $space-2xl $space-xl;
+  position: relative;
+  perspective: 800px;          // 3D 透视：所有子按钮共享同一个消失点
+  background:
+    radial-gradient(ellipse at 30% 50%, rgba(78, 168, 222, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 50%, rgba(108, 92, 231, 0.06) 0%, transparent 60%),
+    linear-gradient(135deg, #0a0a0c 0%, #111114 100%);
+  background: url(../../assets/about-bg.jpg) fixed ;
+}
+
+// ============================================================
+//   毛玻璃大卡片 (Glass Hero Card)
+//   比例 1:3，宽 600px，适合 1920×1080 屏幕
+//   ============================================================
+
+.glass-hero-card {
+  width: 400px;
+  height: 550px;          // 竖屏 1:3 = 600:1800
+  flex-shrink: 0;
+
+  background: rgba(66, 66, 73, 0.82);  // 与大按钮透明度一致
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: transform 0.12s ease-out;
+  overflow: hidden;
+
+  // 右侧冷色渐变装饰条
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(to bottom,
+      $color-primary 0%,
+      $color-secondary 50%,
+      $color-accent 100%
+    );
+    opacity: 0.6;
+    z-index: 1;
+  }
+
+  // 左上装饰角标
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 28px;
+    height: 3px;
+    background: $color-primary;
+    opacity: 0.4;
+    z-index: 1;
+  }
+
+  // 内部内容 — 竖长布局
+  .glass-hero-card__inner {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+    min-height: 100%;
+    padding: $space-2xl $space-xl;
+    gap: $space-lg;
+  }
+
+  .glass-hero-card__title {
+    font-family: $font-mono;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: $text-primary;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+  }
+
+  .glass-hero-card__desc {
+    font-family: $font-sans;
+    font-size: 0.9rem;
+    color: $text-secondary;
+    line-height: 1.6;
+    max-width: 80%;
+  }
+
+  .glass-hero-card__meta {
+    display: flex;
+    gap: $space-lg;
+    margin-top: $space-lg;
+    padding-top: $space-md;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    font-family: $font-mono;
+    font-size: 0.7rem;
+    color: $text-tertiary;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+}
+
+// 大卡片展示容器（与大按钮共用同一张背景图）
+.glass-hero-card-showcase {
+  display: flex;
+  justify-content: flex-start;
+  padding: $space-2xl;
+  background: url(../../assets/about-bg.jpg) fixed;
+  min-height: 400px;
 }

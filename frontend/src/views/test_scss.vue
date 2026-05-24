@@ -295,9 +295,144 @@
           </div>
         </div>
       </section>
+
+      <!-- 个人主页大按钮 -->
+      <section class="component-section">
+        <h2 class="section-title">个人主页大按钮 (Hero Button)</h2>
+        <p style="color: #a0a0b0; margin-bottom: 16px; font-size: 0.9rem;">
+          深毛玻璃 80% + 左侧暗色 + 右 1/5 渐变冷色
+        </p>
+        <div class="hero-button-group">
+          <div class="hero-button">
+            <div class="hero-button__inner">
+              <span class="hero-button__icon">🧊</span>
+              <div class="hero-button__text">
+                <span class="hero-button__label">我的主页</span>
+                <span class="hero-button__sub">PERSONAL_HOME</span>
+              </div>
+            </div>
+          </div>
+          <div class="hero-button">
+            <div class="hero-button__inner">
+              <span class="hero-button__icon">📕</span>
+              <div class="hero-button__text">
+                <span class="hero-button__label">文章归档</span>
+                <span class="hero-button__sub">ARCHIVES</span>
+              </div>
+            </div>
+          </div>
+          <div class="hero-button">
+            <div class="hero-button__inner">
+              <span class="hero-button__icon">💬</span>
+              <div class="hero-button__text">
+                <span class="hero-button__label">留言板</span>
+                <span class="hero-button__sub">GUESTBOOK</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 毛玻璃大卡片 -->
+      <section class="component-section">
+        <h2 class="section-title">毛玻璃大卡片 (Glass Hero Card)</h2>
+        <p style="color: #a0a0b0; margin-bottom: 16px; font-size: 0.9rem;">
+          竖屏 1:3 比例 · 宽 600px · 透明度与大按钮一致 · 与大按钮同一张背景图
+        </p>
+        <div class="glass-hero-card-showcase">
+          <div class="glass-hero-card">
+            <div class="glass-hero-card__inner">
+              <div class="glass-hero-card__title">欢迎来到我的主页</div>
+              <div class="glass-hero-card__desc">
+                这是一个毛玻璃大卡片，未来可替换为二次元背景图，
+                毛玻璃效果将自动叠加在背景之上。
+              </div>
+              <div class="glass-hero-card__meta">
+                <span>SYSTEM v3.2</span>
+                <span>STATUS: ONLINE</span>
+                <span>UPTIME: 42h</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 </template>
+
+<script setup>
+import { onMounted, onUnmounted } from 'vue'
+
+// ---- 全局伪 3D 倾斜效果 (所有 hero-button + glass-hero-card) ----
+// 鼠标在视窗内移动，所有元素朝光标方向倾斜
+const DEFAULT_ANGLE = 20    // 默认位置（相对屏幕中心）最大 ±4°
+const TRACK_X = 8          // 全局鼠标追踪水平最大 ±5°
+const TRACK_Y = 6          // 全局鼠标追踪垂直最大 ±3°
+
+let elements = []
+const defaultTilts = new Map()
+
+function getDefaultRotateY(el) {
+  const rect = el.getBoundingClientRect()
+  const cx = rect.left + rect.width / 2
+  const scx = window.innerWidth / 2
+  return ((cx - scx) / (window.innerWidth / 2)) * DEFAULT_ANGLE
+}
+
+function updateAll(mx, my) {
+  // mx, my: 鼠标相对屏幕中心的位置，范围 -1~1
+  const scx = window.innerWidth / 2
+  const scy = window.innerHeight / 2
+  const rx = (mx - scx) / (window.innerWidth / 2)    // -1~1
+  const ry = (my - scy) / (window.innerHeight / 2)   // -1~1
+
+  elements.forEach(el => {
+    const def = defaultTilts.get(el) || 0
+    el.style.transform =
+      `rotateX(${-ry * TRACK_Y}deg) rotateY(${def + rx * TRACK_X}deg)`
+  })
+}
+
+function resetAll() {
+  elements.forEach(el => {
+    const def = defaultTilts.get(el) || 0
+    el.style.transform = `rotateX(0deg) rotateY(${def}deg)`
+  })
+}
+
+function onGlobalMove(e) {
+  updateAll(e.clientX, e.clientY)
+}
+
+function onGlobalLeave() {
+  resetAll()
+}
+
+function init() {
+  elements = [
+    ...document.querySelectorAll('.hero-button'),
+    ...document.querySelectorAll('.glass-hero-card'),
+  ]
+  defaultTilts.clear()
+  elements.forEach(el => defaultTilts.set(el, getDefaultRotateY(el)))
+  resetAll()
+
+  window.addEventListener('mousemove', onGlobalMove)
+  document.addEventListener('mouseleave', onGlobalLeave)
+}
+
+function onResize() {
+  elements.forEach(el => defaultTilts.set(el, getDefaultRotateY(el)))
+  // 鼠标位置未知，保持现有角度
+}
+
+onMounted(() => { init(); window.addEventListener('resize', onResize) })
+onUnmounted(() => {
+  window.removeEventListener('mousemove', onGlobalMove)
+  document.removeEventListener('mouseleave', onGlobalLeave)
+  window.removeEventListener('resize', onResize)
+})
+</script>
 
 <style lang="scss" scoped>
 // 引入设计令牌

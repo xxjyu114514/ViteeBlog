@@ -21,6 +21,11 @@
   line-height: 1.4;
   border-radius: 0;
 
+  // 全局点击效果：降低透明度（替换所有按钮各自的 active 样式）
+  &:active:not(:disabled) {
+    opacity: 0.7;
+  }
+
   // 聚焦态（键盘可访问性）
   &:focus-visible {
     outline: 2px solid $color-primary;
@@ -37,11 +42,6 @@
       background: lighten($color-primary, 8%);
       border-color: lighten($color-primary, 8%);
     }
-
-    &:active:not(:disabled) {
-      background: $color-primary-dim;
-      border-color: $color-primary-dim;
-    }
   }
 
   // ===== 辅色按钮（冷紫） =====
@@ -53,10 +53,6 @@
     &:hover:not(:disabled) {
       background: lighten($color-secondary, 8%);
     }
-
-    &:active:not(:disabled) {
-      background: darken($color-secondary, 10%);
-    }
   }
 
   // ===== 强调按钮（青绿） =====
@@ -67,10 +63,6 @@
 
     &:hover:not(:disabled) {
       background: lighten($color-accent, 6%);
-    }
-
-    &:active:not(:disabled) {
-      background: darken($color-accent, 10%);
     }
   }
 
@@ -117,12 +109,6 @@
       background: $color-primary;
       color: $bg-base;
     }
-
-    &:active:not(:disabled) {
-      background: $color-primary-dim;
-      border-color: $color-primary-dim;
-      color: $bg-base;
-    }
   }
 
   // ===== 文本按钮（极简） =====
@@ -134,10 +120,6 @@
     &:hover:not(:disabled) {
       background: $bg-hover;
       color: $text-primary;
-    }
-
-    &:active:not(:disabled) {
-      background: $bg-elevated;
     }
   }
 
@@ -166,10 +148,6 @@
 
     &:hover:not(:disabled) {
       background: linear-gradient(135deg, lighten($color-primary, 6%), lighten($color-secondary, 6%));
-    }
-
-    &:active:not(:disabled) {
-      opacity: 0.9;
     }
   }
 
