@@ -1,0 +1,135 @@
+/* ============================================================
+   表单体系 — 冷色调机能风
+   明日方舟风格：冷灰底 + 冰蓝 focus + 硬边
+   ============================================================ */
+
+@import 'tokens';
+
+.form {
+  max-width: 560px;
+}
+
+.form-group {
+  margin-bottom: $space-lg;
+
+  .form-label {
+    display: block;
+    color: $text-primary;
+    font-weight: 500;
+    margin-bottom: $space-2xs;
+    font-size: 0.9rem;
+    letter-spacing: 0.01em;
+  }
+
+  // 所有输入框统一样式
+  .form-input,
+  .form-textarea,
+  .form-select {
+    width: 100%;
+    padding: $space-xs $space-sm;
+    background: $bg-surface;
+    border: $border-white-light;
+    color: $text-primary;
+    font-family: $font-sans;
+    font-size: 0.95rem;
+    transition: border-color $transition-fast, box-shadow $transition-fast;
+    border-radius: 0;
+
+    &:focus {
+      outline: none;
+      border-color: $color-primary;
+      box-shadow: $glow-brand;
+    }
+
+    // 聚焦时背景微微提亮
+    &:focus {
+      background: lighten($bg-surface, 2%);
+    }
+
+    &::placeholder {
+      color: $text-disabled;
+    }
+  }
+
+  .form-textarea {
+    min-height: 100px;
+    resize: vertical;
+  }
+
+  .form-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3e%3cpath fill='%23a0a0b0' d='M2 0L0 2h4zm0 5L0 3h4z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 8px 10px;
+    padding-right: 2rem;
+  }
+
+  // 输入框错误状态
+  .form-input.is-error,
+  .form-textarea.is-error {
+    border-color: $color-error;
+    box-shadow: 0 0 0 1px rgba($color-error, 0.3);
+
+    &:focus {
+      border-color: $color-error;
+      box-shadow: 0 0 0 1px rgba($color-error, 0.5);
+    }
+  }
+
+  .form-error-text {
+    color: $color-error;
+    font-size: 0.8rem;
+    margin-top: $space-2xs;
+    display: none;
+
+    // 配合 .is-error 显示
+    .is-error ~ & {
+      display: block;
+    }
+  }
+
+  // 毛玻璃变体输入框
+  .form-input-glass {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-color: rgba(255, 255, 255, 0.08);
+
+    &:focus {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: rgba($color-primary, 0.3);
+    }
+  }
+}
+
+// ===== Checkbox / Radio =====
+.form-checkbox-group,
+.form-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.checkbox-label,
+.radio-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: $text-primary;
+  font-size: 0.9rem;
+  transition: color $transition-fast;
+
+  &:hover {
+    color: $color-primary;
+  }
+
+  .checkbox-input,
+  .radio-input {
+    margin-right: $space-sm;
+    width: 16px;
+    height: 16px;
+    accent-color: $color-primary;
+    flex-shrink: 0;
+  }
+}

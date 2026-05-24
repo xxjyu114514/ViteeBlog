@@ -1,0 +1,159 @@
+/* ============================================================
+   毛玻璃系统 (Glassmorphism)
+   用于未来二次元背景图上的沉浸式卡片/面板
+   ============================================================ */
+
+@import 'tokens';
+
+// ========== 毛玻璃混合宏 ==========
+
+/// 基础毛玻璃效果
+/// @param {Color} $bg - 玻璃背景色
+/// @param {Length} $blur - 模糊半径
+@mixin glass(
+  $bg: $glass-bg,
+  $blur: $glass-blur,
+  $border-color: $glass-border
+) {
+  background: $bg;
+  backdrop-filter: blur($blur);
+  -webkit-backdrop-filter: blur($blur);
+  border: 1px solid $border-color;
+}
+
+/// 深色毛玻璃（对比更强，适合作为主面板）
+@mixin glass-dark($blur: $glass-blur) {
+  @include glass(rgba(10, 10, 12, 0.7), $blur, $glass-border);
+}
+
+/// 浅色毛玻璃（更透亮，适合轻量装饰面板）
+@mixin glass-light($blur: $glass-blur) {
+  @include glass(rgba(255, 255, 255, 0.06), $blur, $glass-border);
+}
+
+/// 品牌色毛玻璃（带冰蓝色调，适合重点面板）
+@mixin glass-brand($blur: $glass-blur) {
+  @include glass(rgba($color-primary, 0.08), $blur, rgba($color-primary, 0.15));
+}
+
+
+// ========== 毛玻璃组件类 ==========
+
+.glass-panel {
+  @include glass-dark();
+  transition: background $transition-base, border-color $transition-base;
+
+  &:hover {
+    background: rgba(10, 10, 12, 0.75);
+    border-color: $glass-border-hover;
+  }
+}
+
+.glass-panel--light {
+  @include glass-light();
+  transition: background $transition-base, border-color $transition-base;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.09);
+  }
+}
+
+.glass-panel--brand {
+  @include glass-brand();
+  transition: background $transition-base, border-color $transition-base;
+
+  &:hover {
+    background: rgba($color-primary, 0.12);
+    border-color: rgba($color-primary, 0.3);
+  }
+}
+
+// ========== 毛玻璃卡片（明日方舟风格面板） ==========
+
+.glass-card {
+  @include glass-dark($glass-blur-heavy);
+  padding: $space-lg;
+  position: relative;
+  overflow: hidden;
+
+  // 左上角装饰线（明日方舟风格工程感细节）
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 32px;
+    background: $color-primary;
+    opacity: 0.6;
+  }
+
+  // 底部细装饰线
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 60%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba($color-primary, 0.15));
+  }
+
+  .glass-card__title {
+    font-family: $font-mono;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: $text-primary;
+    margin-bottom: $space-sm;
+    letter-spacing: 0.02em;
+  }
+
+  .glass-card__body {
+    color: $text-secondary;
+    line-height: 1.6;
+    font-size: 0.9rem;
+  }
+}
+
+// ========== 毛玻璃展示区域（模拟背景图上的毛玻璃层） ==========
+
+.glass-showcase {
+  position: relative;
+  padding: $space-2xl;
+  margin-bottom: $space-2xl;
+  
+  // 模拟未来的二次元背景图
+  background:
+    linear-gradient(135deg, #0f0c29 0%, #1a1a3e 50%, #24243e 100%);
+  
+  // 毛玻璃面板网格
+  .glass-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: $space-lg;
+  }
+}
+
+// ========== 毛玻璃按钮变体 ==========
+
+.btn-glass {
+  @include glass($glass-bg, 8px, $glass-border);
+  color: $text-primary;
+  padding: $space-xs $space-md;
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all $transition-base;
+  border-radius: 0;
+
+  &:hover {
+    background: $glass-bg-hover;
+    border-color: rgba($color-primary, 0.3);
+    color: $color-primary;
+  }
+
+  &:active {
+    background: $glass-bg-active;
+  }
+}

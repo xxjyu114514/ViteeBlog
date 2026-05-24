@@ -1,0 +1,199 @@
+/* ============================================================
+   按钮体系 — 冷色调机能风
+   明日方舟风格：硬边 + 冷色 + 克制的 hover 发光
+   ============================================================ */
+
+@import 'tokens';
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2xs;
+  padding: $space-xs $space-md;
+  font-family: $font-sans;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all $transition-base;
+  border: 1px solid transparent;
+  text-decoration: none;
+  line-height: 1.4;
+  border-radius: 0;
+
+  // 聚焦态（键盘可访问性）
+  &:focus-visible {
+    outline: 2px solid $color-primary;
+    outline-offset: 2px;
+  }
+
+  // ===== 冷色主按钮 =====
+  &.btn-primary {
+    background: $color-primary;
+    color: $bg-base;
+    border-color: $color-primary;
+
+    &:hover:not(:disabled) {
+      background: lighten($color-primary, 8%);
+      border-color: lighten($color-primary, 8%);
+    }
+
+    &:active:not(:disabled) {
+      background: $color-primary-dim;
+      border-color: $color-primary-dim;
+    }
+  }
+
+  // ===== 辅色按钮（冷紫） =====
+  &.btn-secondary {
+    background: $color-secondary;
+    color: #fff;
+    border-color: $color-secondary;
+
+    &:hover:not(:disabled) {
+      background: lighten($color-secondary, 8%);
+    }
+
+    &:active:not(:disabled) {
+      background: darken($color-secondary, 10%);
+    }
+  }
+
+  // ===== 强调按钮（青绿） =====
+  &.btn-accent {
+    background: $color-accent;
+    color: $bg-base;
+    border-color: $color-accent;
+
+    &:hover:not(:disabled) {
+      background: lighten($color-accent, 6%);
+    }
+
+    &:active:not(:disabled) {
+      background: darken($color-accent, 10%);
+    }
+  }
+
+  // ===== 成功 =====
+  &.btn-success {
+    background: $color-success;
+    color: $bg-base;
+    border-color: $color-success;
+
+    &:hover:not(:disabled) {
+      background: lighten($color-success, 6%);
+    }
+  }
+
+  // ===== 警告 =====
+  &.btn-warning {
+    background: $color-warning;
+    color: $bg-base;
+    border-color: $color-warning;
+
+    &:hover:not(:disabled) {
+      background: lighten($color-warning, 6%);
+    }
+  }
+
+  // ===== 错误 =====
+  &.btn-error {
+    background: $color-error;
+    color: #fff;
+    border-color: $color-error;
+
+    &:hover:not(:disabled) {
+      background: lighten($color-error, 6%);
+    }
+  }
+
+  // ===== 边框按钮（冷色描边） =====
+  &.btn-outline {
+    background: transparent;
+    color: $color-primary;
+    border-color: $color-primary;
+
+    &:hover:not(:disabled) {
+      background: $color-primary;
+      color: $bg-base;
+    }
+
+    &:active:not(:disabled) {
+      background: $color-primary-dim;
+      border-color: $color-primary-dim;
+      color: $bg-base;
+    }
+  }
+
+  // ===== 文本按钮（极简） =====
+  &.btn-ghost {
+    background: transparent;
+    color: $text-secondary;
+    border-color: transparent;
+
+    &:hover:not(:disabled) {
+      background: $bg-hover;
+      color: $text-primary;
+    }
+
+    &:active:not(:disabled) {
+      background: $bg-elevated;
+    }
+  }
+
+  // ===== 毛玻璃按钮 =====
+  &.btn-glass {
+    background: rgba(255, 255, 255, 0.04);
+    color: $text-primary;
+    border-color: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+
+    &:hover:not(:disabled) {
+      background: rgba($color-primary, 0.12);
+      border-color: rgba($color-primary, 0.3);
+      color: $color-primary;
+      box-shadow: $glow-brand;
+    }
+  }
+
+  // ===== 渐变按钮 =====
+  &.btn-gradient {
+    background: linear-gradient(135deg, $color-primary, $color-secondary);
+    color: #fff;
+    border: none;
+    padding: $space-sm $space-lg;
+
+    &:hover:not(:disabled) {
+      background: linear-gradient(135deg, lighten($color-primary, 6%), lighten($color-secondary, 6%));
+    }
+
+    &:active:not(:disabled) {
+      opacity: 0.9;
+    }
+  }
+
+  // ===== 禁用 =====
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  // ===== 尺寸变体 =====
+  &.btn-sm {
+    padding: $space-2xs $space-sm;
+    font-size: 0.8rem;
+  }
+
+  &.btn-lg {
+    padding: $space-sm $space-xl;
+    font-size: 1rem;
+  }
+}
+
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-md;
+  margin-bottom: $space-lg;
+}

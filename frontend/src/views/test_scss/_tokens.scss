@@ -1,0 +1,91 @@
+/* ============================================================
+   设计令牌 (Design Tokens) — 冷色调机能风
+   参考：明日方舟冷色体系 + GitHub 暗色层级
+   ============================================================ */
+
+// ========== 品牌色 — 冷色调核心 ==========
+$color-primary:        #4ea8de;   // 主色：冰蓝
+$color-primary-dim:    #2d6a9e;   // 深蓝：背景色块/边框
+$color-primary-deep:   #1a3a5c;   // 极深蓝：hover 底色
+$color-secondary:      #6c5ce7;   // 辅色：冷紫
+$color-accent:         #00cec9;   // 强调色：青绿（代替原来的粉紫，更冷）
+$color-warning:        #fdcb6e;   // 警告：暖黄（克制使用）
+$color-success:        #00b894;   // 成功：冷绿
+$color-error:          #e17055;   // 错误：暖红
+
+// ========== 背景层 — 冷灰阶梯 ==========
+$bg-base:              #0a0a0c;   // 最底层
+$bg-surface:           #111114;   // 面板/卡片底
+$bg-elevated:          #1a1a1f;   // 悬浮层
+$bg-hover:             #24242b;   // hover 状态
+$bg-overlay:           rgba(0, 0, 0, 0.85);
+
+// ========== 毛玻璃色值 ==========
+$glass-bg:             rgba(255, 255, 255, 0.04);
+$glass-bg-hover:       rgba(255, 255, 255, 0.08);
+$glass-bg-active:      rgba(255, 255, 255, 0.12);
+$glass-border:         rgba(255, 255, 255, 0.08);
+$glass-border-hover:   rgba($color-primary, 0.2);
+$glass-blur:           16px;
+$glass-blur-heavy:     24px;
+
+// ========== 文字层级 ==========
+$text-primary:         #f0f0f0;
+$text-secondary:       #a0a0b0;
+$text-tertiary:        #7a7a8a;
+$text-disabled:        #484852;
+
+// ========== 边框系统 ==========
+$border-white-subtle:  1px solid rgba(255, 255, 255, 0.06);
+$border-white-light:   1px solid rgba(255, 255, 255, 0.1);
+$border-white-medium:  1px solid rgba(255, 255, 255, 0.15);
+$divider-hairline:     1px solid rgba(255, 255, 255, 0.05);
+$divider-emphasis:     1px solid rgba(255, 255, 255, 0.1);
+
+// ========== 发光系统（暗色主题专用） ==========
+$glow-sm:   0 0 0 1px rgba(255, 255, 255, 0.04);
+$glow-md:   0 0 0 1px rgba(255, 255, 255, 0.08), 0 4px 20px rgba(0, 0, 0, 0.5);
+$glow-lg:   0 0 0 1px rgba(255, 255, 255, 0.12), 0 8px 32px rgba(0, 0, 0, 0.6);
+$glow-brand: 0 0 0 1px rgba($color-primary, 0.25), 0 0 20px rgba($color-primary, 0.08);
+
+// ========== 字体系统 ==========
+$font-mono:  'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+$font-sans:  -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Noto Sans SC', sans-serif;
+
+// ========== 间距系统（8px 基准） ==========
+$space-2xs: 4px;
+$space-xs:  8px;
+$space-sm:  12px;
+$space-md:  16px;
+$space-lg:  24px;
+$space-xl:  32px;
+$space-2xl: 48px;
+$space-3xl: 64px;
+
+// ========== 圆角系统 ==========
+$radius-none:  0;
+$radius-sm:    2px;
+$radius-md:    4px;
+$radius-lg:    8px;
+
+// ========== 过渡 ==========
+$transition-fast:   0.15s ease;
+$transition-base:   0.25s ease;
+$transition-slow:   0.4s ease;
+
+// ========== CSS 自定义属性导出 ==========
+:root {
+  --color-primary: #{$color-primary};
+  --color-secondary: #{$color-secondary};
+  --color-accent: #{$color-accent};
+  --color-success: #{$color-success};
+  --color-warning: #{$color-warning};
+  --color-error: #{$color-error};
+  --text-primary: #{$text-primary};
+  --text-secondary: #{$text-secondary};
+  --text-tertiary: #{$text-tertiary};
+  --bg-base: #{$bg-base};
+  --bg-surface: #{$bg-surface};
+  --bg-elevated: #{$bg-elevated};
+  --font-mono: #{$font-mono};
+}

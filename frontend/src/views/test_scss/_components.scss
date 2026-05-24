@@ -1,0 +1,165 @@
+/* ============================================================
+   其他组件：Badge / Spinner / Progress / List / Section
+   明日方舟风格：硬边冷色指示器
+   ============================================================ */
+
+@import 'tokens';
+
+// ========== 组件区块容器 ==========
+.component-section {
+  margin-bottom: $space-2xl;
+  padding: $space-xl;
+  background: $bg-surface;
+  border: $border-white-light;
+  border-radius: 0;
+
+  .section-title {
+    font-family: $font-mono;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: $text-primary;
+    margin-bottom: $space-lg;
+    padding-bottom: $space-sm;
+    border-bottom: $divider-emphasis;
+    letter-spacing: 0.02em;
+  }
+}
+
+// ========== Badge 标签系统 ==========
+.status-demo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $space-md;
+}
+
+.badge {
+  display: inline-block;
+  padding: $space-2xs $space-sm;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-radius: 0;
+
+  &.badge-primary {
+    background: $color-primary;
+    color: $bg-base;
+  }
+
+  &.badge-secondary {
+    background: $color-secondary;
+    color: #fff;
+  }
+
+  &.badge-accent {
+    background: $color-accent;
+    color: $bg-base;
+  }
+
+  &.badge-success {
+    background: $color-success;
+    color: $bg-base;
+  }
+
+  &.badge-warning {
+    background: $color-warning;
+    color: $bg-base;
+  }
+
+  &.badge-error {
+    background: $color-error;
+    color: #fff;
+  }
+
+  // 毛玻璃变体
+  &.badge-glass {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: $text-primary;
+  }
+
+  // 描边变体
+  &.badge-outline {
+    background: transparent;
+    border: 1px solid $color-primary;
+    color: $color-primary;
+  }
+}
+
+// ========== Loading Spinner ==========
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba($text-tertiary, 0.25);
+  border-top-color: $color-primary;
+  border-radius: 50% !important;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// ========== Progress Bar ==========
+.progress-bar {
+  width: 200px;
+  height: 4px;
+  background: $bg-hover;
+  overflow: hidden;
+  border-radius: 0;
+
+  .progress-fill {
+    height: 100%;
+    background: $color-primary;
+    transition: width $transition-slow;
+  }
+}
+
+// ========== 列表系统 ==========
+.lists-demo {
+  .list-unstyled,
+  .list-numbered,
+  .list-bulleted {
+    margin-bottom: $space-md;
+
+    .list-item {
+      color: $text-primary;
+      padding: $space-2xs 0;
+      line-height: 1.6;
+      font-size: 0.9rem;
+    }
+  }
+
+  .list-numbered {
+    list-style-type: decimal;
+    padding-left: $space-lg;
+  }
+
+  .list-bulleted {
+    list-style-type: disc;
+    padding-left: $space-lg;
+  }
+}
+
+// ========== 网格布局 ==========
+.articles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: $space-lg;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: $space-md;
+  }
+}
+
+// ========== 分割线 ==========
+.divider {
+  border: none;
+  height: 1px;
+  background: $divider-emphasis;
+  margin: $space-xl 0;
+}

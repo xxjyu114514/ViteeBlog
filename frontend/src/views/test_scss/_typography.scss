@@ -1,0 +1,132 @@
+/* ============================================================
+   文字体系 — 冷色调机能风
+   标题用等宽字体（工程感），正文用无衬线（可读性）
+   ============================================================ */
+
+@import 'tokens';
+
+.typography-demo {
+  // 标题体系 — 用等宽字体拉出"技术文档"感
+  .text-h1 {
+    font-family: $font-mono;
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: $text-primary;
+    margin-bottom: $space-sm;
+    letter-spacing: -0.02em;
+  }
+
+  .text-h2 {
+    font-family: $font-mono;
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: $text-primary;
+    margin-bottom: $space-sm;
+  }
+
+  .text-h3 {
+    font-family: $font-mono;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: $text-primary;
+    margin-bottom: $space-sm;
+  }
+
+  .text-h4 {
+    font-family: $font-mono;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: $text-primary;
+    margin-bottom: $space-xs;
+  }
+
+  .text-h5,
+  .text-h6 {
+    font-family: $font-sans;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: $text-primary;
+    margin-bottom: $space-xs;
+  }
+
+  // 正文
+  .text-paragraph {
+    color: $text-primary;
+    line-height: 1.75;
+    margin-bottom: $space-md;
+    font-size: 0.95rem;
+  }
+
+  // 文字层级
+  .text-secondary {
+    color: $text-secondary;
+    margin-bottom: $space-md;
+    font-size: 0.9rem;
+  }
+
+  .text-tertiary {
+    color: $text-tertiary;
+    margin-bottom: $space-md;
+    font-size: 0.85rem;
+  }
+
+  .text-disabled {
+    color: $text-disabled;
+    margin-bottom: $space-md;
+    font-size: 0.85rem;
+  }
+
+  // 链接
+  .text-links {
+    margin-bottom: $space-md;
+
+    .text-link {
+      color: $color-primary;
+      text-decoration: none;
+      margin-right: $space-lg;
+      font-size: 0.9rem;
+      transition: color $transition-fast;
+
+      &:hover {
+        color: lighten($color-primary, 12%);
+        text-decoration: underline;
+      }
+    }
+  }
+
+  // 内联修饰
+  .text-emphasis {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-sm;
+
+    .text-bold {
+      font-weight: 700;
+      color: $text-primary;
+    }
+
+    .text-italic {
+      font-style: italic;
+      color: $text-primary;
+    }
+
+    .text-code {
+      font-family: $font-mono;
+      background: $bg-hover;
+      padding: 2px 8px;
+      color: $color-accent;
+      font-size: 0.85rem;
+    }
+
+    .text-highlight {
+      background: rgba($color-warning, 0.15);
+      padding: 2px 6px;
+      color: $text-primary;
+    }
+
+    .text-strikethrough {
+      text-decoration: line-through;
+      color: $text-disabled;
+    }
+  }
+}

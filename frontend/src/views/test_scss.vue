@@ -20,13 +20,15 @@
           <button class="btn btn-warning">警告按钮</button>
           <button class="btn btn-error">错误按钮</button>
           <button class="btn btn-outline">边框按钮</button>
-          <button class="btn btn-text">文本按钮</button>
-          <button class="btn btn-disabled" disabled>禁用按钮</button>
-          <!-- 新增的大渐变按钮 -->
-          <button class="btn btn-gradient-large">
-            <span class="btn-icon">⚡</span>
-            <span class="btn-text-right">渐变大按钮</span>
-          </button>
+          <button class="btn btn-ghost">文本按钮</button>
+          <button class="btn btn-glass">毛玻璃按钮</button>
+          <button class="btn btn-gradient">渐变按钮</button>
+          <button disabled class="btn btn-primary">禁用按钮</button>
+        </div>
+        <div class="button-group">
+          <button class="btn btn-sm btn-primary">小号</button>
+          <button class="btn btn-primary">默认</button>
+          <button class="btn btn-lg btn-primary">大号</button>
         </div>
       </section>
 
@@ -141,9 +143,8 @@
           <p class="text-disabled">这是禁用状态的文本。</p>
           
           <div class="text-links">
-            <a href="#" class="text-link">这是一个链接</a>
-            <a href="#" class="text-link link-hover">悬停链接</a>
-            <a href="#" class="text-link link-active">激活链接</a>
+            <a href="#" class="text-link">普通链接</a>
+            <a href="#" class="text-link">悬停试试</a>
           </div>
           
           <div class="text-emphasis">
@@ -185,9 +186,12 @@
         <div class="status-demo">
           <div class="badge badge-primary">主要</div>
           <div class="badge badge-secondary">次要</div>
+          <div class="badge badge-accent">强调</div>
           <div class="badge badge-success">成功</div>
           <div class="badge badge-warning">警告</div>
           <div class="badge badge-error">错误</div>
+          <div class="badge badge-glass">毛玻璃</div>
+          <div class="badge badge-outline">描边</div>
           
           <div class="loading-spinner"></div>
           <div class="progress-bar">
@@ -228,6 +232,66 @@
               </div>
               <a href="#" class="article-card__tag article-card__tag-half-width">技术教程</a>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 🌟 毛玻璃展示区域（模拟二次元背景图效果） -->
+      <section class="glass-showcase">
+        <h2 class="section-title" style="color: #f0f0f0; margin-bottom: 24px; font-family: 'SF Mono', monospace; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
+          毛玻璃面板 (Glassmorphism)
+        </h2>
+        <p style="color: #a0a0b0; margin-bottom: 24px; font-size: 0.9rem;">
+          以下面板可在未来替换为二次元背景图，毛玻璃效果将叠加在背景之上
+        </p>
+        <div class="glass-grid">
+          <!-- 毛玻璃信息卡片 1 -->
+          <div class="glass-card">
+            <div class="glass-card__title">> SYSTEM_INFO</div>
+            <div class="glass-card__body">
+              冷色调机能风面板，左上角装饰线为明日方舟风格特征。<br>
+              backdrop-filter: blur(24px)
+            </div>
+          </div>
+
+          <!-- 毛玻璃信息卡片 2 -->
+          <div class="glass-card">
+            <div class="glass-card__title">> STATISTICS</div>
+            <div class="glass-card__body">
+              文章: 42 &nbsp;|&nbsp; 评论: 128 &nbsp;|&nbsp; 访问: 3.6k
+            </div>
+          </div>
+
+          <!-- 毛玻璃信息卡片 3 -->
+          <div class="glass-card">
+            <div class="glass-card__title">> QUICK_ACTION</div>
+            <div class="glass-card__body" style="display: flex; gap: 8px; margin-top: 8px;">
+              <button class="btn-glass">新建文章</button>
+              <button class="btn-glass">管理评论</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 毛玻璃网格卡片 -->
+        <hr class="divider">
+        <h3 style="color: #f0f0f0; margin-bottom: 16px; font-family: 'SF Mono', monospace; font-size: 1rem; font-weight: 600;">
+          毛玻璃网格卡片
+        </h3>
+        <div class="glass-card-grid">
+          <div class="glass-card-item">
+            <span class="glass-card-item__icon">📡</span>
+            <div class="glass-card-item__title">SENSOR_A</div>
+            <p class="glass-card-item__desc">数据链路已建立 · 信号强度 98%</p>
+          </div>
+          <div class="glass-card-item">
+            <span class="glass-card-item__icon">⚙️</span>
+            <div class="glass-card-item__title">ENGINE_β</div>
+            <p class="glass-card-item__desc">运行状态正常 · 负载 45%</p>
+          </div>
+          <div class="glass-card-item">
+            <span class="glass-card-item__icon">🔒</span>
+            <div class="glass-card-item__title">SECURE_LINK</div>
+            <p class="glass-card-item__desc">加密通道已激活 · 协议 v3.2</p>
           </div>
         </div>
       </section>
