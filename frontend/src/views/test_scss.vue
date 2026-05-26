@@ -365,9 +365,9 @@ import { onMounted, onUnmounted } from 'vue'
 
 // ---- 全局伪 3D 倾斜效果 (所有 hero-button + glass-hero-card) ----
 // 鼠标在视窗内移动，所有元素朝光标方向倾斜
-const DEFAULT_ANGLE = 20    // 默认位置（相对屏幕中心）最大 ±4°
-const TRACK_X = 8          // 全局鼠标追踪水平最大 ±5°
-const TRACK_Y = 6          // 全局鼠标追踪垂直最大 ±3°
+const DEFAULT_ANGLE = 50    // 默认位置（相对屏幕中心）最大 ±4°
+const TRACK_X = 5          // 全局鼠标追踪水平最大 ±5°
+const TRACK_Y = 0        // 全局鼠标追踪垂直最大 ±3°
 
 let elements = []
 const defaultTilts = new Map()
@@ -376,7 +376,7 @@ function getDefaultRotateY(el) {
   const rect = el.getBoundingClientRect()
   const cx = rect.left + rect.width / 2
   const scx = window.innerWidth / 2
-  return ((cx - scx) / (window.innerWidth / 2)) * DEFAULT_ANGLE
+  return ((scx - cx) / (window.innerWidth / 2)) * DEFAULT_ANGLE
 }
 
 function updateAll(mx, my) {
