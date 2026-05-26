@@ -43,3 +43,7 @@ export const restoreUser = (userId) =>
 /** POST /auth/upload-avatar */
 export const uploadAvatar = (file) =>
   uploadFile('/auth/upload-avatar', file, 'file')
+
+/** PUT /auth/update-profile */
+export const updateProfile = (data) =>
+  put('/auth/update-profile', data)

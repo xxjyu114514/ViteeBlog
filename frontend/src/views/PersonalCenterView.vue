@@ -15,8 +15,17 @@
             <div v-if="avatarUploading" class="avatar-uploading">上传中...</div>
           </div>
           <div class="details">
-            <h2>{{ userStore.userInfo?.username }}</h2>
+            <div v-if="!editingName" class="name-row">
+              <h2>{{ userStore.userInfo?.username }}</h2>
+              <button class="btn-edit-name" @click="editingName = true; editNameValue = userStore.userInfo?.username || ''">✏️</button>
+            </div>
+            <div v-else class="name-row">
+              <input v-model="editNameValue" class="name-input" maxlength="50" @keydown.enter="saveName" @keydown.esc="cancelEditName" />
+              <button class="btn-save-name" @click="saveName" :disabled="nameSaving">{{ nameSaving ? '保存中' : '保存' }}</button>
+              <button class="btn-cancel-name" @click="cancelEditName">取消</button>
+            </div>
             <span class="role-badge">{{ userStore.userInfo?.role === 'admin' ? '管理员' : '普通用户' }}</span>
+            <div v-if="nameMessage" :class="['name-message', nameError ? 'error' : 'success']">{{ nameMessage }}</div>
           </div>
         </header>
       </div>
@@ -113,6 +122,11 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api
 const avatarUrl = ref(userStore.userInfo?.avatar ? API_BASE.replace('/api/v1', '') + userStore.userInfo.avatar : null)
 const fileInputRef = ref(null)
 const avatarUploading = ref(false)
+const editingName = ref(false)
+const editNameValue = ref('')
+const nameSaving = ref(false)
+const nameMessage = ref('')
+const nameError = ref(false)
 
 const handleAvatarUpload = async (e) => {
   const file = e.target.files?.[0]
@@ -131,6 +145,25 @@ const handleAvatarUpload = async (e) => {
   avatarUploading.value = false
   e.target.value = ''
 }
+
+const saveName = async () => {
+  const val = editNameValue.value.trim()
+  if (!val || val === userStore.userInfo?.username) { cancelEditName(); return }
+  if (val.length < 3) { nameMessage.value = '昵称至少3个字符'; nameError.value = true; return }
+  nameSaving.value = true; nameMessage.value = ''; nameError.value = false
+  const r = await authService.updateProfile({ username: val })
+  if (r.success) {
+    if (userStore.userInfo) userStore.userInfo.username = val
+    nameMessage.value = '昵称已更新'; nameError.value = false
+    editingName.value = false
+    setTimeout(() => { nameMessage.value = '' }, 2000)
+  } else {
+    nameMessage.value = r.message || '修改失败'; nameError.value = true
+  }
+  nameSaving.value = false
+}
+
+const cancelEditName = () => { editingName.value = false; editNameValue.value = ''; nameMessage.value = '' }
 
 const handleChangePwd = async () => {
   pwdMessage.value = ''
@@ -213,4 +246,10 @@ const handleBack = () => router.go(-1)
 .avatar-letter { width: 72px; height: 72px; border-radius: 50%; background: $color-primary; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 700; }
 .avatar-upload-btn { font-size: 0.8rem; color: $color-primary; background: none; border: none; cursor: pointer; padding: 2px 8px; &:hover { text-decoration: underline; } }
 .avatar-uploading { font-size: 0.8rem; color: $text-secondary; }
+.name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; h2 { margin: 0; } }
+.btn-edit-name { background: none; border: none; cursor: pointer; font-size: 0.9rem; padding: 2px; opacity: 0.5; &:hover { opacity: 1; } }
+.name-input { padding: 6px 10px; border: 1px solid $border-color; border-radius: 6px; font-size: 1rem; width: 160px; }
+.btn-save-name { padding: 4px 12px; border: none; border-radius: 6px; background: $color-primary; color: white; cursor: pointer; font-size: 0.85rem; &:disabled { opacity: 0.5; } }
+.btn-cancel-name { padding: 4px 12px; border: 1px solid $border-color; border-radius: 6px; background: white; cursor: pointer; font-size: 0.85rem; }
+.name-message { font-size: 0.8rem; margin-top: 4px; &.error { color: $color-danger; } &.success { color: $color-success; } }
 </style>
