@@ -43,6 +43,7 @@ class User(Base):
     # 社交关注统计字段
     following_count: Mapped[int] = mapped_column(Integer, server_default="0", default=0, comment="关注数")
     followers_count: Mapped[int] = mapped_column(Integer, server_default="0", default=0, comment="粉丝数")
+    bio: Mapped[Optional[str]] = mapped_column(String(200), nullable=True, comment="个人简介")
 
     articles: Mapped[List["Article"]] = relationship(back_populates="author", cascade="all, delete-orphan",
                                                      foreign_keys="Article.user_id")

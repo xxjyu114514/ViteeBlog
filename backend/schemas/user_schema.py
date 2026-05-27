@@ -72,3 +72,36 @@ class ResetPasswordRequest(BaseModel):
 class ProfileUpdate(BaseModel):
     username: Optional[str] = Field(None, min_length=3, max_length=50, description="新昵称")
     avatar: Optional[str] = Field(None, description="头像URL")
+    bio: Optional[str] = Field(None, max_length=200, description="个人简介")
+
+
+class UserProfileOut(BaseModel):
+    id: int
+    username: str
+    avatar: Optional[str] = None
+    bio: Optional[str] = None
+    following_count: int = 0
+    followers_count: int = 0
+    is_following: bool = False
+    created_at: datetime
+    
+    # 统计字段
+    total_articles: int = 0              # 文章总数
+    total_likes_received: int = 0        # 收到的总点赞数
+    total_views: int = 0                 # 总阅读量
+    total_favorites: int = 0             # 文章被收藏的总次数
+    total_comments: int = 0              # 文章收到的总评论数
+    last_active_at: Optional[datetime] = None  # 最后活跃时间
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ArticleSimpleOut(BaseModel):
+    id: int
+    title: str
+    summary: Optional[str] = None
+    cover_image: Optional[str] = None
+    view_count: int = 0
+    like_count: int = 0
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)

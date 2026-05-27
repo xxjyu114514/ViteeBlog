@@ -14,41 +14,378 @@ Accept: text/html
 
 # ==================== 认证与用户管理 ====================
 
-# 1. 管理员登录
+# 1. 管理员登录（返回 access_token, token_type, user）
 POST http://127.0.0.1:8000/api/v1/auth/login
 Content-Type: application/json
 
 {
-  "username": "xbz",
-  "password": "114514"
+  "username": "Baozi",
+  "password": "123456"
 }
 
 > {% client.global.set("admin_token", response.body.access_token); %}
 
 ###
 
-# 2. 普通用户登录
+# 2. 普通用户登录（返回 access_token, token_type, user）
 POST http://127.0.0.1:8000/api/v1/auth/login
 Content-Type: application/json
 
 {
-  "username": "user114514",
-  "password": "114514"
+  "username": "Van",
+  "password": "123456"
 }
 
 > {% client.global.set("user_token", response.body.access_token); %}
 
 ###
 
+# 2.1 查看登录返回的完整用户信息
+POST http://127.0.0.1:8000/api/v1/auth/login
+Content-Type: application/json
 
-# ==================== 元数据管理（分类与标签） ====================
+{
+  "username": "testuser",
+  "password": "123456"
+}
 
-# 3. 查看所有分类
-GET http://127.0.0.1:8000/api/v1/meta/categories
+> {% 
+    client.global.set("user_token_full", response.body.access_token);
+    var userInfo = response.body.user;
+    console.log("用户ID: " + userInfo.id);
+    console.log("用户名: " + userInfo.username);
+    console.log("邮箱: " + userInfo.email);
+    console.log("角色: " + userInfo.role);
+%}
 
 ###
 
-# 4. 管理员创建分类
+# 2.2 发送注册验证码
+POST http://127.0.0.1:8000/api/v1/auth/send-register-code
+Content-Type: application/json
+
+{
+  "email": "293529819@qq.com"
+}
+
+###
+
+# 2.3 用户注册（需要先执行 2.2 获取验证码）
+# 注意：因为后端使用了 embed=True，所以需要嵌套结构
+POST http://127.0.0.1:8000/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "user_in": {
+    "username": "Van",
+    "email": "293529819@qq.com",
+    "password": "123456"
+  },
+  "email_code": "443510"
+}
+
+###
+
+# 2.4 修改个人密码
+PUT http://127.0.0.1:8000/api/v1/auth/change-password
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "old_password": "123456",
+  "new_password": "123456"
+}
+
+###
+
+# 2.5 发送找回密码验证码
+POST http://127.0.0.1:8000/api/v1/auth/forgot-password/send-code
+Content-Type: application/json
+
+{
+  "email": "293529819@qq.com"
+}
+
+###
+
+# 2.6 重置密码（需要先执行 2.5 获取验证码）
+POST http://127.0.0.1:8000/api/v1/auth/forgot-password/reset
+Content-Type: application/json
+
+{
+  "email": "293529819@qq.com",
+  "code": "094420",
+  "new_password": "123456"
+}
+
+###
+
+# 2.7 注销个人账号（注意：管理员不能注销）
+DELETE http://127.0.0.1:8000/api/v1/auth/delete-account
+Authorization: Bearer {{user_token}}
+
+###
+
+# 2.8 【超级管理员】修改用户角色
+PUT http://127.0.0.1:8000/api/v1/auth/admin/users/2/role
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "new_role": "admin"
+}
+
+###
+
+# 2.9 【管理员】恢复已注销账号
+# 注意：需要先执行 2.7 注销账号，然后将被注销用户的 ID 替换下面的 user_id
+PUT http://127.0.0.1:8000/api/v1/auth/admin/users/6/restore
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 2.10 修改个人资料（修改昵称和头像）
+PUT http://127.0.0.1:8000/api/v1/auth/update-profile
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "username": "test",
+  "avatar": null
+}
+
+###
+
+# 2.11 仅修改昵称
+PUT http://127.0.0.1:8000/api/v1/auth/update-profile
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "username": "van"
+}
+
+###
+
+# 2.12 仅修改头像
+PUT http://127.0.0.1:8000/api/v1/auth/update-profile
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "avatar": "/storage/avatars/avatar_test.jpg"
+}
+
+###
+
+# 2.13 异常场景 - 修改昵称为已存在的用户名（应返回 400）
+PUT http://127.0.0.1:8000/api/v1/auth/update-profile
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "username": "Baozi"
+}
+
+###
+
+# 2.14 异常场景 - 未登录用户尝试修改资料（应返回 401）
+PUT http://127.0.0.1:8000/api/v1/auth/update-profile
+Content-Type: application/json
+
+{
+  "username": "TestUser"
+}
+
+###
+
+# 2.15 异常场景 - 登录失败次数过多（连续3次错误密码）
+# 注意：这些测试会导致 testuser 账号被锁定15分钟
+POST http://127.0.0.1:8000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "wrong_password_1"
+}
+
+###
+
+POST http://127.0.0.1:8000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "wrong_password_2"
+}
+
+###
+
+POST http://127.0.0.1:8000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "wrong_password_3"
+}
+
+###
+
+# 2.11 异常场景 - 账号锁定后尝试登录（应返回 423）
+# 注意：如果此测试返回 423，说明账号已被锁定，需要等待15分钟或手动重置数据库中的 login_attempts 字段
+POST http://127.0.0.1:8000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "123456"
+}
+
+###
+
+# 2.12 【修复】如果 testuser 被锁定，可以执行以下 SQL 手动解锁：
+# UPDATE user SET login_attempts = 0, last_fail_time = NULL WHERE username = 'testuser';
+# 或者等待15分钟后自动解锁
+
+###
+
+# 2.13 异常场景 - 已注销账号尝试登录（应返回 403）
+# 注意：需要先执行 2.7 注销账号后再测试
+POST http://127.0.0.1:8000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "deleted_user",
+  "password": "123456"
+}
+
+###
+
+
+# ==================== 用户主页与社交功能 ====================
+
+# 80. 获取管理员个人主页信息（user_id=5）
+# 返回包含统计字段：total_articles, total_likes_received, total_views, total_favorites, total_comments, last_active_at
+GET http://127.0.0.1:8000/api/v1/users/5
+
+###
+
+# 81. 获取普通用户个人主页信息（user_id=6，已登录用户会返回 is_following 状态）
+GET http://127.0.0.1:8000/api/v1/users/6
+Authorization: Bearer {{user_token}}
+
+###
+
+# 82. 获取不存在的用户主页（应返回 404）
+GET http://127.0.0.1:8000/api/v1/users/999999
+
+###
+
+# 83. 获取普通用户的文章列表（user_id=6，公开接口，默认分页）
+GET http://127.0.0.1:8000/api/v1/users/6/articles?page=1&size=10
+
+###
+
+# 84. 获取普通用户的文章列表（user_id=6，自定义分页参数）
+GET http://127.0.0.1:8000/api/v1/users/6/articles?page=1&size=5
+
+###
+
+# 85. 获取不存在的用户文章列表（应返回 404）
+GET http://127.0.0.1:8000/api/v1/users/999999/articles?page=1&size=10
+
+###
+
+# 86. 修改个人资料 - 仅修改 bio（个人简介）
+PUT http://127.0.0.1:8000/api/v1/auth/update-profile
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "bio": "这是一个热爱技术的全栈开发者"
+}
+
+###
+
+# 87. 修改个人资料 - 同时修改 username 和 bio
+PUT http://127.0.0.1:8000/api/v1/auth/update-profile
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "username": "van_updated",
+  "bio": "更新后的个人简介，热爱开源和技术分享"
+}
+
+###
+
+# 88. 修改个人资料 - 同时修改 avatar 和 bio
+PUT http://127.0.0.1:8000/api/v1/auth/update-profile
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "avatar": "/storage/avatars/avatar_test.jpg",
+  "bio": "添加了头像和个人简介"
+}
+
+###
+
+# 89. 修改个人资料 - 清空 bio（设置为 null）
+PUT http://127.0.0.1:8000/api/v1/auth/update-profile
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "bio": null
+}
+
+###
+
+# 90. 异常场景 - bio 超过最大长度 200 字符（应返回 422）
+PUT http://127.0.0.1:8000/api/v1/auth/update-profile
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "bio": "这是一段非常长的个人简介，超过了系统允许的最大长度限制。系统规定的最大长度为200个字符，超出部分将会导致验证失败。这段文字故意写得很长，用来测试后端是否正确实施了字段长度校验逻辑。如果后端没有正确校验，可能会导致数据库存储异常或者前端显示问题。因此，这个测试用例非常重要，用以确保系统的健壮性和数据完整性。"
+}
+
+###
+
+# 91. 验证统计字段 - 使用已有用户测试
+# 91.1 查看管理员主页（user_id=5，应该包含统计数据）
+GET http://127.0.0.1:8000/api/v1/users/5
+Authorization: Bearer {{user_token}}
+
+###
+
+# 91.2 查看普通用户主页（user_id=6，验证统计字段）
+# 应该返回：total_articles, total_likes_received, total_views, total_favorites, total_comments, last_active_at
+GET http://127.0.0.1:8000/api/v1/users/6
+Authorization: Bearer {{user_token}}
+
+###
+
+# 91.3 给普通用户的文章点赞（用于验证 total_likes_received）
+# 直接使用 user_id=6 的第一篇文章ID（从上面的响应可知是 35）
+# 如果文章ID不同，请手动修改下面的数字
+POST http://127.0.0.1:8000/api/v1/article/35/like
+Authorization: Bearer {{user_token}}
+
+###
+
+# 91.4 再次查看普通用户主页（user_id=6，验证 total_likes_received 增加）
+# 应该看到 total_likes_received 比之前多 1
+GET http://127.0.0.1:8000/api/v1/users/6
+Authorization: Bearer {{user_token}}
+
+###
+
+
+# ==================== 元数据管理（分类与标签） ====================
+
+# 3. 管理员创建分类
 POST http://127.0.0.1:8000/api/v1/meta/categories
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
@@ -61,12 +398,7 @@ Content-Type: application/json
 
 ###
 
-# 5. 查看所有标签
-GET http://127.0.0.1:8000/api/v1/meta/tags
-
-###
-
-# 6. 普通用户创建标签
+# 4. 普通用户创建标签
 POST http://127.0.0.1:8000/api/v1/meta/tags
 Authorization: Bearer {{user_token}}
 Content-Type: application/json
@@ -79,10 +411,20 @@ Content-Type: application/json
 
 ###
 
+# 5. 查看所有分类
+GET http://127.0.0.1:8000/api/v1/meta/categories
+
+###
+
+# 6. 查看所有标签
+GET http://127.0.0.1:8000/api/v1/meta/tags
+
+###
+
 
 # ==================== 文章管理核心流程 ====================
 
-# 6.5. 图片上传测试（注意：有频率限制，每小时最多15次）
+# 7. 图片上传测试（注意：有频率限制，每小时最多15次）
 POST http://127.0.0.1:8000/api/v1/article/upload-image
 Authorization: Bearer {{admin_token}}
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
@@ -96,7 +438,13 @@ Content-Type: image/jpeg
 
 ###
 
-# 7. 创建文章（草稿）- 使用 content 字段
+# 自定义文章ID测试变量（可手动修改此处的值来测试不同文章）
+# 将此值改为您想测试的文章ID，例如: 1, 2, 3 等
+> {% client.global.set("custom_article_id", "27"); %}
+
+###
+
+# 8. 创建文章（草稿）- 使用 content 字段
 # category_id 是可选字段，这里设置为 null 表示不指定分类
 POST http://127.0.0.1:8000/api/v1/article/autosave
 Authorization: Bearer {{admin_token}}
@@ -107,14 +455,17 @@ Content-Type: application/json
   "summary": "这是测试摘要514",
   "content": "# 测试文章\n\n这是文章内容，使用 Markdown 格式。\n\n## 副标题\n\n一些测试内容...",
   "category_id": null,
-  "tag_ids": []
+  "tag_ids": [],
+  "cover_image": null,
+  "content_hash": null,
+  "version": null
 }
 
 > {% client.global.set("article_id", response.body.id); %}
 
 ###
 
-# 8. 更新文章 - 修改内容和标题（id 必须传入）
+# 9. 更新文章 - 修改内容和标题（id 必须传入）
 POST http://127.0.0.1:8000/api/v1/article/autosave
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
@@ -125,31 +476,41 @@ Content-Type: application/json
   "summary": "更新后的摘要",
   "content": "# 更新后的文章\n\n这是更新后的内容。\n\n## 新章节\n\n添加了新的内容段落。",
   "category_id": null,
-  "tag_ids": []
+  "tag_ids": [],
+  "cover_image": null,
+  "content_hash": null,
+  "version": 1
 }
 
-
 ###
 
-# 9. 获取文章详情（返回 Article 对象，包含所有字段包括审核信息）
+# 10. 获取文章详情（返回 Article 对象，包含所有字段包括审核信息）
+# 方式1：使用自动保存的文章ID
 GET http://127.0.0.1:8000/api/v1/article/{{article_id}}
+Authorization: Bearer {{admin_token}}
 
 ###
 
-# 10. 我的文章列表（新版分页接口，返回包含 size 字段）
+# 10.1 获取文章详情（使用自定义文章ID，可手动修改上面的 custom_article_id 变量）
+GET http://127.0.0.1:8000/api/v1/article/{{custom_article_id}}
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 11. 我的文章列表（新版分页接口，返回包含 size 字段）
 # 返回格式: { "items": [...], "total": 10, "page": 1, "size": 10, "pages": 1 }
 GET http://127.0.0.1:8000/api/v1/article/my/list?page=1&size=10
 Authorization: Bearer {{admin_token}}
 
 ###
 
-# 11. 公开文章列表（新版分页接口，支持分类筛选，返回包含 size 字段）
+# 12. 公开文章列表（新版分页接口，支持分类筛选，返回包含 size 字段）
 # 返回格式: { "items": [...], "total": 10, "page": 1, "size": 10, "pages": 1 }
 GET http://127.0.0.1:8000/api/v1/article/public/list?page=1&size=10
 
 ###
 
-# 12. 管理员发布文章（免审直发）
+# 13. 管理员发布文章（免审直发）
 PUT http://127.0.0.1:8000/api/v1/article/{{article_id}}/publish
 Authorization: Bearer {{admin_token}}
 
@@ -158,7 +519,7 @@ Authorization: Bearer {{admin_token}}
 
 # ==================== 普通用户提交流程 ====================
 
-# 13. 普通用户创建文章 - 使用 content 字段
+# 14. 普通用户创建文章 - 使用 content 字段
 # category_id 是可选字段，这里设置为 null 表示不指定分类
 POST http://127.0.0.1:8000/api/v1/article/autosave
 Authorization: Bearer {{user_token}}
@@ -169,20 +530,23 @@ Content-Type: application/json
   "summary": "需要审核的文章",
   "content": "# 普通用户文章\n\n这是一篇需要审核的文章内容。\n\n## 正文\n\n详细内容在这里...",
   "category_id": null,
-  "tag_ids": []
+  "tag_ids": [],
+  "cover_image": null,
+  "content_hash": null,
+  "version": null
 }
 
 > {% client.global.set("user_article_id", response.body.id); %}
 
 ###
 
-# 14. 普通用户提交审核
+# 15. 普通用户提交审核
 PUT http://127.0.0.1:8000/api/v1/article/{{user_article_id}}/publish
 Authorization: Bearer {{user_token}}
 
 ###
 
-# 15. 普通用户撤回审核
+# 16. 普通用户撤回审核
 POST http://127.0.0.1:8000/api/v1/article/{{user_article_id}}/withdraw
 Authorization: Bearer {{user_token}}
 
@@ -191,14 +555,14 @@ Authorization: Bearer {{user_token}}
 
 # ==================== 管理员审核流程 ====================
 
-# 16. 查看待审核文章列表（返回包含 size 字段）
+# 17. 查看待审核文章列表（返回包含 size 字段）
 # 返回格式: { "items": [...], "total": 5, "page": 1, "size": 20, "pages": 1 }
 GET http://127.0.0.1:8000/api/v1/article/admin/pending
 Authorization: Bearer {{admin_token}}
 
 ###
 
-# 17. 管理员审核通过（注意：需要先执行第146-166行创建并提交文章）
+# 18. 管理员审核通过（注意：需要先执行第14-16步创建并提交文章）
 # 审核接口使用 POST 方法，传递 pass_audit 和 remark 参数
 POST http://127.0.0.1:8000/api/v1/article/admin/articles/{{user_article_id}}/review
 Authorization: Bearer {{admin_token}}
@@ -211,7 +575,7 @@ Content-Type: application/json
 
 ###
 
-# 18. 管理员审核驳回（需要先重新提交）
+# 19. 管理员审核驳回（需要先重新提交）
 # 先让普通用户再次提交
 PUT http://127.0.0.1:8000/api/v1/article/{{user_article_id}}/publish
 Authorization: Bearer {{user_token}}
@@ -233,32 +597,32 @@ Content-Type: application/json
 
 # ==================== 回收站操作 ====================
 
-# 19. 软删除文章
+# 20. 软删除文章
 DELETE http://127.0.0.1:8000/api/v1/article/{{article_id}}
 Authorization: Bearer {{admin_token}}
 
 ###
 
-# 20. 恢复文章
+# 21. 恢复文章
 POST http://127.0.0.1:8000/api/v1/article/{{article_id}}/restore
 Authorization: Bearer {{admin_token}}
 
 ###
 
-# 21. 硬删除（彻底删除）
+# 22. 硬删除（彻底删除）- 注意：执行后 article_id 将不可用
 DELETE http://127.0.0.1:8000/api/v1/article/{{article_id}}/hard
 Authorization: Bearer {{admin_token}}
 
 ###
 
-# 22. 管理员全站列表（默认不显示已删除文章，返回包含 size 字段）
+# 23. 管理员全站列表（默认不显示已删除文章，返回包含 size 字段）
 # 返回格式: { "items": [...], "total": 10, "page": 1, "size": 10, "pages": 1 }
 GET http://127.0.0.1:8000/api/v1/article/admin/all-articles?page=1&size=10&show_deleted=false
 Authorization: Bearer {{admin_token}}
 
 ###
 
-# 23. 管理员全站列表（显示已删除文章，返回包含 size 字段）
+# 24. 管理员全站列表（显示已删除文章，返回包含 size 字段）
 # 返回格式: { "items": [...], "total": 12, "page": 1, "size": 10, "pages": 2 }
 GET http://127.0.0.1:8000/api/v1/article/admin/all-articles?page=1&size=10&show_deleted=true
 Authorization: Bearer {{admin_token}}
@@ -268,7 +632,34 @@ Authorization: Bearer {{admin_token}}
 
 # ==================== 评论管理核心流程 ====================
 
-# 24. 普通用户发表评论
+# 25. 创建用于评论测试的文章（如果 article_id 未设置）
+# 注意：如果前面的文章测试已经创建了文章并设置了 article_id，可以跳过此步骤
+POST http://127.0.0.1:8000/api/v1/article/autosave
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "title": "评论功能测试文章",
+  "summary": "专门用于测试评论功能的文章",
+  "content": "# 评论测试\n\n这篇文章用于测试评论系统。",
+  "category_id": null,
+  "tag_ids": [],
+  "cover_image": null,
+  "content_hash": null,
+  "version": null
+}
+
+> {% client.global.set("article_id", response.body.id); %}
+
+###
+
+# 25.1 发布文章（确保文章是 published 状态）
+PUT http://127.0.0.1:8000/api/v1/article/{{article_id}}/publish
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 26. 普通用户发表评论
 POST http://127.0.0.1:8000/api/v1/comments/articles/{{article_id}}/comments
 Authorization: Bearer {{user_token}}
 Content-Type: application/json
@@ -282,7 +673,7 @@ Content-Type: application/json
 
 ###
 
-# 25. 回复评论（二级评论）
+# 26. 回复评论（二级评论）
 POST http://127.0.0.1:8000/api/v1/comments/articles/{{article_id}}/comments
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
@@ -296,24 +687,24 @@ Content-Type: application/json
 
 ###
 
-# 26. 获取文章的所有评论
+# 27. 获取文章的所有评论
 GET http://127.0.0.1:8000/api/v1/comments/articles/{{article_id}}/comments
 
 ###
 
-# 27. 用户删除自己的评论
+# 28. 用户删除自己的评论
 DELETE http://127.0.0.1:8000/api/v1/comments/{{comment_id}}
 Authorization: Bearer {{user_token}}
 
 ###
 
-# 28. 管理员删除任意评论
+# 29. 管理员删除任意评论
 DELETE http://127.0.0.1:8000/api/v1/comments/{{reply_id}}
 Authorization: Bearer {{admin_token}}
 
 ###
 
-# 29. 举报评论
+# 30. 举报评论
 POST http://127.0.0.1:8000/api/v1/comments/{{comment_id}}/report
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
@@ -322,32 +713,346 @@ Content-Type: application/json
   "reason": "评论内容包含不当言论"
 }
 
-> {% client.global.set("report_id", response.body.id); %}
-
 ###
 
-# 30. 管理员查看待处理举报列表
+# 31. 管理员查看待处理举报列表
 GET http://127.0.0.1:8000/api/v1/comments/admin/reports
 Authorization: Bearer {{admin_token}}
 
 ###
 
-# 31. 管理员处理举报（标记为已解决）
+# 31.5. 获取举报列表以提取 report_id (用于后续测试)
+GET http://127.0.0.1:8000/api/v1/comments/admin/reports
+Authorization: Bearer {{admin_token}}
+
+> {% 
+    var reports = JSON.parse(response.body);
+    if (reports && reports.length > 0) {
+        client.global.set("report_id", reports[0].id);
+    }
+%}
+
+###
+
+# 32. 管理员处理举报（标记为已解决）
 PUT http://127.0.0.1:8000/api/v1/comments/admin/reports/{{report_id}}/resolve
 Authorization: Bearer {{admin_token}}
 
 ###
 
-# 32. 管理员全站评论巡查（分页）
+# 33. 管理员全站评论巡查（分页）
 GET http://127.0.0.1:8000/api/v1/comments/admin/comments/all?page=1&size=20
 Authorization: Bearer {{admin_token}}
 
 ###
 
 
+# ==================== 评论后审机制测试 ====================
+
+# 79.1 普通用户发表评论（需要审核）
+POST http://127.0.0.1:8000/api/v1/comments/articles/{{article_id}}/comments
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "content": "这是一条需要审核的评论",
+  "parent_id": null
+}
+
+> {% client.global.set("pending_comment_id", response.body.id); %}
+
+###
+
+# 79.2 验证新评论不会出现在公开列表中（因为未审核）
+GET http://127.0.0.1:8000/api/v1/comments/articles/{{article_id}}/comments?page=1&size=20
+
+###
+
+# 79.3 管理员巡查发现违规评论，标记为违规（隐藏）
+PUT http://127.0.0.1:8000/api/v1/comments/admin/comments/{{visible_comment_id}}/audit
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "pass_audit": false
+}
+
+###
+
+# 79.4 验证被标记违规的评论不再显示
+GET http://127.0.0.1:8000/api/v1/comments/articles/{{article_id}}/comments?page=1&size=20
+
+###
+
+# 79.5 管理员复查后决定恢复该评论
+PUT http://127.0.0.1:8000/api/v1/comments/admin/comments/{{visible_comment_id}}/audit
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "pass_audit": true
+}
+
+###
+
+# 79.6 验证评论恢复后重新显示
+GET http://127.0.0.1:8000/api/v1/comments/articles/{{article_id}}/comments?page=1&size=20
+
+###
+
+# 79.9 批量审核测试 - 先创建多条评论
+POST http://127.0.0.1:8000/api/v1/comments/articles/{{article_id}}/comments
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "content": "批量测试评论1",
+  "parent_id": null
+}
+
+> {% client.global.set("batch_comment_1", response.body.id); %}
+
+###
+
+POST http://127.0.0.1:8000/api/v1/comments/articles/{{article_id}}/comments
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "content": "批量测试评论2",
+  "parent_id": null
+}
+
+> {% client.global.set("batch_comment_2", response.body.id); %}
+
+###
+
+POST http://127.0.0.1:8000/api/v1/comments/articles/{{article_id}}/comments
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "content": "批量测试评论3",
+  "parent_id": null
+}
+
+> {% client.global.set("batch_comment_3", response.body.id); %}
+
+###
+
+# 79.10 批量通过审核
+POST http://127.0.0.1:8000/api/v1/comments/admin/comments/batch-audit
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "comment_ids": [{{batch_comment_1}}, {{batch_comment_2}}, {{batch_comment_3}}],
+  "pass_audit": true
+}
+
+###
+
+# 79.11 验证批量审核后的评论都可见
+GET http://127.0.0.1:8000/api/v1/comments/articles/{{article_id}}/comments?page=1&size=20
+
+###
+
+# 79.12 异常场景 - 审核不存在的评论（应返回 404）
+PUT http://127.0.0.1:8000/api/v1/comments/admin/comments/999999/audit
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "pass_audit": true
+}
+
+###
+
+# 79.13 异常场景 - 普通用户尝试审核评论（应返回 403）
+PUT http://127.0.0.1:8000/api/v1/comments/admin/comments/{{pending_comment_id}}/audit
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "pass_audit": true
+}
+
+###
+
+# 79.14 完整流程测试 - 模拟真实先发后审场景
+# 79.14.1 创建专门用于先发后审测试的文章
+POST http://127.0.0.1:8000/api/v1/article/autosave
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "title": "评论先发后审功能测试文章",
+  "summary": "用于测试评论的先发后审机制",
+  "content": "# 评论先发后审测试\n\n这篇文章用于测试评论的发后即显、事后标记违规的功能。",
+  "category_id": null,
+  "tag_ids": [],
+  "cover_image": null,
+  "content_hash": null,
+  "version": null
+}
+
+> {% client.global.set("audit_test_article_id", response.body.id); %}
+
+###
+
+# 79.14.2 发布文章
+PUT http://127.0.0.1:8000/api/v1/article/{{audit_test_article_id}}/publish
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 79.14.3 多个用户连续发表评论（先发后审：立即可见）
+POST http://127.0.0.1:8000/api/v1/comments/articles/{{audit_test_article_id}}/comments
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "content": "用户A的第一条评论，立即显示",
+  "parent_id": null
+}
+
+> {% client.global.set("comment_a_id", response.body.id); %}
+
+###
+
+POST http://127.0.0.1:8000/api/v1/comments/articles/{{audit_test_article_id}}/comments
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "content": "管理员的评论，也立即显示",
+  "parent_id": null
+}
+
+> {% client.global.set("comment_b_id", response.body.id); %}
+
+###
+
+# 79.14.4 验证这些评论都立即显示在公开列表中（先发后审）
+GET http://127.0.0.1:8000/api/v1/comments/articles/{{audit_test_article_id}}/comments?page=1&size=20
+
+###
+
+# 79.14.5 管理员巡查发现违规评论，标记为违规（隐藏）
+PUT http://127.0.0.1:8000/api/v1/comments/admin/comments/{{comment_a_id}}/audit
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "pass_audit": false
+}
+
+###
+
+# 79.14.6 验证被标记违规的评论不再显示
+GET http://127.0.0.1:8000/api/v1/comments/articles/{{audit_test_article_id}}/comments?page=1&size=20
+
+###
+
+# 79.14.7 管理员查看已标记违规的评论列表
+GET http://127.0.0.1:8000/api/v1/comments/admin/comments/pending?page=1&size=20
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 79.14.8 管理员复查后决定恢复该评论
+PUT http://127.0.0.1:8000/api/v1/comments/admin/comments/{{comment_a_id}}/audit
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "pass_audit": true
+}
+
+###
+
+# 79.14.9 验证评论恢复后重新显示
+GET http://127.0.0.1:8000/api/v1/comments/articles/{{audit_test_article_id}}/comments?page=1&size=20
+
+###
+
+# 79.14.10 批量标记违规测试 - 先创建多条评论
+POST http://127.0.0.1:8000/api/v1/comments/articles/{{audit_test_article_id}}/comments
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "content": "测试批量标记违规 - 评论1",
+  "parent_id": null
+}
+
+> {% client.global.set("batch_comment_1", response.body.id); %}
+
+###
+
+POST http://127.0.0.1:8000/api/v1/comments/articles/{{audit_test_article_id}}/comments
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "content": "测试批量标记违规 - 评论2",
+  "parent_id": null
+}
+
+> {% client.global.set("batch_comment_2", response.body.id); %}
+
+###
+
+POST http://127.0.0.1:8000/api/v1/comments/articles/{{audit_test_article_id}}/comments
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "content": "测试批量标记违规 - 评论3",
+  "parent_id": null
+}
+
+> {% client.global.set("batch_comment_3", response.body.id); %}
+
+###
+
+# 79.14.11 批量标记违规（隐藏多条评论）
+POST http://127.0.0.1:8000/api/v1/comments/admin/comments/batch-audit
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "comment_ids": [{{batch_comment_1}}, {{batch_comment_2}}, {{batch_comment_3}}],
+  "pass_audit": false
+}
+
+###
+
+# 79.14.12 验证批量标记后评论都不再显示
+GET http://127.0.0.1:8000/api/v1/comments/articles/{{audit_test_article_id}}/comments?page=1&size=20
+
+###
+
+# 79.14.13 批量恢复评论
+POST http://127.0.0.1:8000/api/v1/comments/admin/comments/batch-audit
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "comment_ids": [{{batch_comment_1}}, {{batch_comment_2}}],
+  "pass_audit": true
+}
+
+###
+
+# 79.14.14 验证批量恢复后评论重新显示
+GET http://127.0.0.1:8000/api/v1/comments/articles/{{audit_test_article_id}}/comments?page=1&size=20
+
+###
+
 # ==================== 完整业务流程测试 ====================
 
-# 33. 创建新文章用于评论测试
+# 34. 创建新文章用于评论测试
 POST http://127.0.0.1:8000/api/v1/article/autosave
 Authorization: Bearer {{user_token}}
 Content-Type: application/json
@@ -357,20 +1062,23 @@ Content-Type: application/json
   "summary": "用于测试评论系统的文章",
   "content": "# 评论功能测试\n\n这篇文章专门用来测试评论功能。\n\n## 测试内容\n\n1. 发表评论\n2. 回复评论\n3. 删除评论\n4. 举报评论",
   "category_id": null,
-  "tag_ids": []
+  "tag_ids": [],
+  "cover_image": null,
+  "content_hash": null,
+  "version": null
 }
 
 > {% client.global.set("comment_test_article_id", response.body.id); %}
 
 ###
 
-# 34. 发布文章（管理员免审直发）
+# 35. 发布文章（管理员免审直发）
 PUT http://127.0.0.1:8000/api/v1/article/{{comment_test_article_id}}/publish
 Authorization: Bearer {{admin_token}}
 
 ###
 
-# 35. 多用户连续评论测试 - 用户A第一条评论
+# 36. 多用户连续评论测试 - 用户A第一条评论
 POST http://127.0.0.1:8000/api/v1/comments/articles/{{comment_test_article_id}}/comments
 Authorization: Bearer {{user_token}}
 Content-Type: application/json
@@ -382,7 +1090,7 @@ Content-Type: application/json
 
 ###
 
-# 36. 多用户连续评论测试 - 管理员第二条
+# 37. 多用户连续评论测试 - 管理员第二条
 POST http://127.0.0.1:8000/api/v1/comments/articles/{{comment_test_article_id}}/comments
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
@@ -396,7 +1104,7 @@ Content-Type: application/json
 
 ###
 
-# 37. 嵌套回复测试 - 回复管理员的评论
+# 38. 嵌套回复测试 - 回复管理员的评论
 POST http://127.0.0.1:8000/api/v1/comments/articles/{{comment_test_article_id}}/comments
 Authorization: Bearer {{user_token}}
 Content-Type: application/json
@@ -408,7 +1116,7 @@ Content-Type: application/json
 
 ###
 
-# 38. 再次查看评论列表（应该包含所有评论）
+# 39. 再次查看评论列表（应该包含所有评论）
 GET http://127.0.0.1:8000/api/v1/comments/articles/{{comment_test_article_id}}/comments
 
 ###
@@ -416,49 +1124,49 @@ GET http://127.0.0.1:8000/api/v1/comments/articles/{{comment_test_article_id}}/c
 
 # ==================== 评论点赞功能测试 ====================
 
-# 39. 给评论点赞（首次点赞）
+# 40. 给评论点赞（首次点赞）
 POST http://127.0.0.1:8000/api/v1/comments/{{admin_comment_id}}/like
 Authorization: Bearer {{user_token}}
 
 ###
 
-# 40. 再次点赞（取消点赞）
+# 41. 再次点赞（取消点赞）
 POST http://127.0.0.1:8000/api/v1/comments/{{admin_comment_id}}/like
 Authorization: Bearer {{user_token}}
 
 ###
 
-# 41. 第三次点赞（重新点赞）
+# 42. 第三次点赞（重新点赞）
 POST http://127.0.0.1:8000/api/v1/comments/{{admin_comment_id}}/like
 Authorization: Bearer {{user_token}}
 
 ###
 
-# 42. 管理员给评论点赞
+# 43. 管理员给评论点赞
 POST http://127.0.0.1:8000/api/v1/comments/{{admin_comment_id}}/like
 Authorization: Bearer {{admin_token}}
 
 ###
 
-# 43. 查看点赞后的评论列表（应该显示点赞数和点赞状态）
+# 44. 查看点赞后的评论列表（应该显示点赞数和点赞状态）
 GET http://127.0.0.1:8000/api/v1/comments/articles/{{comment_test_article_id}}/comments
 Authorization: Bearer {{user_token}}
 
 ###
 
-# 44. 未登录用户查看评论（is_liked 应该为 false）
+# 45. 未登录用户查看评论（is_liked 应该为 false）
 GET http://127.0.0.1:8000/api/v1/comments/articles/{{comment_test_article_id}}/comments
 
 ###
 
-# 45. 给不存在的评论点赞（应该返回 404）
+# 46. 给不存在的评论点赞（应该返回 404）
 POST http://127.0.0.1:8000/api/v1/comments/999999/like
 Authorization: Bearer {{user_token}}
 
 ###
 
-# 46. 完整流程测试 - 创建新评论并点赞
-# 46.1 创建新评论
+# 47. 完整流程测试 - 创建新评论并点赞
+# 47.1 创建新评论
 POST http://127.0.0.1:8000/api/v1/comments/articles/{{comment_test_article_id}}/comments
 Authorization: Bearer {{user_token}}
 Content-Type: application/json
@@ -472,13 +1180,13 @@ Content-Type: application/json
 
 ###
 
-# 46.2 给新评论点赞
+# 47.2 给新评论点赞
 POST http://127.0.0.1:8000/api/v1/comments/{{new_comment_for_like}}/like
 Authorization: Bearer {{admin_token}}
 
 ###
 
-# 46.3 验证点赞结果
+# 47.3 验证点赞结果
 GET http://127.0.0.1:8000/api/v1/comments/articles/{{comment_test_article_id}}/comments
 Authorization: Bearer {{admin_token}}
 
@@ -486,4 +1194,255 @@ Authorization: Bearer {{admin_token}}
 
 
 
-####
+# ==================== 文章收藏功能测试 ====================
+
+# 48. 创建用于收藏测试的文章（需要是已发布状态）
+POST http://127.0.0.1:8000/api/v1/article/autosave
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "title": "收藏功能测试文章",
+  "summary": "用于测试收藏功能的文章",
+  "content": "# 收藏功能测试\n\n这篇文章专门用来测试收藏功能。",
+  "category_id": null,
+  "tag_ids": [],
+  "cover_image": null,
+  "content_hash": null,
+  "version": null
+}
+
+> {% client.global.set("favorite_article_id", response.body.id); %}
+
+###
+
+# 49. 发布文章（收藏接口要求文章必须是 published 状态）
+PUT http://127.0.0.1:8000/api/v1/article/{{favorite_article_id}}/publish
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 50. 收藏文章（首次收藏）
+POST http://127.0.0.1:8000/api/v1/favorites/{{favorite_article_id}}/favorite
+Authorization: Bearer {{user_token}}
+
+###
+
+# 51. 再次点击（取消收藏）
+POST http://127.0.0.1:8000/api/v1/favorites/{{favorite_article_id}}/favorite
+Authorization: Bearer {{user_token}}
+
+###
+
+# 52. 第三次点击（重新收藏）
+POST http://127.0.0.1:8000/api/v1/favorites/{{favorite_article_id}}/favorite
+Authorization: Bearer {{user_token}}
+
+###
+
+# 53. 检查收藏状态（应该返回 favorited: true）
+GET http://127.0.0.1:8000/api/v1/favorites/check/{{favorite_article_id}}
+Authorization: Bearer {{user_token}}
+
+###
+
+# 54. 获取我的收藏列表
+GET http://127.0.0.1:8000/api/v1/favorites/my?page=1&size=10
+Authorization: Bearer {{user_token}}
+
+###
+
+# 55. 管理员收藏同一篇文章
+POST http://127.0.0.1:8000/api/v1/favorites/{{favorite_article_id}}/favorite
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 56. 管理员检查收藏状态
+GET http://127.0.0.1:8000/api/v1/favorites/check/{{favorite_article_id}}
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 57. 异常场景 - 收藏不存在的文章（应返回 404）
+POST http://127.0.0.1:8000/api/v1/favorites/999999/favorite
+Authorization: Bearer {{user_token}}
+
+###
+
+# 58. 异常场景 - 未登录用户收藏（应返回 401）
+POST http://127.0.0.1:8000/api/v1/favorites/{{favorite_article_id}}/favorite
+
+###
+
+# 59. 测试收藏其他已存在文章（使用自定义文章ID）
+# 注意：请确保 custom_article_id 对应的文章是 published 状态且未被删除
+# 可以在第101行修改 custom_article_id 的值来测试不同的文章
+GET http://127.0.0.1:8000/api/v1/article/{{custom_article_id}}
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 59.1 尝试收藏自定义文章
+POST http://127.0.0.1:8000/api/v1/favorites/{{custom_article_id}}/favorite
+Authorization: Bearer {{user_token}}
+
+###
+
+# 59.2 检查收藏状态
+GET http://127.0.0.1:8000/api/v1/favorites/check/{{custom_article_id}}
+Authorization: Bearer {{user_token}}
+
+###
+
+
+# ==================== 文章点赞功能测试 ====================
+
+# 60. 创建用于点赞测试的文章
+POST http://127.0.0.1:8000/api/v1/article/autosave
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "title": "点赞功能测试文章",
+  "summary": "用于测试点赞功能的文章",
+  "content": "# 点赞功能测试\n\n这篇文章专门用来测试点赞功能。",
+  "category_id": null,
+  "tag_ids": [],
+  "cover_image": null,
+  "content_hash": null,
+  "version": null
+}
+
+> {% client.global.set("like_article_id", response.body.id); %}
+
+###
+
+# 61. 发布文章（点赞接口要求文章必须是 published 状态）
+PUT http://127.0.0.1:8000/api/v1/article/{{like_article_id}}/publish
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 62. 给文章点赞（首次点赞）
+POST http://127.0.0.1:8000/api/v1/article/{{like_article_id}}/like
+Authorization: Bearer {{user_token}}
+
+###
+
+# 63. 再次点击（取消点赞）
+POST http://127.0.0.1:8000/api/v1/article/{{like_article_id}}/like
+Authorization: Bearer {{user_token}}
+
+###
+
+# 64. 第三次点击（重新点赞）
+POST http://127.0.0.1:8000/api/v1/article/{{like_article_id}}/like
+Authorization: Bearer {{user_token}}
+
+###
+
+# 65. 获取文章点赞数
+GET http://127.0.0.1:8000/api/v1/article/{{like_article_id}}/like/count
+
+###
+
+# 66. 管理员给文章点赞
+POST http://127.0.0.1:8000/api/v1/article/{{like_article_id}}/like
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 67. 查看文章详情（应该包含 like_count 和 is_liked 字段）
+GET http://127.0.0.1:8000/api/v1/article/{{like_article_id}}
+Authorization: Bearer {{user_token}}
+
+###
+
+# 68. 未登录用户查看文章详情（is_liked 应该为 false）
+GET http://127.0.0.1:8000/api/v1/article/{{like_article_id}}
+
+###
+
+# 69. 异常场景 - 给不存在的文章点赞（应返回 404）
+POST http://127.0.0.1:8000/api/v1/article/999999/like
+Authorization: Bearer {{user_token}}
+
+###
+
+# 70. 异常场景 - 未登录用户点赞（应返回 401）
+POST http://127.0.0.1:8000/api/v1/article/{{like_article_id}}/like
+
+###
+
+
+# ==================== 文章置顶功能测试 ====================
+
+# 71. 管理员置顶文章
+PUT http://127.0.0.1:8000/api/v1/article/admin/articles/{{like_article_id}}/pin
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 72. 查看置顶后的文章详情（应该包含 is_pinned: true）
+GET http://127.0.0.1:8000/api/v1/article/{{like_article_id}}
+Authorization: Bearer {{user_token}}
+
+###
+
+# 73. 查看公开文章列表（置顶文章应该排在前面）
+GET http://127.0.0.1:8000/api/v1/article/public/list?page=1&size=10
+
+###
+
+# 74. 取消置顶
+PUT http://127.0.0.1:8000/api/v1/article/admin/articles/{{like_article_id}}/pin
+Authorization: Bearer {{admin_token}}
+
+###
+
+# 75. 验证已取消置顶
+GET http://127.0.0.1:8000/api/v1/article/{{like_article_id}}
+Authorization: Bearer {{user_token}}
+
+###
+
+# 76. 异常场景 - 普通用户尝试置顶（应返回 403）
+PUT http://127.0.0.1:8000/api/v1/article/admin/articles/{{like_article_id}}/pin
+Authorization: Bearer {{user_token}}
+
+###
+
+# 77. 异常场景 - 置顶不存在的文章（应返回 404）
+PUT http://127.0.0.1:8000/api/v1/article/admin/articles/999999/pin
+Authorization: Bearer {{admin_token}}
+
+###
+
+
+# ==================== 文章归档功能测试 ====================
+
+# 78. 获取文章归档统计（按年月）
+GET http://127.0.0.1:8000/api/v1/article/public/archive
+
+###
+
+# 79. 验证归档数据格式（应该返回 [{year, month, count}, ...]）
+# 注意：此测试用于检查返回的数据结构是否正确
+GET http://127.0.0.1:8000/api/v1/article/public/archive
+
+> {% 
+    var archive = JSON.parse(response.body);
+    if (archive && archive.length > 0) {
+        console.log("归档数据统计:");
+        archive.forEach(function(item) {
+            console.log(item.year + "年" + item.month + "月: " + item.count + "篇文章");
+        });
+    } else {
+        console.log("暂无归档数据");
+    }
+%}
+
+###
+
+#####

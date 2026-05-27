@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings
 from core.database import init_db, IS_LITE
-from routers.v1 import api_auth, api_article,api_meta,api_comment,api_favorite,api_channel,api_social
+from routers.v1 import api_auth, api_article,api_meta,api_comment,api_favorite,api_channel,api_social,api_user
 from fastapi.staticfiles import StaticFiles
 
 
@@ -39,6 +39,7 @@ def create_app() -> FastAPI:
     app.include_router(api_favorite.router, prefix="/api/v1/favorites", tags=["文章收藏"])  # 已新增
     app.include_router(api_channel.router, prefix="/api/v1/channels", tags=["频道广场聊天系统"])
     app.include_router(api_social.router, prefix="/api/v1/social", tags=["社交关注"])
+    app.include_router(api_user.router, prefix="/api/v1/users", tags=["用户主页"])
 
     # 4. 挂载静态文件目录
     app.mount("/storage", StaticFiles(directory="storage"), name="storage")
