@@ -1,3 +1,4 @@
+@use 'sass:color';
 /* ============================================================
    按钮体系 — 冷色调机能风
    明日方舟风格：硬边 + 冷色 + 克制的 hover 发光
@@ -39,8 +40,8 @@
     border-color: $color-primary;
 
     &:hover:not(:disabled) {
-      background: lighten($color-primary, 8%);
-      border-color: lighten($color-primary, 8%);
+      background: color.adjust($color-primary, $lightness: 8%);
+      border-color: color.adjust($color-primary, $lightness: 8%);
     }
   }
 
@@ -51,7 +52,7 @@
     border-color: $color-secondary;
 
     &:hover:not(:disabled) {
-      background: lighten($color-secondary, 8%);
+      background: color.adjust($color-secondary, $lightness: 8%);
     }
   }
 
@@ -62,7 +63,7 @@
     border-color: $color-accent;
 
     &:hover:not(:disabled) {
-      background: lighten($color-accent, 6%);
+      background: color.adjust($color-accent, $lightness: 6%);
     }
   }
 
@@ -73,7 +74,7 @@
     border-color: $color-success;
 
     &:hover:not(:disabled) {
-      background: lighten($color-success, 6%);
+      background: color.adjust($color-success, $lightness: 6%);
     }
   }
 
@@ -84,7 +85,7 @@
     border-color: $color-warning;
 
     &:hover:not(:disabled) {
-      background: lighten($color-warning, 6%);
+      background: color.adjust($color-warning, $lightness: 6%);
     }
   }
 
@@ -95,7 +96,7 @@
     border-color: $color-error;
 
     &:hover:not(:disabled) {
-      background: lighten($color-error, 6%);
+      background: color.adjust($color-error, $lightness: 6%);
     }
   }
 
@@ -147,7 +148,7 @@
     padding: $space-sm $space-lg;
 
     &:hover:not(:disabled) {
-      background: linear-gradient(135deg, lighten($color-primary, 6%), lighten($color-secondary, 6%));
+      background: linear-gradient(135deg, color.adjust($color-primary, $lightness: 6%), color.adjust($color-secondary, $lightness: 6%));
     }
   }
 

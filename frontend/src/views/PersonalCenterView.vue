@@ -138,7 +138,10 @@ const handleAvatarUpload = async (e) => {
   if (r.success) {
     const url = API_BASE.replace('/api/v1', '') + r.data.url
     avatarUrl.value = url
-    if (userStore.userInfo) userStore.userInfo.avatar = r.data.url
+    if (userStore.userInfo) {
+      userStore.userInfo.avatar = r.data.url
+      localStorage.setItem('vitee_user', JSON.stringify(userStore.userInfo))
+    }
   } else {
     alert(r.message || '上传失败')
   }
@@ -153,7 +156,10 @@ const saveName = async () => {
   nameSaving.value = true; nameMessage.value = ''; nameError.value = false
   const r = await authService.updateProfile({ username: val })
   if (r.success) {
-    if (userStore.userInfo) userStore.userInfo.username = val
+    if (userStore.userInfo) {
+      userStore.userInfo.username = val
+      localStorage.setItem('vitee_user', JSON.stringify(userStore.userInfo))
+    }
     nameMessage.value = '昵称已更新'; nameError.value = false
     editingName.value = false
     setTimeout(() => { nameMessage.value = '' }, 2000)

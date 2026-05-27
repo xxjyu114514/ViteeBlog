@@ -1,3 +1,4 @@
+@use 'sass:color';
 /* ============================================================
    文字体系 — 冷色调机能风
    标题用等宽字体（工程感），正文用无衬线（可读性）
@@ -88,7 +89,7 @@
       transition: color $transition-fast;
 
       &:hover {
-        color: lighten($color-primary, 12%);
+        color: color.adjust($color-primary, $lightness: 12%);
         text-decoration: underline;
       }
     }

@@ -198,6 +198,7 @@ watch([currentPage, filterStatus], () => fetchComments())
 </script>
 
 <style scoped lang="scss">
+@use 'sass:color';
 @use '@/assets/styles/variables' as *;
 
 .comment-admin-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
@@ -231,12 +232,12 @@ watch([currentPage, filterStatus], () => fetchComments())
       &:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
     }
     .btn-batch-approve {
-      background: linear-gradient(135deg, $color-success 0%, darken($color-success, 10%) 100%);
+      background: linear-gradient(135deg, $color-success 0%, color.adjust($color-success, $lightness: -10%) 100%);
       box-shadow: 0 4px 12px rgba($color-success, 0.3);
       &:hover:not(:disabled) { box-shadow: 0 6px 16px rgba($color-success, 0.4); }
     }
     .btn-batch-reject {
-      background: linear-gradient(135deg, $color-danger 0%, darken($color-danger, 10%) 100%);
+      background: linear-gradient(135deg, $color-danger 0%, color.adjust($color-danger, $lightness: -10%) 100%);
       box-shadow: 0 4px 12px rgba($color-danger, 0.3);
       &:hover:not(:disabled) { box-shadow: 0 6px 16px rgba($color-danger, 0.4); }
     }

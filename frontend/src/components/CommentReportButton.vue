@@ -38,13 +38,14 @@ const handleReportClick = () => {
 </script>
 
 <style scoped lang="scss">
+@use 'sass:color';
 @use '@/assets/styles/variables' as *;
 
 .report-btn {
   color: $color-danger;
   
   &:hover:not(:disabled) {
-    color: darken($color-danger, 10%);
+    color: color.adjust($color-danger, $lightness: -10%);
   }
   
   &:disabled {

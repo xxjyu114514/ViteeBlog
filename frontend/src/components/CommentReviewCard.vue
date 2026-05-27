@@ -83,6 +83,7 @@ const getReportReasonText = (reason) => {
 </script>
 
 <style scoped lang="scss">
+@use 'sass:color';
 @use '@/assets/styles/variables' as *;
 
 .comment-card {
@@ -148,14 +149,14 @@ const getReportReasonText = (reason) => {
 }
 
 .btn-approve {
-  background: linear-gradient(135deg, $color-success 0%, darken($color-success, 10%) 100%);
+  background: linear-gradient(135deg, $color-success 0%, color.adjust($color-success, $lightness: -10%) 100%);
   color: white;
   box-shadow: 0 2px 8px rgba($color-success, 0.3);
   &:hover:not(:disabled) { box-shadow: 0 4px 12px rgba($color-success, 0.4); }
 }
 
 .btn-reject {
-  background: linear-gradient(135deg, $color-danger 0%, darken($color-danger, 10%) 100%);
+  background: linear-gradient(135deg, $color-danger 0%, color.adjust($color-danger, $lightness: -10%) 100%);
   color: white;
   box-shadow: 0 2px 8px rgba($color-danger, 0.3);
   &:hover:not(:disabled) { box-shadow: 0 4px 12px rgba($color-danger, 0.4); }

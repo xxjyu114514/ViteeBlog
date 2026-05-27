@@ -1,3 +1,4 @@
+@use 'sass:color';
 /* ============================================================
    表单体系 — 冷色调机能风
    明日方舟风格：冷灰底 + 冰蓝 focus + 硬边
@@ -43,7 +44,7 @@
 
     // 聚焦时背景微微提亮
     &:focus {
-      background: lighten($bg-surface, 2%);
+      background: color.adjust($bg-surface, $lightness: 2%);
     }
 
     &::placeholder {

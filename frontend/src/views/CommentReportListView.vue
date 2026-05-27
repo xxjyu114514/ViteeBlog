@@ -221,6 +221,7 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
+@use 'sass:color';
 @use '@/assets/styles/variables' as *;
 
 .report-list-container {
@@ -452,7 +453,7 @@ onMounted(() => {
   }
   
   .btn-resolve {
-    background: linear-gradient(135deg, $color-success 0%, darken($color-success, 10%) 100%);
+    background: linear-gradient(135deg, $color-success 0%, color.adjust($color-success, $lightness: -10%) 100%);
     color: white;
     border: none;
     padding: 10px 24px;
