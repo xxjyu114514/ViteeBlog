@@ -22,9 +22,9 @@
   line-height: 1.4;
   border-radius: 0;
 
-  // 全局点击效果：降低透明度（替换所有按钮各自的 active 样式）
+  // 全局点击效果：变暗而非降低透明度
   &:active:not(:disabled) {
-    opacity: 0.7;
+    filter: brightness(0.85);
   }
 
   // 聚焦态（键盘可访问性）
