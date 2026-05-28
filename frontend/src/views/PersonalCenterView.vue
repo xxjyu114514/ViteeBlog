@@ -194,7 +194,7 @@ onUnmounted(() => { window.removeEventListener('mousemove', onGlobalMove); windo
 
 <style lang="scss">
 @use 'sass:color';
-@import './test_scss.scss';
+@use './test_scss.scss' as *;
 
 .pc-page {
   background: url(../assets/personl.webp) right top / cover fixed, $bg-base;

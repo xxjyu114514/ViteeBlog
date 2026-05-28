@@ -20,9 +20,11 @@
             <p class="section-description">展示最新的6篇文章</p>
           </div>
           
-          <div class="glass-main-card">
+          <!-- 玻璃面板容器（test_scss 组件） -->
+          <div class="glass-panel panel-scroll">
+            <!-- 左上角冰蓝装饰线由 .glass-panel 自带的 ::before 提供 -->
             
-            <div class="items-stack">
+            <div class="panel-body">
               <!-- 动态文章列表 -->
               <div 
                 v-if="loading"
@@ -38,7 +40,7 @@
               >
                 <p class="error-message">{{ error }}</p>
                 <button 
-                  class="btn-secondary"
+                  class="btn btn-ghost"
                   @click="loadArticles"
                 >
                   重新加载
@@ -52,30 +54,35 @@
                 <p>暂无文章</p>
               </div>
               
+              <!-- 文章列表项：使用 article-card 结构 -->
               <div 
                 v-else
-                class="glass-sub-card" 
+                class="article-card post-list-item" 
                 v-for="(article, index) in articles.slice(0, 6)" 
                 :key="article.id"
                 @click="goToArticle(article.id)"
               >
-                <div class="card-internal">
-                  <div class="text-info">
+                <div class="article-card__header">
+                  <div class="meta-row">
                     <span class="item-index">{{ String(index + 1).padStart(2, '0') }}</span>
-                    <h3 class="item-title">{{ article.title || '无标题文章' }}</h3>
+                    <h3 class="article-card__title">{{ article.title || '无标题文章' }}</h3>
                   </div>
+                </div>
+                <div class="article-card__footer">
                   <span class="static-arrow">→</span>
                 </div>
               </div>
             </div>
 
-            <!-- "查看更多文章"按钮 - 使用sticky定位 -->
-            <button 
-              class="more-articles-btn"
-              @click="navToSubList"
-            >
-              <span class="btn-text">查看更多文章</span>
-            </button>
+            <!-- "查看更多文章"按钮 -->
+            <div class="panel-footer">
+              <button 
+                class="btn btn-glass"
+                @click="navToSubList"
+              >
+                <span>查看更多文章</span>
+              </button>
+            </div>
           </div>
 
           <div 
@@ -91,41 +98,36 @@
         </div>
 
         <div class="auth-section">
-          <div class="glass-login-card">
-            <header class="login-header">
-              <div 
-                v-if="!userStore.isAuthenticated" 
-                class="user-avatar-glass"
-              ></div>
-              <div 
-                v-else 
-                class="user-info"
-              >
-                <span class="username">{{ userStore.userInfo?.username || '用户' }}</span>
-                <span class="role-badge">{{ userStore.userInfo?.role === 'admin' ? '管理员' : '普通用户' }}</span>
+          <div class="glass-card">
+            <div class="glass-card__title">
+              <span v-if="!userStore.isAuthenticated">LOGIN</span>
+              <span v-else>欢迎回来</span>
+            </div>
+            <div class="glass-card__body">
+              <div class="user-mini">
+                <div 
+                  v-if="!userStore.isAuthenticated" 
+                  class="avatar-placeholder"
+                ></div>
+                <div 
+                  v-else 
+                  class="user-info"
+                >
+                  <span class="username">{{ userStore.userInfo?.username || '用户' }}</span>
+                  <span class="role-badge">{{ userStore.userInfo?.role === 'admin' ? '管理员' : '普通用户' }}</span>
+                </div>
               </div>
               
-              <h3 
-                v-if="!userStore.isAuthenticated" 
-                class="login-title"
-              >LOGIN</h3>
-              <h3 
-                v-else 
-                class="login-title"
-              >欢迎回来</h3>
-            </header>
-            
-            <div class="login-body">
               <button 
                 v-if="!userStore.isAuthenticated"
-                class="action-btn"
+                class="btn btn-primary btn-full"
                 @click="router.push('/login')"
               >
                 立即登录
               </button>
               <button 
                 v-else
-                class="action-btn"
+                class="btn btn-primary btn-full"
                 @click="router.push('/personal')"
               >
                 个人中心

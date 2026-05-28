@@ -46,8 +46,8 @@
     margin-left: 25px;
     font-weight: 500;
     transition: color 0.3s;
-    &:hover { color: #3b82f6; }
-    &.router-link-active { color: #3b82f6; }
+    &:hover { color: $color-primary; }
+    &.router-link-active { color: $color-primary; }
   }
 }
 </style>

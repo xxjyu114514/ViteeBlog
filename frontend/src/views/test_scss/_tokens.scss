@@ -1,53 +1,57 @@
 @use 'sass:color';
 /* ============================================================
-   设计令牌 (Design Tokens) — 冷色调机能风
-   参考：明日方舟冷色体系 + GitHub 暗色层级
+   设计令牌 (Design Tokens) — 冷色调机能风  v2
+   参考：GitHub Dark 多层灰度体系 + 明日方舟冷色
+   核心改进：增加各层背景之间的明度对比，避免"死黑一片"
    ============================================================ */
 
 // ========== 品牌色 — 冷色调核心 ==========
-$color-primary:        #4ea8de;   // 主色：冰蓝
-$color-primary-dim:    #2d6a9e;   // 深蓝：背景色块/边框
-$color-primary-deep:   #1a3a5c;   // 极深蓝：hover 底色
+$color-primary:        #58a6ff;   // 主色：亮冰蓝（在暗色中更醒目）
+$color-primary-dim:    #1f6feb;   // 深蓝：背景色块/边框
+$color-primary-deep:   #0d419d;   // 极深蓝：hover 底色
 $color-secondary:      #6c5ce7;   // 辅色：冷紫
-$color-accent:         #00cec9;   // 强调色：青绿（代替原来的粉紫，更冷）
-$color-warning:        #fdcb6e;   // 警告：暖黄（克制使用）
-$color-success:        #00b894;   // 成功：冷绿
-$color-error:          #e17055;   // 错误：暖红
+$color-accent:         #00cec9;   // 强调色：青绿
+$color-warning:        #d29922;   // 警告：暗黄（降低亮度避免刺眼）
+$color-success:        #2ea043;   // 成功：冷绿
+$color-error:          #da3633;   // 错误：暗红
 
-// ========== 背景层 — 冷灰阶梯 ==========
-$bg-base:              #0a0a0c;   // 最底层
-$bg-surface:           #111114;   // 面板/卡片底
-$bg-elevated:          #1a1a1f;   // 悬浮层
-$bg-hover:             #24242b;   // hover 状态
-$bg-overlay:           rgba(0, 0, 0, 0.85);
+// ========== 背景层 — 冷灰阶梯（每层至少差 15 明度值，确保肉眼可见） ==========
+$bg-base:              #0d1117;   // 最底层
+$bg-surface:           #1c2128;   // 面板/卡片底（比底层亮 +15）
+$bg-elevated:          #2d333b;   // 悬浮层/输入框（比面板亮 +17）
+$bg-hover:             #3d444d;   // hover 状态（比悬浮亮 +16）
+$bg-overlay:           rgba(0, 0, 0, 0.8);
 
-// ========== 毛玻璃色值 ==========
-$glass-bg:             rgba(255, 255, 255, 0.04);
-$glass-bg-hover:       rgba(255, 255, 255, 0.08);
-$glass-bg-active:      rgba(255, 255, 255, 0.12);
-$glass-border:         rgba(255, 255, 255, 0.08);
-$glass-border-hover:   rgba($color-primary, 0.2);
+// ========== 毛玻璃色值（提高透明度让效果更明显） ==========
+$glass-bg:             rgba(255, 255, 255, 0.06);
+$glass-bg-hover:       rgba(255, 255, 255, 0.10);
+$glass-bg-active:      rgba(255, 255, 255, 0.15);
+$glass-border:         rgba(255, 255, 255, 0.10);
+$glass-border-hover:   rgba($color-primary, 0.3);
 $glass-blur:           16px;
 $glass-blur-heavy:     24px;
 
-// ========== 文字层级 ==========
-$text-primary:         #f0f0f0;
-$text-secondary:       #a0a0b0;
-$text-tertiary:        #7a7a8a;
-$text-disabled:        #484852;
+// ========== 文字层级（提高可读性） ==========
+$text-primary:         #B0B8C5;   // 主文字：亮白
+$text-secondary:       #8b949e;   // 次要：中灰（可读性好）
+$text-tertiary:        #6e7681;   // 辅助：暗灰
+$text-disabled:        #484f58;   // 禁用：更暗
 
-// ========== 边框系统 ==========
-$border-white-subtle:  1px solid rgba(255, 255, 255, 0.06);
-$border-white-light:   1px solid rgba(255, 255, 255, 0.1);
-$border-white-medium:  1px solid rgba(255, 255, 255, 0.15);
-$divider-hairline:     1px solid rgba(255, 255, 255, 0.05);
-$divider-emphasis:     1px solid rgba(255, 255, 255, 0.1);
+// ========== 边框系统（提高可见度） ==========
+$border-white-subtle:  1px solid rgba(255, 255, 255, 0.08);
+$border-white-light:   1px solid rgba(255, 255, 255, 0.15);
+$border-white-medium:  1px solid rgba(255, 255, 255, 0.2);
+$divider-hairline:     1px solid rgba(255, 255, 255, 0.06);
+$divider-emphasis:     1px solid rgba(255, 255, 255, 0.12);
+// 纯色值（用于 border: Xpx solid $var 等旧语法）
+$border-white-subtle-color: rgba(255, 255, 255, 0.08);
+$border-white-light-color:  rgba(255, 255, 255, 0.15);
 
-// ========== 发光系统（暗色主题专用） ==========
-$glow-sm:   0 0 0 1px rgba(255, 255, 255, 0.04);
-$glow-md:   0 0 0 1px rgba(255, 255, 255, 0.08), 0 4px 20px rgba(0, 0, 0, 0.5);
-$glow-lg:   0 0 0 1px rgba(255, 255, 255, 0.12), 0 8px 32px rgba(0, 0, 0, 0.6);
-$glow-brand: 0 0 0 1px rgba($color-primary, 0.25), 0 0 20px rgba($color-primary, 0.08);
+// ========== 发光系统 ==========
+$glow-sm:   0 0 0 1px rgba(255, 255, 255, 0.06);
+$glow-md:   0 0 0 1px rgba(255, 255, 255, 0.10), 0 4px 20px rgba(0, 0, 0, 0.5);
+$glow-lg:   0 0 0 1px rgba(255, 255, 255, 0.15), 0 8px 32px rgba(0, 0, 0, 0.6);
+$glow-brand: 0 0 0 1px rgba($color-primary, 0.3), 0 0 20px rgba($color-primary, 0.1);
 
 // ========== 字体系统 ==========
 $font-mono:  'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
@@ -62,12 +66,6 @@ $space-lg:  24px;
 $space-xl:  32px;
 $space-2xl: 48px;
 $space-3xl: 64px;
-
-// ========== 圆角系统 ==========
-$radius-none:  0;
-$radius-sm:    2px;
-$radius-md:    4px;
-$radius-lg:    8px;
 
 // ========== 过渡 ==========
 $transition-fast:   0.15s ease;

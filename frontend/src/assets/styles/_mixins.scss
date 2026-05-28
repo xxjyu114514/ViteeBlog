@@ -4,7 +4,7 @@
 @mixin glass-text-effect($font-size: 3.5rem, $weight: 700) {
   font-size: $font-size;
   font-weight: $weight;
-  background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.5) 100%);
+  background: linear-gradient(135deg, $text-primary 0%, rgba(255, 255, 255, 0.5) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -19,7 +19,7 @@
     width: 100%;
     height: 100%;
     background: $bg-dark url('../hero-bg.webp') center/cover no-repeat;
-    color: white;
+    color: $text-primary;
   }
 
   .hero-content {
@@ -28,7 +28,7 @@
 
     .icon-box {
       margin-bottom: 20px;
-      svg { width: 80px; height: 80px; color: white; opacity: 0.8; }
+      svg { width: 80px; height: 80px; color: $text-primary; opacity: 0.8; }
     }
 
     .glass-text {
@@ -38,14 +38,14 @@
 
     .intro-text {
       font-size: 1.1rem;
-      color: rgba(255, 255, 255, 0.7);
+      color: $text-secondary;
       text-transform: uppercase;
       letter-spacing: 2px;
     }
 
     .enter-hint {
       margin-top: 40px;
-      color: rgba(255, 255, 255, 0.5);
+      color: $text-tertiary;
       font-size: 0.9rem;
       animation: pulse 2s infinite;
     }
@@ -81,18 +81,18 @@
   blockquote {
     margin: 1.5em 0; padding: 16px 24px;
     border-left: 4px solid $color-primary;
-    background: rgba(59, 130, 246, 0.05); color: $text-muted; font-style: italic;
+    background: rgba($color-primary, 0.05); color: $text-secondary; font-style: italic;
   }
 
   code {
-    background: rgba(0, 0, 0, 0.05); padding: 3px 6px; border-radius: 4px;
-    font-family: 'Monaco', 'Consolas', 'Menlo', monospace; font-size: 0.9em; color: #d73a49;
+    background: $bg-hover; padding: 3px 6px;
+    font-family: $font-mono; font-size: 0.9em; color: $color-accent;
   }
 
   pre {
-    background: #f8f9fa; padding: 20px; border-radius: 8px;
+    background: $bg-elevated; padding: 20px;
     overflow-x: auto; margin: 1.5em 0; line-height: 1.45;
-    code { background: none; padding: 0; color: #333; font-size: 14px; }
+    code { background: none; padding: 0; color: $text-primary; font-size: 0.9em; }
   }
 
   ul, ol { margin: 1.5em 0; padding-left: 2em;
@@ -100,8 +100,8 @@
   }
 
   table { width: 100%; border-collapse: collapse; margin: 20px 0;
-    th, td { padding: 12px; border: 1px solid $border-color-light; text-align: left; }
-    th { background: rgba(59, 130, 246, 0.05); font-weight: 600; }
+    th, td { padding: 12px; border: $border-white-subtle; text-align: left; }
+    th { background: rgba($color-primary, 0.05); font-weight: 600; }
   }
 }
 

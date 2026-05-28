@@ -159,205 +159,96 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped lang="scss">
-// 使用全局样式变量
+@use 'sass:color';
+@use '@/assets/styles/variables' as *;
+
 .report-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  position: fixed; top: 0; left: 0;
+  width: 100vw; height: 100vh;
   background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999; /* 增加z-index确保覆盖所有内容 */
+  display: flex; justify-content: center; align-items: center;
+  z-index: 9999;
 }
 
 .report-modal {
-  background: white;
-  border-radius: 16px;
-  max-width: 500px;
-  width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
+  background: $bg-surface; padding: 0;
+  max-width: 500px; width: 90%;
+  max-height: 80vh; overflow-y: auto;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  position: relative; /* 确保内部元素的z-index相对于此容器 */
 }
 
 .modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: flex; justify-content: space-between; align-items: center;
   padding: 24px 24px 16px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: $divider-hairline;
   
-  h3 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #1f2937;
-  }
+  h3 { margin: 0; font-size: 1.25rem; font-weight: 600; color: $text-primary; }
   
   .close-btn {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: #4b5563;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: background-color 0.2s ease;
-    
-    &:hover {
-      background: #f5f5f5;
-    }
+    background: none; border: none; font-size: 1.5rem; cursor: pointer;
+    color: $text-secondary; width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s ease;
+    &:hover { background: $bg-hover; }
   }
 }
 
 .modal-body {
   padding: 24px;
   
-  .help-text {
-    margin: 0 0 16px;
-    color: #4b5563;
-    font-size: 0.95rem;
-  }
-  
-  .reason-options {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
+  .help-text { margin: 0 0 16px; color: $text-secondary; font-size: 0.95rem; }
+  .reason-options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
   
   .reason-option {
-    display: flex;
-    align-items: center;
-    padding: 12px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    cursor: pointer;
+    display: flex; align-items: center; padding: 12px;
+    border: $border-white-light; cursor: pointer;
     transition: all 0.2s ease;
     
-    &:hover {
-      border-color: #3b82f6;
-      background: rgba(59, 130, 246, 0.05);
-    }
+    &:hover { border-color: $color-primary; background: rgba($color-primary, 0.05); }
+    &.selected { border-color: $color-primary; background: rgba($color-primary, 0.1); }
     
-    &.selected {
-      border-color: #3b82f6;
-      background: rgba(59, 130, 246, 0.1);
-    }
-    
-    input[type="radio"] {
-      margin-right: 12px;
-      width: 18px;
-      height: 18px;
-      cursor: pointer;
-    }
-    
-    .reason-label {
-      font-size: 1rem;
-      color: #1f2937;
-      cursor: pointer;
-    }
+    input[type="radio"] { margin-right: 12px; width: 18px; height: 18px; cursor: pointer; }
+    .reason-label { font-size: 1rem; color: $text-primary; cursor: pointer; }
   }
   
   .custom-reason {
     margin-top: 16px;
-    
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 0.95rem;
-      color: #1f2937;
-    }
-    
+    label { display: block; margin-bottom: 8px; font-size: 0.95rem; color: $text-primary; }
     textarea {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      font-size: 1rem;
-      line-height: 1.5;
-      resize: vertical;
+      width: 100%; padding: 12px;
+      border: $border-white-light; font-size: 1rem;
+      line-height: 1.5; resize: vertical;
+      background: $bg-elevated; color: $text-primary;
       transition: border-color 0.2s ease;
-      
-      &:focus {
-        outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-      }
+      &:focus { outline: none; border-color: $color-primary; box-shadow: 0 0 0 2px rgba($color-primary, 0.2); }
     }
-    
-    .char-count {
-      text-align: right;
-      font-size: 0.85rem;
-      color: #4b5563;
-      margin-top: 4px;
-    }
+    .char-count { text-align: right; font-size: 0.85rem; color: $text-tertiary; margin-top: 4px; }
   }
   
   .error-message {
-    margin-top: 16px;
-    padding: 12px;
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid #ef4444;
-    border-radius: 8px;
-    color: #ef4444;
-    font-size: 0.9rem;
+    margin-top: 16px; padding: 12px;
+    background: rgba($color-error, 0.1); border: 1px solid $color-error;
+    color: $color-error; font-size: 0.9rem;
   }
 }
 
 .modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 24px 24px;
-  border-top: 1px solid #e5e7eb;
+  display: flex; justify-content: flex-end; gap: 12px;
+  padding: 16px 24px 24px; border-top: $divider-hairline;
   
   .btn-cancel {
-    background: none;
-    border: 1px solid #e5e7eb;
-    color: #4b5563;
-    padding: 8px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.95rem;
+    background: none; border: $border-white-light; color: $text-secondary;
+    padding: 8px 20px; cursor: pointer; font-size: 0.95rem;
     transition: all 0.2s ease;
-    
-    &:hover {
-      background: #f5f5f5;
-    }
+    &:hover { background: $bg-hover; }
   }
   
   .btn-submit {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    color: white;
-    border: none;
-    padding: 8px 24px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.95rem;
-    font-weight: 500;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-    
-    &:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
-    }
-    
-    &:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
+    background: $color-primary; color: $bg-base; border: none;
+    padding: 8px 24px; cursor: pointer; font-size: 0.95rem; font-weight: 500;
+    transition: background 0.2s ease;
+    &:hover:not(:disabled) { background: color.adjust($color-primary, $lightness: 8%); }
+    &:disabled { opacity: 0.6; cursor: not-allowed; }
   }
 }
 </style>

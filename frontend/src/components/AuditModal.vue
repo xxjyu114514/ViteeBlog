@@ -310,7 +310,7 @@ watch(() => props.show, (val) => {
     
     .btn-primary {
       padding: 8px 16px; background: $color-primary;
-      color: white; border-radius: 8px; font-weight: 500;
+      color: $bg-base; font-weight: 500;
       border: none; cursor: pointer; transition: all 0.2s ease;
       &:hover { background: $color-primary-hover; }
       &:disabled { opacity: 0.6; cursor: not-allowed; }

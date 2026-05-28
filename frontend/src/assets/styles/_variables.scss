@@ -1,36 +1,57 @@
-// 基础颜色系统
-$color-primary: #3b82f6;
-$color-primary-hover: #2563eb;
-$color-primary-disabled: #93c5fd;
+// ============================================================
+// ViteeBlog 暗色主题变量 — 向后兼容层
+// 此处导入新设计令牌，并为旧组件提供名称别名
+// ============================================================
+@use 'sass:color';
 
-$color-danger: #ef4444;
-$color-danger-hover: #dc2626;
-$color-danger-disabled: #fca5a5;
-$color-danger-dark: #991b1b;
-$color-danger-dark-hover: #7f1d1d;
+// 1. 导入新的设计令牌（冷色调机能风）
+@use '../../views/test_scss/tokens' as *;
 
-$color-purple: #8b5cf6;
-$color-purple-hover: #7c3aed;
-$color-purple-disabled: #c4b5fd;
+// @forward 必须在变量声明之前，将令牌重新导出给下游使用
+@forward '../../views/test_scss/tokens';
 
-$color-success: #10b981;
-$color-success-hover: #059669;
+// ============================================================
+// 2. 向后兼容别名
+// 这些变量名与原 _variables.scss 一致，值映射到新暗色主题
+// 保证所有使用 @use 'variables' as * 的 Vue 文件自动适配
+// ============================================================
 
-$color-warning: #f59e0b;
-$color-warning-hover: #d97706;
-$color-warning-light: #fbbf24;
+// 主色
+$color-primary: $color-primary;                     // #4ea8de（冰蓝）
+$color-primary-hover: color.adjust($color-primary, $lightness: 8%);
+$color-primary-disabled: color.adjust($color-primary, $lightness: 30%);
 
-// 背景与文字颜色
-$bg-dark: #111;
-$bg-light: #f0f2f5;
-$bg-white: #ffffff;
-$bg-smoke: #f5f5f5;
+// 危险色
+$color-danger: $color-error;                        // #e17055
+$color-danger-hover: color.adjust($color-error, $lightness: 8%);
+$color-danger-disabled: color.adjust($color-error, $lightness: 30%);
+$color-danger-dark: color.adjust($color-error, $lightness: -10%);
+$color-danger-dark-hover: color.adjust($color-danger-dark, $lightness: 8%);
 
-$text-main: #1f2937;
-$text-secondary: #4b5563;
-$text-muted: #6b7280;
+// 辅助色
+$color-purple: $color-secondary;                    // #6c5ce7
+$color-purple-hover: color.adjust($color-secondary, $lightness: 8%);
+$color-purple-disabled: color.adjust($color-secondary, $lightness: 30%);
 
-// 边框与动效
-$border-color: #e5e7eb;
-$border-color-light: #d1d5db;
-$transition-base: all 0.3s ease;
+// 状态色
+$color-success: $color-success;                     // #00b894
+$color-success-hover: color.adjust($color-success, $lightness: 8%);
+$color-warning: $color-warning;                     // #fdcb6e
+$color-warning-hover: color.adjust($color-warning, $lightness: 8%);
+$color-warning-light: color.adjust(#fdcb6e, $lightness: 20%);
+
+// 背景色
+$bg-dark: $bg-base;                                 // #0a0a0c
+$bg-light: color.adjust($bg-base, $lightness: 5%);  // 略浅
+$bg-white: $bg-surface;                             // #111114
+$bg-smoke: $bg-hover;                               // #24242b
+
+// 文字色
+$text-main: $text-primary;                          // #f0f0f0
+$text-secondary: $text-secondary;                   // #a0a0b0
+$text-muted: $text-tertiary;                        // #7a7a8a
+
+// 边框与过渡（⚠️ 注意：旧代码用 $border-color 做 border: Xpx solid $border-color，所以这里必须是纯色值）
+$border-color: $border-white-light-color;           // rgba(255,255,255,0.15)
+$border-color-light: $border-white-subtle-color;    // rgba(255,255,255,0.08)
+$transition-base: all 0.25s ease;

@@ -325,24 +325,27 @@ const handleReportSuccess = () => {
 </script>
 
 <style scoped lang="scss">
+@use 'sass:color';
+@use '@/assets/styles/variables' as *;
 @use '@/assets/styles/components/comment';
 
 .reply-form-container {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid $border-white-subtle;
 }
 
 .form-input {
   width: 100%;
   min-height: 80px;
   padding: 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border: 1px solid $border-white-light;
   font-size: 0.95rem;
   line-height: 1.5;
   resize: vertical;
   margin-bottom: 12px;
+  background: $bg-elevated;
+  color: $text-primary;
 }
 
 .reply-actions {
@@ -352,49 +355,43 @@ const handleReportSuccess = () => {
   
   .btn-cancel {
     background: none;
-    border: 1px solid #d1d5db;
-    color: #6b7280;
-    border-radius: 6px;
+    border: 1px solid $border-white-light;
+    color: $text-secondary;
     padding: 6px 16px;
     font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.2s ease;
     
     &:hover {
-      background: #f9fafb;
+      background: $bg-hover;
     }
   }
   
   .btn-submit {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    color: white;
+    background: $color-primary;
+    color: $bg-base;
     border: none;
-    border-radius: 6px;
     padding: 6px 16px;
     font-size: 0.9rem;
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    transition: background 0.2s ease;
     
     &:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+      background: color.adjust($color-primary, $lightness: 8%);
     }
     
     &:disabled {
       opacity: 0.6;
       cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
     }
   }
 }
 
 .reply-error {
   margin-top: 8px;
-  color: #ef4444;
+  color: $color-error;
   font-size: 0.85rem;
 }
 
-.btn-del { color: #ef4444; &:hover { text-decoration: underline; } }
+.btn-del { color: $color-error; &:hover { text-decoration: underline; } }
 </style>

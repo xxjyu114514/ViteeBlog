@@ -4,7 +4,7 @@
    明日方舟风格：硬边 + 冷色 + 克制的 hover 发光
    ============================================================ */
 
-@import 'tokens';
+@use 'tokens' as *;
 
 .btn {
   display: inline-flex;
@@ -48,7 +48,7 @@
   // ===== 辅色按钮（冷紫） =====
   &.btn-secondary {
     background: $color-secondary;
-    color: #fff;
+    color: $bg-base;
     border-color: $color-secondary;
 
     &:hover:not(:disabled) {
@@ -92,7 +92,7 @@
   // ===== 错误 =====
   &.btn-error {
     background: $color-error;
-    color: #fff;
+    color: $bg-base;
     border-color: $color-error;
 
     &:hover:not(:disabled) {
@@ -143,7 +143,7 @@
   // ===== 渐变按钮 =====
   &.btn-gradient {
     background: linear-gradient(135deg, $color-primary, $color-secondary);
-    color: #fff;
+    color: $bg-base;
     border: none;
     padding: $space-sm $space-lg;
 

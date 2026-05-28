@@ -171,23 +171,143 @@ onMounted(() => { loadArticle() })
 </script>
 
 <style scoped lang="scss">
+@use 'sass:color';
+@use '@/assets/styles/variables' as *;
 @use '@/assets/styles/components/comment';
+
 .article-detail-container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
-.back-button { margin-bottom: 24px; color: #3b82f6; cursor: pointer; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 4px; }
-.article-header { margin-bottom: 32px; }
-.article-title { font-size: 2.2rem; font-weight: 700; line-height: 1.3; margin-bottom: 16px; color: #1f2937; }
-.article-meta {
-  .meta-info { display: flex; gap: 16px; color: #6b7280; font-size: 0.95rem; }
-  .like-count { display: inline-flex; }
-  .btn-like { background: none; border: none; cursor: pointer; font-size: 0.95rem; padding: 0; color: #6b7280; &:hover { color: #ef4444; } &.liked { color: #ef4444; } }
-  .btn-follow { background: none; border: 1px solid #3b82f6; border-radius: 4px; padding: 2px 10px; font-size: 0.8rem; cursor: pointer; color: #3b82f6; white-space: nowrap; &:hover { background: #3b82f6; color: white; } &:disabled { opacity: 0.5; } }
-  .admin-actions { display: flex; gap: 12px; }
-  .btn-action { padding: 6px 16px; border: none; border-radius: 6px; font-size: 0.9rem; cursor: pointer; }
-  .btn-edit { background: #dbeafe; color: #2563eb; &:hover { background: #bfdbfe; } }
-  .btn-delete { background: #fee2e2; color: #dc2626; &:hover:not(:disabled) { background: #fecaca; } &:disabled { opacity: 0.6; cursor: not-allowed; } }
+
+.back-button {
+  margin-bottom: 24px; color: $color-primary; cursor: pointer; font-size: 0.95rem;
+  display: inline-flex; align-items: center; gap: 4px;
+  &:hover { color: color.adjust($color-primary, $lightness: 8%); }
 }
+
+.article-header { margin-bottom: 32px; }
+
+.article-title {
+  font-size: 2.2rem; font-weight: 700; line-height: 1.3;
+  margin-bottom: 16px; color: $text-primary;
+}
+
+.article-meta {
+  .meta-info {
+    display: flex; gap: 16px; color: $text-secondary; font-size: 0.95rem;
+    flex-wrap: wrap;
+  }
+  .like-count { display: inline-flex; }
+  .btn-like {
+    background: none; border: none; cursor: pointer; font-size: 0.95rem;
+    padding: 0; color: $text-secondary;
+    &:hover { color: $color-error; }
+    &.liked { color: $color-error; }
+    &:disabled { opacity: 0.5; }
+  }
+  .btn-follow {
+    background: none; border: 1px solid $color-primary;
+    padding: 2px 10px; font-size: 0.8rem; cursor: pointer;
+    color: $color-primary; white-space: nowrap;
+    &:hover { background: $color-primary; color: $bg-base; }
+    &:disabled { opacity: 0.5; }
+  }
+  .admin-actions { display: flex; gap: 12px; }
+  .btn-action {
+    padding: 6px 16px; border: none; font-size: 0.9rem; cursor: pointer;
+  }
+  .btn-edit {
+    background: rgba($color-primary, 0.12); color: $color-primary;
+    &:hover { background: rgba($color-primary, 0.2); }
+  }
+  .btn-delete {
+    background: rgba($color-error, 0.12); color: $color-error;
+    &:hover:not(:disabled) { background: rgba($color-error, 0.2); }
+    &:disabled { opacity: 0.6; cursor: not-allowed; }
+  }
+}
+
 .article-actions { display: flex; gap: 8px; align-items: center; }
-.btn-favorite { padding: 6px 14px; border: 1px solid #e5e7eb; border-radius: 6px; background: white; cursor: pointer; font-size: 0.9rem; &:hover:not(:disabled) { border-color: #f59e0b; background: #fffbeb; } &:disabled { opacity: 0.6; } &.favorited { border-color: #f59e0b; background: #fffbeb; } }
-.article-content { margin-bottom: 60px; line-height: 1.7; color: #374151; }
-.article-content :deep(img) { max-width: 100%; height: 80vh; width: auto; margin: 24px auto; border-radius: 8px; object-fit: contain; display: block; }
+
+.btn-favorite {
+  padding: 6px 14px; border: 1px solid $border-white-light;
+  background: $bg-surface; cursor: pointer; font-size: 0.9rem; color: $text-primary;
+  &:hover:not(:disabled) { border-color: $color-warning; background: rgba($color-warning, 0.1); }
+  &:disabled { opacity: 0.6; }
+  &.favorited { border-color: $color-warning; background: rgba($color-warning, 0.1); }
+}
+
+/* === 文章正文（核心修复：文字颜色+加粗效果） === */
+.article-content {
+  margin-bottom: 60px;
+  line-height: 1.7;
+  font-size: 1.05rem;
+  color: $text-primary;
+
+  /* 加粗修复 */
+  :deep(strong),
+  :deep(b) {
+    font-weight: 700;
+    color: $text-primary;
+  }
+
+  :deep(h1), :deep(h2), :deep(h3), :deep(h4), :deep(h5), :deep(h6) {
+    font-weight: 600;
+    color: $text-primary;
+    margin-top: 32px;
+    margin-bottom: 16px;
+  }
+  :deep(h1) { font-size: 1.8rem; }
+  :deep(h2) { font-size: 1.5rem; }
+  :deep(h3) { font-size: 1.3rem; }
+
+  :deep(p) { margin-bottom: 20px; }
+
+  :deep(a) {
+    color: $color-primary;
+    text-decoration: none;
+    &:hover { text-decoration: underline; }
+  }
+
+  :deep(img) {
+    max-width: 100%; height: 80vh; width: auto;
+    margin: 24px auto; object-fit: contain; display: block;
+  }
+
+  :deep(blockquote) {
+    margin: 20px 0; padding: 16px 24px;
+    border-left: 4px solid $color-primary;
+    background: rgba($color-primary, 0.05);
+    color: $text-secondary;
+    font-style: italic;
+  }
+
+  :deep(code) {
+    padding: 2px 6px;
+    background: $bg-hover;
+    font-family: $font-mono;
+    font-size: 0.9em;
+    color: $color-accent;
+  }
+
+  :deep(pre) {
+    margin: 20px 0; padding: 20px;
+    background: $bg-elevated;
+    overflow-x: auto;
+    code { background: none; padding: 0; color: $text-primary; font-size: 0.95em; }
+  }
+
+  :deep(ul), :deep(ol) {
+    margin: 20px 0; padding-left: 30px;
+    li { margin-bottom: 8px; line-height: 1.6; }
+  }
+
+  :deep(table) {
+    width: 100%; border-collapse: collapse; margin: 20px 0;
+    th, td { padding: 12px; border: $border-white-subtle; text-align: left; }
+    th { background: $bg-surface; font-weight: 600; }
+  }
+
+  :deep(hr) {
+    border: none; border-top: $divider-emphasis; margin: 32px 0;
+  }
+}
 </style>

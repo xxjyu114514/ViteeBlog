@@ -78,7 +78,7 @@ onMounted(() => { fetchFavorites(); requestAnimationFrame(() => { slidIn.value =
 
 <style lang="scss">
 @use 'sass:color';
-@import './test_scss.scss';
+@use './test_scss.scss' as *;
 
 .fav-page { position: fixed; inset: 0; z-index: 1; overflow: hidden; }
 
@@ -119,7 +119,7 @@ onMounted(() => { fetchFavorites(); requestAnimationFrame(() => { slidIn.value =
 }
 
 .btn-unfav {
-  padding: 6px 14px; border: 1px solid $color-error; background: transparent;
+  padding: $space-2xs $space-md; border: 1px solid $color-error; background: transparent;
   color: $color-error; cursor: pointer; font-size: 0.8rem; white-space: nowrap; flex-shrink: 0;
   &:hover { background: $color-error; color: $bg-base; }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -127,7 +127,7 @@ onMounted(() => { fetchFavorites(); requestAnimationFrame(() => { slidIn.value =
 
 .pagination { display: flex; justify-content: center; align-items: center; gap: $space-md; margin-top: $space-xl; }
 .page-btn {
-  padding: 6px 16px; background: $bg-elevated; border: 1px solid $glass-border;
+  padding: $space-2xs $space-md; background: $bg-elevated; border: 1px solid $glass-border;
   color: $text-secondary; cursor: pointer; font-size: 0.85rem;
   &:hover { color: $text-primary; border-color: $color-primary; }
   &:disabled { opacity: 0.4; cursor: not-allowed; }

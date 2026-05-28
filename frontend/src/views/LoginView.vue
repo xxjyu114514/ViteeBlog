@@ -255,9 +255,11 @@ const handleForgotSubmit = async () => {
 </script>
 
 <style lang="scss" scoped>
+@use 'sass:color';
+@use '@/assets/styles/variables' as *;
+
 .login-page {
   display: flex; width: 100vw; height: 100vh; overflow: hidden; background-color: #050505;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 .login-visual {
   flex: 1.45; position: relative; height: 100%; overflow: hidden;
@@ -271,81 +273,81 @@ const handleForgotSubmit = async () => {
     }
   }
   .visual-content {
-    position: relative; z-index: 2; height: 100%; display: flex; align-items: flex-end; padding: 5vw; color: #ffffff; box-sizing: border-box;
+    position: relative; z-index: 2; height: 100%; display: flex; align-items: flex-end; padding: 5vw; color: #fff; box-sizing: border-box;
     .brand-info {
       h1 { font-size: clamp(2.2rem, 3.8vw, 4.2rem); font-weight: 900; letter-spacing: 2px; margin: 0 0 1.5vh 0; }
-      .animated-bar { width: 60px; height: 4px; background: #ffffff; margin-bottom: 1.5vh; }
+      .animated-bar { width: 60px; height: 4px; background: #fff; margin-bottom: 1.5vh; }
       p { font-size: clamp(0.75rem, 0.8vw, 0.9rem); letter-spacing: 3px; opacity: 0.6; margin: 0; }
     }
   }
 }
 .login-form-container {
-  flex: 0.55; min-width: 340px; height: 100%; background: #ededed; display: flex; align-items: center; justify-content: center;
+  flex: 0.55; min-width: 340px; height: 100%; background: $bg-surface; display: flex; align-items: center; justify-content: center;
   padding: clamp(60px, 7vh, 90px) clamp(16px, 2.5vw, 40px) clamp(20px, 4vh, 40px) clamp(16px, 2.5vw, 40px); box-sizing: border-box;
-  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.15); z-index: 5; overflow: hidden;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5); z-index: 5; overflow: hidden;
   @media (max-width: 1024px) { flex: 1; }
   .form-card {
     width: 100%; max-width: clamp(320px, 24vw, 420px); max-height: calc(100vh - clamp(80px, 10vh, 130px)); overflow-y: auto;
-    background: rgba(255, 255, 255, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 12px; padding: clamp(20px, 3vh, 34px) clamp(16px, 2vw, 32px);
-    box-sizing: border-box; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04), 0 24px 48px rgba(0, 0, 0, 0.12); will-change: height;
+    background: rgba(10, 10, 12, 0.85); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08); padding: clamp(20px, 3vh, 34px) clamp(16px, 2vw, 32px);
+    box-sizing: border-box; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 24px 48px rgba(0, 0, 0, 0.4); will-change: height;
     scrollbar-width: none; -ms-overflow-style: none;
     &::-webkit-scrollbar { display: none; width: 0 !important; height: 0 !important; background: transparent; }
   }
   .inner-form-wrapper { width: 100%; display: flex; flex-direction: column; }
   .form-header {
     margin-bottom: clamp(12px, 2.2vh, 22px); text-align: left; padding-left: 2px;
-    h2 { font-size: clamp(1.35rem, 1.9vw, 1.85rem); font-weight: 800; color: #111111; margin: 0 0 6px 0; letter-spacing: 1px; }
-    p { font-size: clamp(0.75rem, 0.8vw, 0.85rem); color: #555555; margin: 0; opacity: 0.8; }
+    h2 { font-size: clamp(1.35rem, 1.9vw, 1.85rem); font-weight: 800; color: $text-primary; margin: 0 0 6px 0; letter-spacing: 1px; }
+    p { font-size: clamp(0.75rem, 0.8vw, 0.85rem); color: $text-secondary; margin: 0; opacity: 0.8; }
   }
 }
 .main-form {
   .input-group {
     display: flex; flex-direction: column; margin-bottom: clamp(10px, 1.6vh, 16px);
-    label { font-size: clamp(0.7rem, 0.75vw, 0.8rem); font-weight: 600; color: #222222; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; padding-left: 2px; }
+    label { font-size: clamp(0.7rem, 0.75vw, 0.8rem); font-weight: 600; color: $text-secondary; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; padding-left: 2px; }
     input[type="text"], input[type="email"], input[type="password"] {
       width: 100%; height: clamp(34px, 4vh, 42px); padding: 0 clamp(10px, 1.2vw, 16px); font-size: clamp(0.85rem, 0.9vw, 0.95rem);
-      border: 1px solid rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.7); border-radius: 8px; color: #111111; transition: all 0.25s ease; box-sizing: border-box; text-align: left;
-      &:focus { outline: none; border-color: #0091ff; background: #ffffff; box-shadow: 0 0 0 3px rgba(0, 145, 255, 0.08); }
+      border: 1px solid rgba(255, 255, 255, 0.08); background: $bg-elevated; color: $text-primary; transition: all 0.25s ease; box-sizing: border-box; text-align: left;
+      &:focus { outline: none; border-color: $color-primary; background: $bg-hover; box-shadow: 0 0 0 2px rgba($color-primary, 0.15); }
     }
   }
   .email-with-send .email-input-wrapper {
     display: flex; gap: clamp(6px, 1vw, 10px); input { flex: 1; }
     .send-code-btn {
       padding: 0 clamp(10px, 1.2vw, 18px); height: clamp(34px, 4vh, 42px); font-size: clamp(0.75rem, 0.8vw, 0.85rem);
-      border: 1px solid #111111; background: #111111; color: #ffffff; border-radius: 8px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.2s ease; box-sizing: border-box; display: flex; align-items: center; justify-content: center;
-      &:hover:not(:disabled) { background: #333333; border-color: #333333; }
-      &:disabled { background: rgba(0, 0, 0, 0.05); border-color: rgba(0, 0, 0, 0.05); color: #888888; cursor: not-allowed; }
+      border: 1px solid $color-primary; background: $color-primary; color: $bg-base; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s ease; box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+      &:hover:not(:disabled) { background: color.adjust($color-primary, $lightness: 8%); border-color: color.adjust($color-primary, $lightness: 8%); }
+      &:disabled { opacity: 0.4; cursor: not-allowed; }
     }
   }
 }
 .form-options {
   display: flex; align-items: center; justify-content: space-between; margin-bottom: clamp(12px, 2vh, 20px); font-size: clamp(0.75rem, 0.8vw, 0.85rem); padding: 0 2px;
   .checkbox-label {
-    display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; color: #333333; input { display: none; }
+    display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; color: $text-secondary; input { display: none; }
     .custom-check {
-      width: 14px; height: 14px; border: 1px solid #bbbbbb; border-radius: 4px; position: relative; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; transition: all 0.25s cubic-bezier(0.25, 1, 0.5, 1);
-      &:after { content: ''; width: 7px; height: 4px; border-left: 1.5px solid #fff; border-bottom: 1.5px solid #fff; transform: rotate(-45deg) translateY(-1px); opacity: 0; transition: opacity 0.15s ease; }
+      width: 14px; height: 14px; border: 1px solid $text-tertiary; position: relative; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; transition: all 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+      &:after { content: ''; width: 7px; height: 4px; border-left: 1.5px solid $bg-base; border-bottom: 1.5px solid $bg-base; transform: rotate(-45deg) translateY(-1px); opacity: 0; transition: opacity 0.15s ease; }
     }
-    input:checked + .custom-check { background: #0091ff; border-color: #0091ff; &:after { opacity: 1; } }
+    input:checked + .custom-check { background: $color-primary; border-color: $color-primary; &:after { opacity: 1; } }
   }
-  .forgot-link { color: #555555; text-decoration: none; cursor: pointer; transition: color 0.2s ease; &:hover { color: #0091ff; text-decoration: underline; } }
+  .forgot-link { color: $text-secondary; text-decoration: none; cursor: pointer; transition: color 0.2s ease; &:hover { color: $color-primary; text-decoration: underline; } }
 }
 .submit-btn {
-  width: 100%; height: clamp(36px, 4.2vh, 44px); font-size: clamp(0.85rem, 0.9vw, 1rem); background: #0091ff; color: #ffffff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; transition: background-color 0.25s ease, box-shadow 0.25s ease;
-  &:hover:not(:disabled) { background: #1a9bff; box-shadow: 0 0 12px rgba(0, 145, 255, 0.45); }
-  &:disabled { background: #cccccc; color: #ffffff; cursor: not-allowed; }
+  width: 100%; height: clamp(36px, 4.2vh, 44px); font-size: clamp(0.85rem, 0.9vw, 1rem); background: $color-primary; color: $bg-base; border: none; font-weight: 600; cursor: pointer; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; transition: background-color 0.25s ease, box-shadow 0.25s ease;
+  &:hover:not(:disabled) { background: color.adjust($color-primary, $lightness: 8%); box-shadow: 0 0 12px rgba($color-primary, 0.45); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 .switch-area {
-  display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: clamp(12px, 2vh, 22px); font-size: clamp(0.75rem, 0.8vw, 0.85rem); color: #555555;
+  display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: clamp(12px, 2vh, 22px); font-size: clamp(0.75rem, 0.8vw, 0.85rem); color: $text-secondary;
   .btn-toggle {
-    background: none; border: none; color: #0091ff; font-weight: 700; cursor: pointer; padding: 2px 6px; font-size: clamp(0.75rem, 0.8vw, 0.85rem); border-radius: 6px; transition: all 0.25s ease;
-    &:hover { color: #1a9bff; background: rgba(0, 145, 255, 0.05); }
+    background: none; border: none; color: $color-primary; font-weight: 700; cursor: pointer; padding: 2px 6px; transition: all 0.25s ease;
+    &:hover { color: color.adjust($color-primary, $lightness: 8%); background: rgba($color-primary, 0.08); }
   }
 }
-.error-message, .success-message { padding: clamp(8px, 1vh, 12px) 16px; font-size: clamp(0.75rem, 0.8vw, 0.85rem); margin-bottom: 12px; text-align: left; border-radius: 8px; }
-.error-message { background: #fff5f5; color: #ff4d4f; border: 1px solid rgba(255, 77, 79, 0.2); }
-.success-message { background: #f6ffed; color: #52c41a; border: 1px solid rgba(82, 196, 26, 0.2); }
+.error-message, .success-message { padding: clamp(8px, 1vh, 12px) 16px; font-size: clamp(0.75rem, 0.8vw, 0.85rem); margin-bottom: 12px; text-align: left; }
+.error-message { background: rgba($color-error, 0.1); color: $color-error; border: 1px solid rgba($color-error, 0.2); }
+.success-message { background: rgba($color-success, 0.1); color: $color-success; border: 1px solid rgba($color-success, 0.2); }
 
 .text-move-enter-active, .text-move-leave-active { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
 .text-move-enter-from { opacity: 0; transform: translateY(12px); }

@@ -3,7 +3,7 @@
    明日方舟风格：硬边 + 冷色分层 + 装饰线
    ============================================================ */
 
-@import 'tokens';
+@use 'tokens' as *;
 
 .card-container {
   display: grid;

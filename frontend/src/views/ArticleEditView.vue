@@ -216,7 +216,7 @@ onUnmounted(() => { if (vditorInstance) vditorInstance.destroy() })
 
 <style lang="scss">
 @use 'sass:color';
-@import './test_scss.scss';
+@use './test_scss.scss' as *;
 
 .article-edit-page {
   position: fixed; inset: 0; z-index: 1;
@@ -250,7 +250,7 @@ onUnmounted(() => { if (vditorInstance) vditorInstance.destroy() })
 
 .btn-drawer-toggle {
   background: $bg-hover; border: 1px solid $glass-border; color: $text-secondary;
-  cursor: pointer; padding: 6px 10px; font-size: 0.8rem; transition: all 0.2s;
+  cursor: pointer; padding: $space-2xs $space-sm; font-size: 0.8rem; transition: all 0.2s;
   &:hover { color: $text-primary; border-color: $color-primary; }
 }
 

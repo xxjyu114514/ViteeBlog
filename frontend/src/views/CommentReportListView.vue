@@ -298,7 +298,7 @@ onMounted(() => {
 }
 
 .report-card {
-  background: white;
+  background: $bg-surface;
   border: 1px solid $border-color;
   border-radius: 16px;
   padding: 24px;
@@ -454,7 +454,7 @@ onMounted(() => {
   
   .btn-resolve {
     background: linear-gradient(135deg, $color-success 0%, color.adjust($color-success, $lightness: -10%) 100%);
-    color: white;
+    color: $bg-base;
     border: none;
     padding: 10px 24px;
     border-radius: 8px;
@@ -488,7 +488,7 @@ onMounted(() => {
   border-top: 1px solid $border-color-light;
   
   .pagination-btn {
-    background: white;
+    background: $bg-surface;
     border: 1px solid $border-color;
     color: $text-main;
     padding: 8px 20px;

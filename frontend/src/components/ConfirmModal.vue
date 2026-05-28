@@ -32,6 +32,7 @@ defineEmits(['confirm', 'cancel'])
 </script>
 
 <style scoped lang="scss">
+@use 'sass:color';
 @use '@/assets/styles/variables' as *;
 .confirm-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -39,15 +40,15 @@ defineEmits(['confirm', 'cancel'])
   justify-content: center; align-items: center; z-index: 2000;
 }
 .confirm-modal {
-  background: white; border-radius: 12px; padding: 24px;
-  width: 90%; max-width: 360px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  background: $bg-surface; padding: 24px;
+  width: 90%; max-width: 360px; box-shadow: 0 8px 24px rgba(0,0,0,0.3);
 }
-.confirm-header { h3 { margin: 0 0 12px; font-size: 1.1rem; } }
-.confirm-body { p { margin: 0 0 20px; color: #555; font-size: 0.95rem; line-height: 1.5; } }
+.confirm-header { h3 { margin: 0 0 12px; font-size: 1.1rem; color: $text-primary; } }
+.confirm-body { p { margin: 0 0 20px; color: $text-secondary; font-size: 0.95rem; line-height: 1.5; } }
 .confirm-footer { display: flex; justify-content: flex-end; gap: 12px; }
 .btn-cancel, .btn-confirm {
-  padding: 8px 20px; border-radius: 8px; font-size: 0.9rem; font-weight: 500; cursor: pointer; border: none;
+  padding: 8px 20px; font-size: 0.9rem; font-weight: 500; cursor: pointer; border: none;
 }
-.btn-cancel { background: #f3f4f6; color: #333; &:hover { background: #e5e7eb; } }
-.btn-confirm { background: $color-primary; color: white; &:hover { background: $color-primary-hover; } &:disabled { opacity: 0.6; } &.danger { background: #ef4444; &:hover { background: #dc2626; } } }
+.btn-cancel { background: $bg-hover; color: $text-primary; &:hover { background: color.adjust($bg-hover, $lightness: 5%); } }
+.btn-confirm { background: $color-primary; color: $bg-base; &:hover { background: color.adjust($color-primary, $lightness: 8%); } &:disabled { opacity: 0.6; } &.danger { background: $color-error; &:hover { background: color.adjust($color-error, $lightness: -8%); } } }
 </style>

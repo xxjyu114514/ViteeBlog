@@ -217,7 +217,7 @@ watch([currentPage, filterStatus], () => fetchComments())
     label { font-weight: 500; color: $text-main; }
     .filter-select {
       padding: 8px 16px; border: 1px solid $border-color; border-radius: 8px;
-      background: white; font-size: 1rem; cursor: pointer;
+      background: $bg-surface; font-size: 1rem; cursor: pointer;
       &:hover { border-color: $color-primary; }
     }
   }
@@ -226,7 +226,7 @@ watch([currentPage, filterStatus], () => fetchComments())
     .selection-info { color: $text-secondary; font-size: 0.95rem; }
     .btn-batch-approve, .btn-batch-reject {
       border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer;
-      font-size: 0.95rem; font-weight: 500; color: white;
+      font-size: 0.95rem; font-weight: 500; color: $bg-base;
       transition: transform 0.2s ease, box-shadow 0.2s ease;
       &:hover:not(:disabled) { transform: translateY(-2px); }
       &:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
@@ -247,7 +247,7 @@ watch([currentPage, filterStatus], () => fetchComments())
 .loading-state {
   text-align: center; padding: 60px 0;
   .spinner {
-    width: 32px; height: 32px; border: 3px solid rgba(0, 0, 0, 0.1);
+    width: 32px; height: 32px; border: 3px solid rgba(255, 255, 255, 0.08);
     border-top: 3px solid $color-primary; border-radius: 50%;
     animation: spin 1s linear infinite; margin: 0 auto 16px;
   }
@@ -265,8 +265,8 @@ watch([currentPage, filterStatus], () => fetchComments())
   display: flex; justify-content: center; align-items: center; gap: 24px;
   margin-top: 40px; padding-top: 24px; border-top: 1px solid $border-color-light;
   .pagination-btn {
-    background: white; border: 1px solid $border-color; color: $text-main;
-    padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem;
+    background: $bg-surface; border: $border-white-light; color: $text-main;
+    padding: 8px 20px; cursor: pointer; font-size: 1rem;
     transition: all 0.2s ease;
     &:hover:not(:disabled) { background: $bg-smoke; border-color: $color-primary; }
     &:disabled { opacity: 0.5; cursor: not-allowed; }

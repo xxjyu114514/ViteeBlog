@@ -3,7 +3,7 @@
    用于未来二次元背景图上的沉浸式卡片/面板
    ============================================================ */
 
-@import 'tokens';
+@use 'tokens' as *;
 
 // ========== 毛玻璃混合宏 ==========
 
@@ -23,12 +23,12 @@
 
 /// 深色毛玻璃（对比更强，适合作为主面板）
 @mixin glass-dark($blur: $glass-blur) {
-  @include glass(rgba(10, 10, 12, 0.7), $blur, $glass-border);
+  @include glass(rgba($bg-base, 0.7), $blur, $glass-border);
 }
 
 /// 浅色毛玻璃（更透亮，适合轻量装饰面板）
 @mixin glass-light($blur: $glass-blur) {
-  @include glass(rgba(255, 255, 255, 0.06), $blur, $glass-border);
+  @include glass($glass-bg, $blur, $glass-border);
 }
 
 /// 品牌色毛玻璃（带冰蓝色调，适合重点面板）
@@ -44,7 +44,7 @@
   transition: background $transition-base, border-color $transition-base;
 
   &:hover {
-    background: rgba(10, 10, 12, 0.75);
+    background: rgba($bg-base, 0.75);
     border-color: $glass-border-hover;
   }
 }
@@ -54,7 +54,7 @@
   transition: background $transition-base, border-color $transition-base;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.09);
+    background: $glass-bg-hover;
   }
 }
 

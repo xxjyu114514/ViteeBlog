@@ -103,18 +103,19 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped lang="scss">
+@use '@/assets/styles/variables' as *;
 @use '@/assets/styles/components/comment';
 
-.form-error { margin-top: 12px; color: #ef4444; font-size: 0.9rem; }
+.form-error { margin-top: 12px; color: $color-error; font-size: 0.9rem; }
 
 .md-toolbar {
   display: flex; align-items: center; gap: 4px; margin-bottom: 8px; flex-wrap: wrap;
   .toolbar-btn {
-    padding: 4px 8px; border: 1px solid #e5e7eb; border-radius: 4px;
-    background: white; cursor: pointer; font-size: 0.85rem; line-height: 1.4;
-    transition: background 0.15s;
-    &:hover { background: #f3f4f6; }
-    &.active { background: #dbeafe; border-color: #3b82f6; color: #2563eb; }
+    padding: 4px 8px; border: 1px solid $border-white-light;
+    background: $bg-surface; cursor: pointer; font-size: 0.85rem; line-height: 1.4;
+    transition: background 0.15s; color: $text-primary;
+    &:hover { background: $bg-hover; }
+    &.active { background: rgba($color-primary, 0.12); border-color: $color-primary; color: $color-primary; }
     code { font-size: 0.8rem; }
   }
   .toolbar-spacer { flex: 1; }
@@ -122,20 +123,21 @@ const handleSubmit = async () => {
 
 .form-input {
   width: 100%; min-height: 100px; padding: 12px;
-  border: 1px solid #e5e7eb; border-radius: 8px;
+  border: 1px solid $border-white-light;
   font-size: 0.95rem; line-height: 1.6; resize: vertical;
   font-family: inherit; box-sizing: border-box;
-  &:focus { outline: none; border-color: #3b82f6; }
+  background: $bg-elevated; color: $text-primary;
+  &:focus { outline: none; border-color: $color-primary; }
 }
 
 .preview-area {
-  border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px;
-  min-height: 100px; background: #fafafa;
-  .preview-content { font-size: 0.95rem; line-height: 1.6; color: #333; }
+  border: 1px solid $border-white-subtle; padding: 12px;
+  min-height: 100px; background: $bg-surface;
+  .preview-content { font-size: 0.95rem; line-height: 1.6; color: $text-primary; }
 }
 
 .form-actions {
   display: flex; justify-content: space-between; align-items: center; margin-top: 12px;
-  .char-count { font-size: 0.8rem; color: #999; }
+  .char-count { font-size: 0.8rem; color: $text-tertiary; }
 }
 </style>

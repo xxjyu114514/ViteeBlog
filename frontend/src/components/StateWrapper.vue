@@ -66,9 +66,8 @@ defineEmits(['retry'])
   .btn-retry {
     padding: 8px 20px;
     background: $color-primary;
-    color: white;
+    color: $bg-base;
     border: none;
-    border-radius: 8px;
     cursor: pointer;
     font-size: 0.95rem;
     transition: background 0.2s;

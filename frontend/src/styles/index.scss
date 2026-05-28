@@ -1,0 +1,114 @@
+/* ============================================================
+   ViteeBlog 暗色主题 — 全局入口
+   冷色调机能风 | 0 圆角 | 毛玻璃系统
+   参考：明日方舟（点线面冷色设计）+ GitHub（暗色层级）
+   ============================================================ */
+
+// ========== 1. 导入暗色设计系统（从 test_scss，必须放在最前使变量可用） ==========
+@use '../views/test_scss/tokens' as *;
+@use '../views/test_scss/glass';
+@use '../views/test_scss/buttons';
+@use '../views/test_scss/cards';
+@use '../views/test_scss/forms';
+@use '../views/test_scss/typography';
+@use '../views/test_scss/components';
+
+// ========== 2. 全局重置 ==========
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: $font-sans;
+  color: $text-primary;
+  background-color: $bg-base;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+// ========== 3. 全局零圆角（让已导入的组件保持 0 圆角） ==========
+// 对需要圆角的元素（如 spinner、avatar 等），在各自样式中显式覆盖
+:root {
+  --global-radius: 0;
+}
+
+// ========== 4. 全局工具类（从旧 style.css 迁移） ==========
+.container {
+  width: 100%;
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.container-narrow {
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.editor-container-wide {
+  width: 100%;
+  min-width: 80%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.text-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.nav-placeholder {
+  width: 100%;
+  height: 90px;
+}
+
+// ========== 5. 页面框架 ==========
+.page-wrapper-base {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  z-index: 1;
+  overflow-y: auto;
+  background: $bg-base;
+}
+
+// 卡片页面（管理后台等使用 personl.png 背景）
+.page-wrapper-base.card-page {
+  width: 100vw;
+  min-width: 100vw;
+  background: url('../assets/personl.png') right top / cover fixed, $bg-base;
+}
+
+// ========== 6. 辅助间距类 ==========
+.mt-20 { margin-top: 20px; }
+.mt-40 { margin-top: 40px; }
+.mb-20 { margin-bottom: 20px; }
+.mb-30 { margin-bottom: 30px; }
+.mr-10 { margin-right: 10px; }
+.flex-1 { flex: 1; }
+.flex-2 { flex: 2; }

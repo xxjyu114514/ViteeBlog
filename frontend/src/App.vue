@@ -50,11 +50,4 @@ const onTransitionLeave = (el, done) => {
 /* ... existing styles ... */
 </style>
 
-<!-- 全局：卡片页面（noCardTransition）父容器强制全屏 -->
-<style>
-.page-wrapper-base.card-page {
-  width: 100vw !important;
-  min-width: 100vw !important;
-  background: url(./assets/personl.png) right top / cover fixed, #0a0a0c !important;
-}
-</style>
+<!-- 卡片页面背景由 index.scss 提供 -->

@@ -4,10 +4,17 @@
    参考：明日方舟（点线面冷色设计）+ GitHub（暗色层级）
    ============================================================ */
 
-// 1. 设计令牌
-@import './test_scss/tokens';
+// ========== @use / @forward 必须位于所有 CSS 规则之前 ==========
+@use './test_scss/tokens' as *;
+@use './test_scss/glass';
+@use './test_scss/buttons';
+@use './test_scss/cards';
+@use './test_scss/forms';
+@use './test_scss/typography';
+@use './test_scss/components';
+@forward './test_scss/tokens';
 
-// 2. 基础页面布局
+// ========== 基础页面布局 ==========
 .test-page {
   background: $bg-base;
   color: $text-primary;
@@ -48,11 +55,3 @@
   max-width: 1200px;
   margin: 0 auto;
 }
-
-// 3. 模块导入
-@import './test_scss/glass';
-@import './test_scss/buttons';
-@import './test_scss/cards';
-@import './test_scss/forms';
-@import './test_scss/typography';
-@import './test_scss/components';
