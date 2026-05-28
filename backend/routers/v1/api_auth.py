@@ -285,6 +285,10 @@ async def update_profile(
     if profile_in.avatar:
         current_user.avatar = profile_in.avatar
 
+    # 3. 如果传了 bio，直接更新
+    if profile_in.bio is not None:
+        current_user.bio = profile_in.bio
+
     await db.commit()
     await db.refresh(current_user)
 

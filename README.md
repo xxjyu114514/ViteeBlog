@@ -2700,6 +2700,321 @@ axios.interceptors.response.use(
 
 ---
 
+## 👤 用户个人主页模块
+
+### 功能概述
+个人主页模块提供用户公开信息的展示接口，包含用户基本信息、统计数据、文章列表等功能。
+
+**核心特性**:
+- 📊 **统计数据**: 文章总数、总点赞数、总阅读量、总收藏数、总评论数、最后活跃时间
+- 📝 **文章列表**: 分页获取用户发布的公开文章
+- 🔔 **社交状态**: 显示关注数、粉丝数、当前用户是否已关注
+- 🆔 **公开访问**: 无需登录即可查看他人主页（登录后显示更多交互信息）
+
+---
+
+### ⚙️ 通用规范
+
+**Base URL**: `/api/v1/users`  
+**鉴权**: 基础信息无需登录，部分字段需登录才能查看  
+**分页格式**: `{items, total, page, size, pages}`
+
+---
+
+### 1. 获取用户个人主页信息
+
+**接口**: `GET /users/{user_id}`  
+**权限**: 公开（未登录可查看基础信息，登录后显示 `is_following` 状态）
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_id | int | ✅ | 目标用户ID |
+
+**请求头**:
+```
+Authorization: Bearer <Token>  // 可选，登录后才有 is_following 字段
+```
+
+**成功响应** (200):
+```json
+{
+  "id": 6,
+  "username": "Van",
+  "avatar": null,
+  "bio": "这是一个热爱技术的全栈开发者",
+  "following_count": 0,
+  "followers_count": 0,
+  "is_following": false,
+  "created_at": "2026-05-09T17:17:10",
+  "total_articles": 1,
+  "total_likes_received": 1,
+  "total_views": 0,
+  "total_favorites": 0,
+  "total_comments": 3,
+  "last_active_at": "2026-05-17T21:17:22"
+}
+```
+
+**响应字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | int | 用户ID |
+| username | string | 用户名 |
+| avatar | string/null | 头像URL |
+| bio | string/null | 个人简介（最多200字符） |
+| following_count | int | 关注数 |
+| followers_count | int | 粉丝数 |
+| is_following | boolean | 当前用户是否关注了该用户（仅登录后返回） |
+| created_at | datetime | 注册时间 |
+| total_articles | int | 文章总数（仅统计已发布且未删除的文章） |
+| total_likes_received | int | 收到的总点赞数（所有文章的点赞总和） |
+| total_views | int | 总阅读量（所有文章的浏览量总和） |
+| total_favorites | int | 文章被收藏的总次数 |
+| total_comments | int | 文章收到的总评论数（仅统计已审核通过的评论） |
+| last_active_at | datetime/null | 最后活跃时间（最新文章的发布时间） |
+
+**错误响应**:
+- `404`: 用户不存在或已注销
+
+**前端注意**:
+- ✅ 未登录时 `is_following` 默认为 `false`
+- ✅ 所有统计数据仅计算 `status='published' AND deleted_at IS NULL` 的文章
+- ✅ `total_comments` 仅统计 `is_audited=true` 的评论
+- ✅ 可用于用户个人主页、文章作者卡片等场景
+- ✅ 建议缓存用户主页数据，避免频繁请求
+
+---
+
+### 2. 获取用户的文章列表
+
+**接口**: `GET /users/{user_id}/articles?page=1&size=10`  
+**权限**: 公开
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_id | int | ✅ | 目标用户ID |
+
+**查询参数**:
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| page | int | 1 | 页码（从1开始） |
+| size | int | 10 | 每页数量（最大50） |
+
+**成功响应** (200):
+```json
+{
+  "items": [
+    {
+      "id": 35,
+      "title": "评论功能测试文章",
+      "summary": "用于测试评论系统的文章",
+      "cover_image": null,
+      "view_count": 0,
+      "like_count": 0,
+      "created_at": "2026-05-17T21:17:20"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "size": 10,
+  "pages": 1
+}
+```
+
+**响应字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| items | array | 文章列表 |
+| items[].id | int | 文章ID |
+| items[].title | string | 文章标题 |
+| items[].summary | string/null | 文章摘要 |
+| items[].cover_image | string/null | 封面图片URL |
+| items[].view_count | int | 阅读量 |
+| items[].like_count | int | 点赞数 |
+| items[].created_at | datetime | 创建时间 |
+| total | int | 文章总数 |
+| page | int | 当前页码 |
+| size | int | 每页数量 |
+| pages | int | 总页数 |
+
+**错误响应**:
+- `404`: 用户不存在或已注销
+
+**前端注意**:
+- ✅ 仅返回 `status='published' AND deleted_at IS NULL` 的文章
+- ✅ 按 `created_at` 降序排列（最新文章在前）
+- ✅ 统一分页格式 `{items, total, page, size, pages}`
+- ✅ 可用于个人主页的"文章"标签页
+- ✅ 预加载了 `tags` 关系，但简化输出中不包含
+
+---
+
+### 💡 个人主页开发建议
+
+#### 1. 用户主页组件结构
+
+```vue
+<template>
+  <div class="user-profile">
+    <!-- 用户基本信息 -->
+    <div class="profile-header">
+      <img :src="user.avatar || defaultAvatar" class="avatar" />
+      <h2>{{ user.username }}</h2>
+      <p v-if="user.bio" class="bio">{{ user.bio }}</p>
+      <div class="stats">
+        <span>文章 {{ user.total_articles }}</span>
+        <span>获赞 {{ user.total_likes_received }}</span>
+        <span>阅读 {{ user.total_views }}</span>
+        <span>收藏 {{ user.total_favorites }}</span>
+        <span>评论 {{ user.total_comments }}</span>
+      </div>
+      <div class="social-stats">
+        <span>关注 {{ user.following_count }}</span>
+        <span>粉丝 {{ user.followers_count }}</span>
+      </div>
+      <!-- 关注按钮（仅登录且非本人可见） -->
+      <button 
+        v-if="isLoggedIn && !isSelf" 
+        @click="toggleFollow"
+        :class="{ 'following': user.is_following }"
+      >
+        {{ user.is_following ? '已关注' : '关注' }}
+      </button>
+    </div>
+    
+    <!-- 文章列表 -->
+    <div class="article-list">
+      <ArticleCard 
+        v-for="article in articles" 
+        :key="article.id"
+        :article="article"
+      />
+      <!-- 分页 -->
+      <Pagination 
+        :current="currentPage" 
+        :total="totalPages"
+        @change="loadArticles"
+      />
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+
+const props = defineProps({
+  userId: {
+    type: Number,
+    required: true
+  }
+})
+
+const user = ref(null)
+const articles = ref([])
+const currentPage = ref(1)
+const totalPages = ref(0)
+const isLoggedIn = ref(!!token)
+const isSelf = ref(false)
+
+// 加载用户信息
+const loadUserProfile = async () => {
+  try {
+    const response = await axios.get(`/api/v1/users/${props.userId}`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    })
+    user.value = response.data
+    isSelf.value = user.value.id === currentUserId
+  } catch (error) {
+    console.error('加载用户信息失败:', error)
+  }
+}
+
+// 加载文章列表
+const loadArticles = async (page = 1) => {
+  try {
+    const response = await axios.get(`/api/v1/users/${props.userId}/articles`, {
+      params: { page, size: 10 }
+    })
+    articles.value = response.data.items
+    totalPages.value = response.data.pages
+    currentPage.value = response.data.page
+  } catch (error) {
+    console.error('加载文章列表失败:', error)
+  }
+}
+
+// 切换关注状态
+const toggleFollow = async () => {
+  try {
+    if (user.value.is_following) {
+      // 取消关注
+      await axios.delete(`/api/v1/social/follow/${props.userId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      user.value.is_following = false
+      user.value.followers_count--
+    } else {
+      // 关注
+      await axios.post(`/api/v1/social/follow/${props.userId}`, {}, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      user.value.is_following = true
+      user.value.followers_count++
+    }
+  } catch (error) {
+    console.error('操作失败:', error)
+  }
+}
+
+onMounted(() => {
+  loadUserProfile()
+  loadArticles()
+})
+</script>
+```
+
+#### 2. 统计数据实时更新
+
+```javascript
+// 当用户发表新文章后，刷新主页数据
+const handleArticlePublished = async () => {
+  await loadUserProfile()  // 重新加载统计数据
+  await loadArticles(1)    // 重新加载文章列表
+}
+
+// 当文章被点赞/收藏/评论时，局部更新统计数据
+const updateStats = (type, delta) => {
+  if (type === 'likes') {
+    user.value.total_likes_received += delta
+  } else if (type === 'views') {
+    user.value.total_views += delta
+  } else if (type === 'favorites') {
+    user.value.total_favorites += delta
+  } else if (type === 'comments') {
+    user.value.total_comments += delta
+  }
+}
+```
+
+#### 3. 性能优化建议
+
+- ✅ **缓存策略**: 用户主页数据变化不频繁，建议使用 Pinia/Vuex 缓存
+- ✅ **懒加载**: 文章列表使用虚拟滚动或无限加载
+- ✅ **按需加载**: 首次仅加载基础信息，切换到"文章"标签时再加载文章列表
+- ✅ **防抖处理**: 关注/取消关注操作添加防抖，防止重复点击
+
+#### 4. 边界情况处理
+
+- ⚠️ 用户不存在时显示 404 页面
+- ⚠️ 用户已注销时提示"该账号已注销"
+- ⚠️ 没有文章时显示空状态提示
+- ⚠️ 统计数据为 0 时正常显示，不要隐藏
+
+---
+
 ## 🔄 后续更新计划
 
 - [ ] 文章搜索功能
@@ -2710,6 +3025,7 @@ axios.interceptors.response.use(
 - [x] 防灌水机制
 - [x] 评论系统（发表/回复/删除/举报）
 - [x] 点赞与收藏
+- [x] 个人主页与统计数据
 
 ---
 
