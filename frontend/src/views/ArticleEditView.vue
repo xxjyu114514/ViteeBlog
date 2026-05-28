@@ -1,73 +1,75 @@
 <template>
   <div class="article-edit-page">
-    <!-- 背景 + 玻璃卡片容器 -->
     <div class="glass-wrap">
       <div class="glass-card-editor" :class="{ 'slide-in': slidIn }">
-        <!-- 卡片头部 -->
+        <!-- 头部 -->
         <div class="card-header">
           <button class="btn-back" @click="goBack">← 返回</button>
           <span class="card-title">{{ editingArticle ? '编辑文章' : '新建文章' }}</span>
           <div class="header-actions">
-            <button class="btn btn-ghost" @click="goBack" :disabled="saving">返回</button>
+            <button class="btn btn-ghost" @click="goBack">返回</button>
             <button class="btn btn-primary" @click="handleSave" :disabled="saving || !canSave || isPending">
-              {{ saving ? '保存中...' : '保存草稿' }}
+              {{ saving ? '保存中...' : '保存' }}
             </button>
             <button v-if="editingArticle && editingArticle.status === 'draft'" class="btn btn-accent" @click="handlePublish" :disabled="saving || !canSave || isPending">
-              {{ publishing ? '发布中...' : '发布文章' }}
+              {{ publishing ? '发布中...' : '发布' }}
             </button>
             <button v-if="editingArticle && editingArticle.status === 'pending'" class="btn btn-outline" @click="handleWithdraw" :disabled="withdrawing">
-              {{ withdrawing ? '撤回中...' : '撤回发布' }}
+              {{ withdrawing ? '撤回中...' : '撤回' }}
+            </button>
+            <button class="btn-drawer-toggle" @click="drawerOpen = !drawerOpen" :title="drawerOpen ? '关闭设置' : '打开设置'">
+              {{ drawerOpen ? '▶' : '◀' }}
             </button>
           </div>
         </div>
 
         <!-- 消息 -->
         <div v-if="statusMessage" :class="['msg-banner', isError ? 'err' : 'ok']">{{ statusMessage }}</div>
-        <div v-if="isPending" class="pending-notice">
-          <span class="notice-icon">⚠️</span>
-          <span>文章正在审核中，如需修改，请先撤回为草稿。</span>
-        </div>
+        <div v-if="isPending" class="pending-notice"><span class="notice-icon">⚠️</span><span>文章正在审核中</span></div>
 
-        <!-- 表单 -->
+        <!-- 主体：编辑器 + 侧拉框 -->
         <div class="card-body">
-          <div class="form-group">
-            <label class="form-label">标题</label>
-            <input v-model="currentArticle.title" type="text" class="form-input" placeholder="请输入文章标题" :disabled="saving || isPending">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">摘要</label>
-            <textarea v-model="currentArticle.summary" class="form-input form-textarea-sm" placeholder="请输入文章摘要（可选）" :disabled="saving || isPending" rows="3"></textarea>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group flex-1">
-              <label class="form-label">分类</label>
-              <select v-model="currentArticle.category_id" class="form-select" :disabled="saving || loadingCategories || isPending">
-                <option value="">请选择分类</option>
-                <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
-              </select>
-              <div v-if="loadingCategories" class="load-hint">加载分类中...</div>
-            </div>
-            <div class="form-group flex-2">
-              <label class="form-label">标签</label>
-              <div class="tag-selector">
-                <div v-for="tag in selectedTags" :key="tag.id" class="tag-pill" :class="{ disabled: isPending }">
-                  {{ tag.name }}<span v-if="!isPending" class="tag-remove" @click.stop="removeTag(tag.id)">×</span>
-                </div>
-                <select v-model="newTagId" class="tag-pick form-select" :disabled="saving || loadingTags || isPending" @change="addTag">
-                  <option value="">+ 标签</option>
-                  <option v-for="tag in availableTags" :key="tag.id" :value="tag.id" :disabled="selectedTags.some(t => t.id === tag.id)">{{ tag.name }}</option>
-                </select>
+          <div class="editor-main" :class="{ 'with-drawer': drawerOpen }">
+            <div class="editor-area">
+              <div class="form-group">
+                <input v-model="currentArticle.title" class="input-title" placeholder="输入文章标题..." :disabled="saving || isPending">
               </div>
-              <div v-if="loadingTags" class="load-hint">加载标签中...</div>
+              <div class="editor-content">
+                <div v-show="!editorLoadError" id="vditor-editor"></div>
+                <textarea v-if="editorLoadError" v-model="currentArticle.content" class="form-textarea" placeholder="高级编辑器加载失败，请使用普通文本模式..." :disabled="isPending"></textarea>
+              </div>
             </div>
-          </div>
 
-          <div class="form-group">
-            <label class="form-label">内容 (支持拖拽/粘贴图片上传)</label>
-            <div v-show="!editorLoadError" id="vditor-editor"></div>
-            <textarea v-if="editorLoadError" v-model="currentArticle.content" class="form-textarea" placeholder="高级编辑器加载失败，请使用普通文本模式..." :disabled="isPending"></textarea>
+            <!-- 侧拉框 -->
+            <transition name="drawer-slide">
+              <div v-if="drawerOpen" class="drawer-panel">
+                <div class="drawer-section">
+                  <label class="drawer-label">摘要</label>
+                  <textarea v-model="currentArticle.summary" class="drawer-input drawer-textarea" placeholder="文章摘要（可选）" :disabled="saving || isPending" rows="3"></textarea>
+                </div>
+                <div class="drawer-section">
+                  <label class="drawer-label">分类</label>
+                  <select v-model="currentArticle.category_id" class="drawer-input drawer-select" :disabled="saving || loadingCategories || isPending">
+                    <option value="">选择分类</option>
+                    <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
+                  </select>
+                  <div v-if="loadingCategories" class="load-hint">加载中...</div>
+                </div>
+                <div class="drawer-section">
+                  <label class="drawer-label">标签</label>
+                  <div class="drawer-tags">
+                    <div v-for="tag in selectedTags" :key="tag.id" class="tag-pill" :class="{ disabled: isPending }">
+                      {{ tag.name }}<span v-if="!isPending" class="tag-remove" @click="removeTag(tag.id)">×</span>
+                    </div>
+                  </div>
+                  <select v-model="newTagId" class="drawer-input drawer-select" :disabled="saving || loadingTags || isPending" @change="addTag">
+                    <option value="">+ 添加标签</option>
+                    <option v-for="tag in availableTags" :key="tag.id" :value="tag.id" :disabled="selectedTags.some(t => t.id === tag.id)">{{ tag.name }}</option>
+                  </select>
+                  <div v-if="loadingTags" class="load-hint">加载中...</div>
+                </div>
+              </div>
+            </transition>
           </div>
         </div>
       </div>
@@ -107,6 +109,7 @@ const loadingTags = ref(true)
 const selectedTags = ref([])
 const newTagId = ref('')
 const slidIn = ref(false)
+const drawerOpen = ref(false)
 
 const canSave = computed(() => currentArticle.value.title.trim() !== '' && currentArticle.value.content.trim() !== '')
 const isPending = computed(() => editingArticle.value?.status === 'pending')
@@ -128,16 +131,12 @@ const removeTag = (tagId) => {
 }
 
 const fetchCategories = async () => {
-  loadingCategories.value = true
-  const r = await getCategories()
-  if (r.success) categories.value = r.data || []
-  loadingCategories.value = false
+  loadingCategories.value = true; const r = await getCategories()
+  if (r.success) categories.value = r.data || []; loadingCategories.value = false
 }
 const fetchTags = async () => {
-  loadingTags.value = true
-  const r = await getTags()
-  if (r.success) tags.value = r.data || []
-  loadingTags.value = false
+  loadingTags.value = true; const r = await getTags()
+  if (r.success) tags.value = r.data || []; loadingTags.value = false
 }
 
 const initVditor = (initialContent) => {
@@ -211,11 +210,7 @@ const handleWithdraw = async () => {
 
 const goBack = () => router.push('/personal')
 
-onMounted(() => {
-  loadArticleData()
-  // 滑入动画
-  requestAnimationFrame(() => { slidIn.value = true })
-})
+onMounted(() => { loadArticleData(); requestAnimationFrame(() => { slidIn.value = true }) })
 onUnmounted(() => { if (vditorInstance) vditorInstance.destroy() })
 </script>
 
@@ -225,14 +220,12 @@ onUnmounted(() => { if (vditorInstance) vditorInstance.destroy() })
 
 .article-edit-page {
   position: fixed; inset: 0; z-index: 1;
-  background: url(../assets/personl.webp) right top / cover fixed, $bg-base;
   overflow: hidden;
 }
 
 .glass-wrap {
   position: absolute; bottom: 0; left: $space-lg; right: $space-lg;
-  height: calc(100vh - 100px);
-  display: flex; flex-direction: column;
+  height: calc(100vh - 100px); display: flex; flex-direction: column;
 }
 
 .glass-card-editor {
@@ -252,45 +245,80 @@ onUnmounted(() => { if (vditorInstance) vditorInstance.destroy() })
   border-bottom: 1px solid $glass-border; flex-shrink: 0;
   .btn-back { background: none; border: none; color: $text-secondary; cursor: pointer; font-size: 0.9rem; padding: 0; &:hover { color: $text-primary; } }
   .card-title { font-family: $font-mono; font-size: 1rem; font-weight: 600; color: $text-primary; flex: 1; }
-  .header-actions { display: flex; gap: $space-sm; }
+  .header-actions { display: flex; align-items: center; gap: $space-sm; }
+}
+
+.btn-drawer-toggle {
+  background: $bg-hover; border: 1px solid $glass-border; color: $text-secondary;
+  cursor: pointer; padding: 6px 10px; font-size: 0.8rem; transition: all 0.2s;
+  &:hover { color: $text-primary; border-color: $color-primary; }
 }
 
 .msg-banner { padding: 10px $space-xl; font-size: 0.85rem; flex-shrink: 0; &.ok { background: rgba($color-success, 0.15); color: $color-success; } &.err { background: rgba($color-error, 0.15); color: $color-error; } }
+.pending-notice { display: flex; align-items: center; gap: 8px; padding: 10px $space-xl; flex-shrink: 0; background: rgba($color-warning, 0.12); color: $color-warning; font-size: 0.85rem; .notice-icon { font-size: 1rem; } }
 
-.pending-notice {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px $space-xl; flex-shrink: 0;
-  background: rgba($color-warning, 0.12); color: $color-warning; font-size: 0.85rem;
-  .notice-icon { font-size: 1rem; }
+.card-body { flex: 1; overflow: hidden; }
+
+// 主编辑器区域
+.editor-main {
+  display: flex; height: 100%;
 }
 
-.card-body {
-  flex: 1; overflow-y: auto; padding: $space-xl;
+.editor-area {
+  flex: 1; display: flex; flex-direction: column; padding: $space-lg;
+  overflow: hidden;
+  transition: flex 0.3s ease;
 }
 
-// 表单样式（暗色）
-.form-group { margin-bottom: $space-lg; }
-.form-label { display: block; font-family: $font-mono; font-size: 0.8rem; color: $text-secondary; margin-bottom: $space-xs; text-transform: uppercase; letter-spacing: 0.05em; }
-.form-input, .form-select, .form-textarea {
-  width: 100%; padding: 10px 14px; background: $bg-elevated; border: 1px solid $glass-border;
-  color: $text-primary; font-size: 0.95rem; box-sizing: border-box;
+.input-title {
+  width: 100%; padding: 14px 16px; font-size: 1.3rem; font-weight: 600;
+  background: transparent; border: none; border-bottom: 1px solid $glass-border;
+  color: $text-primary; outline: none; margin-bottom: $space-md;
+  &::placeholder { color: $text-tertiary; }
+  &:focus { border-bottom-color: $color-primary; }
+}
+
+.editor-content { flex: 1; overflow-y: auto; }
+
+// 侧拉框
+.drawer-panel {
+  width: 16vw; min-width: 200px; max-width: 320px;
+  background: $bg-surface; border-left: 1px solid $glass-border;
+  padding: $space-lg; overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.drawer-slide-enter-active, .drawer-slide-leave-active {
+  transition: width 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+}
+.drawer-slide-enter-from, .drawer-slide-leave-to {
+  width: 0 !important; min-width: 0 !important; padding: $space-lg 0; opacity: 0; overflow: hidden;
+}
+
+.drawer-section { margin-bottom: $space-lg; }
+.drawer-label { display: block; font-family: $font-mono; font-size: 0.75rem; color: $text-secondary; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+.drawer-input {
+  width: 100%; padding: 8px 10px; background: $bg-elevated; border: 1px solid $glass-border;
+  color: $text-primary; font-size: 0.85rem; box-sizing: border-box;
   &:focus { outline: none; border-color: $color-primary; }
 }
-.form-textarea-sm { min-height: 80px; resize: vertical; }
-.form-textarea { min-height: 300px; resize: vertical; font-family: $font-mono; }
-.form-select { cursor: pointer; option { background: $bg-surface; color: $text-primary; } }
-.form-row { display: flex; gap: $space-lg; }
-.flex-1 { flex: 1; }
-.flex-2 { flex: 2; }
-.load-hint { font-size: 0.8rem; color: $text-tertiary; margin-top: 4px; }
+.drawer-textarea { resize: vertical; min-height: 60px; font-family: $font-sans; }
+.drawer-select { cursor: pointer; option { background: $bg-surface; color: $text-primary; } }
+.drawer-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
 
-.tag-selector { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .tag-pill {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 4px 10px; background: $bg-hover; border: 1px solid $glass-border;
-  color: $text-primary; font-size: 0.8rem;
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 3px 8px; background: $bg-hover; border: 1px solid $glass-border;
+  color: $text-primary; font-size: 0.78rem;
   &.disabled { opacity: 0.5; }
 }
-.tag-remove { cursor: pointer; color: $text-tertiary; &:hover { color: $color-error; } }
-.tag-pick { width: auto; min-width: 100px; padding: 4px 10px; }
+.tag-remove { cursor: pointer; color: $text-tertiary; margin-left: 2px; &:hover { color: $color-error; } }
+
+.load-hint { font-size: 0.75rem; color: $text-tertiary; margin-top: 4px; }
+
+.form-textarea {
+  width: 100%; min-height: 300px; padding: 12px; background: $bg-elevated; border: 1px solid $glass-border;
+  color: $text-primary; font-size: 0.95rem; font-family: $font-mono; box-sizing: border-box;
+  &:focus { outline: none; border-color: $color-primary; }
+}
 </style>

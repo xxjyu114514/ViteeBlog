@@ -1,31 +1,32 @@
 <template>
-  <div class="page-wrapper-base">
-    <div class="nav-placeholder"></div>
-    <div class="back-button" @click="router.go(-1)">← 返回</div>
-    <div class="container-narrow mt-30">
-      <h1 class="title-large mb-30">我的收藏</h1>
-
-      <StateWrapper :loading="loading" :empty="favorites.length === 0" empty-text="暂无收藏文章" @retry="fetchFavorites">
-        <div class="article-list">
-          <div v-for="item in favorites" :key="item.id" class="article-item card card-hover">
-            <div class="article-info" @click="router.push(`/article/${item.article.id}`)">
-              <h3 class="article-title">{{ item.article.title || '[无标题]' }}</h3>
-              <div class="meta-text">
-                <span>收藏于 {{ formatDateTime(item.createdAt) }}</span>
+  <div class="fav-page">
+    <div class="glass-wrap">
+      <div class="glass-card" :class="{ 'slide-in': slidIn }">
+        <div class="card-header">
+          <button class="btn-back" @click="goBack">← 返回</button>
+          <span class="card-title">我的收藏</span>
+        </div>
+        <div class="card-body">
+          <StateWrapper :loading="loading" :empty="favorites.length === 0" empty-text="暂无收藏文章" @retry="fetchFavorites">
+            <div class="fav-list">
+              <div v-for="item in favorites" :key="item.id" class="fav-item">
+                <div class="fav-info" @click="router.push(`/article/${item.article.id}`)">
+                  <div class="fav-title">{{ item.article.title || '[无标题]' }}</div>
+                  <div class="fav-meta">收藏于 {{ formatDateTime(item.createdAt) }}</div>
+                </div>
+                <button class="btn-unfav" @click="handleUnfavorite(item.article.id)" :disabled="unfavoritingId === item.article.id">
+                  {{ unfavoritingId === item.article.id ? '取消中...' : '取消收藏' }}
+                </button>
               </div>
             </div>
-            <button class="btn-unfavorite" @click="handleUnfavorite(item.article.id)" :disabled="unfavoritingId === item.article.id">
-              {{ unfavoritingId === item.article.id ? '取消中...' : '取消收藏' }}
-            </button>
-          </div>
+            <div v-if="totalPages > 1" class="pagination">
+              <button class="page-btn" :disabled="currentPage <= 1" @click="goToPage(currentPage - 1)">上一页</button>
+              <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页（共 {{ total }} 篇）</span>
+              <button class="page-btn" :disabled="currentPage >= totalPages" @click="goToPage(currentPage + 1)">下一页</button>
+            </div>
+          </StateWrapper>
         </div>
-
-        <div v-if="totalPages > 1" class="pagination mt-30">
-          <button class="pagination-btn" :disabled="currentPage <= 1" @click="goToPage(currentPage - 1)">上一页</button>
-          <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页（共 {{ total }} 篇）</span>
-          <button class="pagination-btn" :disabled="currentPage >= totalPages" @click="goToPage(currentPage + 1)">下一页</button>
-        </div>
-      </StateWrapper>
+      </div>
     </div>
   </div>
 </template>
@@ -38,7 +39,6 @@ import { formatDateTime } from '@/utils'
 import StateWrapper from '@/components/StateWrapper.vue'
 
 const router = useRouter()
-
 const favorites = ref([])
 const loading = ref(true)
 const currentPage = ref(1)
@@ -46,18 +46,17 @@ const pageSize = ref(20)
 const total = ref(0)
 const totalPages = ref(0)
 const unfavoritingId = ref(null)
+const slidIn = ref(false)
 
 const fetchFavorites = async (page = 1) => {
   loading.value = true
-  const result = await getMyFavorites({ page, size: pageSize.value })
-  if (result.success) {
-    favorites.value = result.data.items || []
-    total.value = result.data.total || 0
-    totalPages.value = result.data.pages || 0
+  const r = await getMyFavorites({ page, size: pageSize.value })
+  if (r.success) {
+    favorites.value = r.data.items || []
+    total.value = r.data.total || 0
+    totalPages.value = r.data.pages || 0
     currentPage.value = page
-  } else {
-    favorites.value = []
-  }
+  } else { favorites.value = [] }
   loading.value = false
 }
 
@@ -71,30 +70,67 @@ const handleUnfavorite = async (articleId) => {
   unfavoritingId.value = null
 }
 
-const goToPage = (page) => {
-  if (page >= 1 && page <= totalPages.value) fetchFavorites(page)
-}
+const goToPage = (page) => { if (page >= 1 && page <= totalPages.value) fetchFavorites(page) }
+const goBack = () => router.push('/personal')
 
-onMounted(() => fetchFavorites())
+onMounted(() => { fetchFavorites(); requestAnimationFrame(() => { slidIn.value = true }) })
 </script>
 
-<style scoped lang="scss">
-@use '@/assets/styles/variables' as *;
-.article-list { display: flex; flex-direction: column; gap: 16px; }
-.article-item {
-  padding: 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;
-  transition: background 0.2s ease; &:hover { background: $bg-smoke; }
-  .article-info { flex: 1; cursor: pointer; }
-  .article-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; color: $text-main; }
-  .meta-text { font-size: 0.85rem; color: $text-secondary; span { margin-right: 8px; } }
+<style lang="scss">
+@use 'sass:color';
+@import './test_scss.scss';
+
+.fav-page { position: fixed; inset: 0; z-index: 1; overflow: hidden; }
+
+.glass-wrap {
+  position: absolute; bottom: 0; left: $space-lg; right: $space-lg;
+  height: calc(100vh - 100px); display: flex; flex-direction: column;
 }
-.btn-unfavorite {
-  padding: 6px 14px; border: 1px solid $color-danger; border-radius: 6px;
-  background: white; color: $color-danger; cursor: pointer; font-size: 0.85rem; white-space: nowrap;
-  &:hover { background: $color-danger; color: white; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.glass-card {
+  background: rgba(26, 26, 31, 0.92);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border: 1px solid $glass-border; border-bottom: none;
+  display: flex; flex-direction: column; height: 100%;
+  transform: translateY(100%);
+  transition: transform 0.45s cubic-bezier(0.25, 0.8, 0.25, 1);
+  overflow: hidden;
+  &.slide-in { transform: translateY(0); }
 }
-.pagination { display: flex; justify-content: center; align-items: center; gap: 16px; }
-.pagination-btn { padding: 8px 16px; border: 1px solid $border-color; border-radius: 8px; background: white; cursor: pointer; font-size: 0.9rem; &:disabled { opacity: 0.4; cursor: not-allowed; } }
-.page-info { font-size: 0.85rem; color: $text-secondary; }
+
+.card-header {
+  display: flex; align-items: center; gap: $space-md;
+  padding: $space-md $space-xl;
+  border-bottom: 1px solid $glass-border; flex-shrink: 0;
+  .btn-back { background: none; border: none; color: $text-secondary; cursor: pointer; font-size: 0.9rem; padding: 0; &:hover { color: $text-primary; } }
+  .card-title { font-family: $font-mono; font-size: 1rem; font-weight: 600; color: $text-primary; }
+}
+
+.card-body { flex: 1; overflow-y: auto; padding: $space-xl; }
+
+.fav-list { display: flex; flex-direction: column; gap: 8px; }
+.fav-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: $space-md; transition: background 0.15s;
+  &:hover { background: $bg-hover; }
+  .fav-info { flex: 1; cursor: pointer; }
+  .fav-title { font-size: 1rem; font-weight: 500; color: $text-primary; margin-bottom: 4px; }
+  .fav-meta { font-size: 0.8rem; color: $text-tertiary; }
+}
+
+.btn-unfav {
+  padding: 6px 14px; border: 1px solid $color-error; background: transparent;
+  color: $color-error; cursor: pointer; font-size: 0.8rem; white-space: nowrap; flex-shrink: 0;
+  &:hover { background: $color-error; color: $bg-base; }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+.pagination { display: flex; justify-content: center; align-items: center; gap: $space-md; margin-top: $space-xl; }
+.page-btn {
+  padding: 6px 16px; background: $bg-elevated; border: 1px solid $glass-border;
+  color: $text-secondary; cursor: pointer; font-size: 0.85rem;
+  &:hover { color: $text-primary; border-color: $color-primary; }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+.page-info { font-size: 0.8rem; color: $text-tertiary; }
 </style>

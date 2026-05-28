@@ -1,72 +1,62 @@
 <template>
-  <div class="page-wrapper-base article-manage-wrapper">
-    <div class="nav-placeholder"></div>
-    <div class="back-button" @click="handleBack">← 返回</div>
-    <div class="container-narrow">
-      <div class="flex-between mb-30">
-        <h1 class="title-large">{{ userStore.isAdmin ? '全站文章管理' : '我的文章' }}</h1>
-        <div class="header-right">
-          <span v-if="pendingCount > 0" class="pending-badge">待审核 {{ pendingCount }} 篇</span>
-          <button class="btn-primary" @click="handleCreateNew">新建文章</button>
+  <div class="manage-page">
+    <div class="glass-wrap">
+      <div class="glass-card" :class="{ 'slide-in': slidIn }">
+        <div class="card-header">
+          <button class="btn-back" @click="goBack">← 返回</button>
+          <span class="card-title">{{ userStore.isAdmin ? '全站文章管理' : '我的文章' }}</span>
+          <div class="header-actions">
+            <span v-if="pendingCount > 0" class="pending-badge">待审核 {{ pendingCount }} 篇</span>
+            <button class="btn btn-primary btn-sm" @click="handleCreateNew">新建</button>
+          </div>
         </div>
-      </div>
 
-      <div v-if="userStore.isAdmin" class="admin-controls mb-20">
-        <div class="flex-between">
-          <div>
-            <label class="mr-10">查看范围:</label>
-            <select v-model="viewMode" class="select-field" @change="fetchArticles(1)">
-              <option value="all">全站文章</option>
-              <option value="mine">我的文章</option>
+        <div v-if="userStore.isAdmin" class="admin-bar">
+          <div class="admin-left">
+            <label class="admin-label">范围:</label>
+            <select v-model="viewMode" class="admin-select" @change="fetchArticles(1)">
+              <option value="all">全站</option>
+              <option value="mine">我的</option>
             </select>
           </div>
-          <div class="admin-nav-links">
-            <router-link to="/comment-reports" class="nav-link">举报管理</router-link>
-            <router-link to="/comment-admin" class="nav-link">评论巡查</router-link>
+          <div class="admin-links">
+            <router-link to="/comment-reports" class="admin-link">举报管理</router-link>
+            <router-link to="/comment-admin" class="admin-link">评论巡查</router-link>
           </div>
         </div>
-      </div>
 
-      <div v-if="articles.length > 0" class="article-list">
-        <div v-for="article in articles" :key="article.id" class="article-item card card-hover">
-          <div class="flex-between">
-            <div class="article-info">
-              <h3 class="article-title">{{ article.title }}</h3>
-              <div class="meta-text">
-                <span v-if="userStore.isAdmin && viewMode === 'all' && article.author">{{ article.author.username }} · </span>
-                <span>{{ formatDateTime(article.publishedAt || article.createdAt) }}</span>
-                <span v-if="article.status === 'draft'" class="status-draft">草稿</span>
-                <span v-else class="status-published">已发布</span>
-                <span>阅读 {{ article.viewCount || 0 }} 次</span>
-                <span v-if="article.isAudited" class="status-audited">✓ 已审核</span>
+        <div class="card-body">
+          <div v-if="articles.length > 0" class="article-list">
+            <div v-for="article in articles" :key="article.id" class="article-item">
+              <div class="article-info">
+                <div class="article-title">{{ article.title }}</div>
+                <div class="article-meta">
+                  <span v-if="userStore.isAdmin && viewMode === 'all' && article.author">{{ article.author.username }} · </span>
+                  <span>{{ formatDateTime(article.publishedAt || article.createdAt) }}</span>
+                  <span :class="article.status === 'draft' ? 'badge-draft' : 'badge-published'">{{ article.status === 'draft' ? '草稿' : '已发布' }}</span>
+                  <span>阅读 {{ article.viewCount || 0 }}</span>
+                  <span v-if="article.isAudited" class="badge-audited">✓ 已审核</span>
+                </div>
+              </div>
+              <div class="article-actions">
+                <button v-if="canPublish(article)" class="act-btn act-publish" @click="handlePublish(article.id)" :disabled="publishingId === article.id">{{ publishingId === article.id ? '...' : '发布' }}</button>
+                <button v-if="canEdit(article)" class="act-btn act-edit" @click="handleEdit(article.id)">编辑</button>
+                <button v-if="canDelete(article)" class="act-btn act-delete" @click="handleSoftDelete(article.id)" :disabled="deletingId === article.id">{{ deletingId === article.id ? '...' : '删除' }}</button>
+                <button v-if="canDelete(article)" class="act-btn act-hard" @click="handleHardDelete(article.id)" :disabled="hardDeletingId === article.id">{{ hardDeletingId === article.id ? '...' : '彻底删除' }}</button>
+                <button v-if="userStore.isAdmin && !article.isAudited && article.status === 'pending'" class="act-btn act-audit" @click="openAudit(article.id)">审核</button>
+                <button v-if="userStore.isAdmin" class="act-btn act-pin" @click="handleTogglePin(article.id)" :disabled="pinningId === article.id">{{ pinningId === article.id ? '...' : (article.isPinned ? '📌' : '📌') }}</button>
               </div>
             </div>
-            <div class="article-actions">
-              <button v-if="canPublish(article)" class="btn-action btn-publish" @click="handlePublish(article.id)" :disabled="publishingId === article.id">{{ publishingId === article.id ? '发布中...' : '发布' }}</button>
-              <button v-if="canEdit(article)" class="btn-action btn-edit" @click="handleEdit(article.id)">编辑</button>
-              <button v-if="canDelete(article)" class="btn-action btn-delete" @click="handleSoftDelete(article.id)" :disabled="deletingId === article.id">{{ deletingId === article.id ? '删除中...' : '删除' }}</button>
-              <button v-if="canDelete(article)" class="btn-action btn-hard-delete" @click="handleHardDelete(article.id)" :disabled="hardDeletingId === article.id">{{ hardDeletingId === article.id ? '删除中...' : '彻底删除' }}</button>
-              <button v-if="userStore.isAdmin && !article.isAudited && article.status === 'pending'" class="btn-action btn-audit" @click="openAudit(article.id)">审核</button>
-              <button v-if="userStore.isAdmin" class="btn-action btn-pin" @click="handleTogglePin(article.id)" :disabled="pinningId === article.id">{{ pinningId === article.id ? '处理中...' : (article.isPinned ? '📌 已置顶' : '📌 置顶') }}</button>
+
+            <div v-if="totalPages > 1" class="pagination">
+              <button class="page-btn" :disabled="currentPage <= 1" @click="goToPage(currentPage - 1)">上一页</button>
+              <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页（共 {{ totalArticles }} 篇）</span>
+              <button class="page-btn" :disabled="currentPage >= totalPages" @click="goToPage(currentPage + 1)">下一页</button>
             </div>
           </div>
+          <div v-else-if="loading" class="state-msg"><div class="spinner"></div><p>加载中...</p></div>
+          <div v-else class="state-msg"><p>{{ emptyMessage }}</p><button class="btn btn-primary btn-sm mt-20" @click="handleCreateNew">创建文章</button></div>
         </div>
-
-        <div v-if="totalPages > 1" class="pagination mt-30">
-          <button class="pagination-btn" :disabled="currentPage <= 1" @click="goToPage(currentPage - 1)">上一页</button>
-          <span class="page-info">第 {{ currentPage }} 页 / 共 {{ totalPages }} 页 (共 {{ totalArticles }} 篇文章)</span>
-          <button class="pagination-btn" :disabled="currentPage >= totalPages" @click="goToPage(currentPage + 1)">下一页</button>
-        </div>
-      </div>
-
-      <div v-else-if="loading" class="loading-state">
-        <div class="loading-spinner"></div>
-        <p>加载文章列表中...</p>
-      </div>
-
-      <div v-else class="empty-state">
-        <p>{{ emptyMessage }}</p>
-        <button class="btn-primary mt-20" @click="handleCreateNew">立即创建第一篇文章</button>
       </div>
     </div>
     <AuditModal v-model:show="showAuditModal" :article-id="auditArticleId" @audit-success="onAuditSuccess" />
@@ -89,7 +79,6 @@ const articles = ref([])
 const publishingId = ref(null)
 const deletingId = ref(null)
 const hardDeletingId = ref(null)
-const restoringId = ref(null)
 const pinningId = ref(null)
 const auditArticleId = ref(null)
 const showAuditModal = ref(false)
@@ -98,16 +87,17 @@ const currentPage = ref(1)
 const pageSize = ref(20)
 const totalArticles = ref(0)
 const pendingCount = ref(0)
+const slidIn = ref(false)
 
 const emptyMessage = computed(() => {
   if (userStore.isAdmin) return viewMode.value === 'all' ? '全站暂无文章' : '您暂无文章'
   return '您暂无文章'
 })
 const totalPages = computed(() => Math.ceil(totalArticles.value / pageSize.value))
-
 const canEdit = (article) => userStore.isAdmin || article.userId === userStore.userInfo?.id
 const canDelete = (article) => userStore.isAdmin || article.userId === userStore.userInfo?.id
 const canPublish = (article) => article.status === 'draft' && (userStore.isAdmin || article.userId === userStore.userInfo?.id)
+const goBack = () => router.push('/personal')
 
 const fetchArticles = async (page = 1) => {
   loading.value = true
@@ -116,75 +106,99 @@ const fetchArticles = async (page = 1) => {
     if (userStore.isAdmin && viewMode.value === 'all') result = await articleService.getAdminAllArticles({ page, size: pageSize.value })
     else result = await articleService.getMyArticles({ page, size: pageSize.value })
     if (result.success) { articles.value = result.data.items || []; totalArticles.value = result.data.total || 0; currentPage.value = page }
-    else alert(result.message)
-  } catch { alert('获取文章列表失败，请稍后重试') }
+  } catch {}
   loading.value = false
 }
-
 const handleCreateNew = () => router.push('/edit-article')
-const handleEdit = (articleId) => { router.push(`/edit-article/${articleId}`) }
-const handlePublish = async (articleId) => {
-  publishingId.value = articleId; const r = await articleService.publishArticle(articleId)
-  if (r.success) await fetchArticles(currentPage.value); else alert(r.message); publishingId.value = null
-}
-const handleSoftDelete = async (articleId) => {
-  if (!confirm('确定要将此文章移至回收站吗？')) return; deletingId.value = articleId
-  const r = await articleService.softDeleteArticle(articleId)
-  if (r.success) await fetchArticles(currentPage.value); else alert(r.message); deletingId.value = null
-}
-const handleHardDelete = async (articleId) => {
-  if (!confirm('⚠️ 确定要彻底删除此文章吗？此操作不可撤销！')) return
-  if (!confirm('再次确认：彻底删除后数据无法恢复！')) return; hardDeletingId.value = articleId
-  const r = await articleService.hardDeleteArticle(articleId)
-  if (r.success) await fetchArticles(currentPage.value); else alert(r.message); hardDeletingId.value = null
-}
-const handleRestore = async (articleId) => {
-  restoringId.value = articleId; const r = await articleService.restoreArticle(articleId)
-  if (r.success) await fetchArticles(currentPage.value); else alert(r.message); restoringId.value = null
-}
-const handleTogglePin = async (articleId) => {
-  pinningId.value = articleId; const r = await articleService.togglePinArticle(articleId)
-  if (r.success) await fetchArticles(currentPage.value); else alert(r.message); pinningId.value = null
-}
-
-const openAudit = (articleId) => { auditArticleId.value = articleId; showAuditModal.value = true }
+const handleEdit = (id) => router.push(`/edit-article/${id}`)
+const handlePublish = async (id) => { publishingId.value = id; const r = await articleService.publishArticle(id); if (r.success) await fetchArticles(currentPage.value); publishingId.value = null }
+const handleSoftDelete = async (id) => { if (!confirm('移至回收站？')) return; deletingId.value = id; const r = await articleService.softDeleteArticle(id); if (r.success) await fetchArticles(currentPage.value); deletingId.value = null }
+const handleHardDelete = async (id) => { if (!confirm('⚠️ 确定彻底删除？不可撤销！')) return; if (!confirm('再次确认！')) return; hardDeletingId.value = id; const r = await articleService.hardDeleteArticle(id); if (r.success) await fetchArticles(currentPage.value); hardDeletingId.value = null }
+const handleTogglePin = async (id) => { pinningId.value = id; const r = await articleService.togglePinArticle(id); if (r.success) await fetchArticles(currentPage.value); pinningId.value = null }
+const openAudit = (id) => { auditArticleId.value = id; showAuditModal.value = true }
 const onAuditSuccess = () => fetchArticles(currentPage.value)
 const goToPage = (page) => { if (page >= 1 && page <= totalPages.value) fetchArticles(page) }
-const handleBack = () => router.go(-1)
 
 onMounted(async () => {
   if (!userStore.isAdmin) viewMode.value = 'mine'
   const r = await articleService.getMyPendingCount()
   if (r.success) pendingCount.value = r.data.pendingCount ?? r.data.pending_count ?? 0
   await fetchArticles(1)
+  requestAnimationFrame(() => { slidIn.value = true })
 })
 </script>
 
-<style scoped lang="scss">
-@use '@/assets/styles/variables' as *;
-.article-manage-wrapper { padding-top: 100px; }
-.back-button { position: fixed; top: 16px; left: 16px; padding: 8px 16px; background: rgba($color-primary, 0.1); color: $color-primary; border-radius: 8px; cursor: pointer; font-weight: 500; &:hover { background: rgba($color-primary, 0.2); transform: translateY(-1px); } }
-.admin-controls { padding: 16px; background: rgba($color-primary, 0.05); border-radius: 8px; .admin-nav-links { display: flex; gap: 16px; } .nav-link { display: inline-block; padding: 8px 16px; background: rgba($color-primary, 0.1); color: $color-primary; border-radius: 8px; text-decoration: none; font-weight: 500; &:hover { background: rgba($color-primary, 0.2); } } }
-.article-list .article-item { padding: 16px; border-radius: 8px; margin-bottom: 16px; }
-.meta-text { font-size: 0.875rem; color: $text-secondary; span { margin-right: 8px; } }
-.status-draft { color: $color-warning; }
-.status-published { color: $color-success; }
-.status-audited { color: $color-primary; }
-.article-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.btn-action { padding: 8px 16px; border-radius: 8px; font-weight: 500; border: none; cursor: pointer; transition: all 0.2s ease; &:hover { transform: translateY(-1px); } }
-.btn-publish { background: rgba($color-success, 0.1); color: $color-success; &:hover { background: rgba($color-success, 0.2); } }
-.btn-edit { background: rgba($color-primary, 0.1); color: $color-primary; &:hover { background: rgba($color-primary, 0.2); } }
-.btn-delete { background: rgba($color-danger, 0.1); color: $color-danger; &:hover { background: rgba($color-danger, 0.2); } }
-.btn-hard-delete { background: rgba($color-danger, 0.2); color: $color-danger-dark; &:hover { background: rgba($color-danger, 0.3); } }
-.btn-audit { background: rgba($color-primary, 0.1); color: $color-primary; &:hover { background: rgba($color-primary, 0.2); } }
-.btn-pin { background: rgba($color-purple, 0.1); color: $color-purple; &:hover { background: rgba($color-purple, 0.2); } }
-.pagination { display: flex; justify-content: center; align-items: center; gap: 16px; }
-.pagination-btn { padding: 8px 16px; background: rgba($color-primary, 0.1); color: $color-primary; border-radius: 8px; font-weight: 500; border: none; cursor: pointer; &:hover { background: rgba($color-primary, 0.2); } &:disabled { background: rgba($text-secondary, 0.1); color: $text-secondary; cursor: not-allowed; } }
-.page-info { font-size: 0.875rem; color: $text-secondary; }
-.loading-state { display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 16px; margin-top: 50px; }
-.loading-spinner { width: 32px; height: 32px; border: 4px solid rgba($color-primary, 0.1); border-top: 4px solid $color-primary; border-radius: 50%; animation: spin 1s linear infinite; }
-.empty-state { display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 16px; margin-top: 50px; p { font-size: 1rem; color: $text-secondary; } }
-.header-right { display: flex; align-items: center; gap: 12px; }
-.pending-badge { padding: 4px 12px; background: rgba($color-warning, 0.1); color: $color-warning; border-radius: 20px; font-size: 0.85rem; font-weight: 500; }
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+<style lang="scss">
+@use 'sass:color';
+@import './test_scss.scss';
+
+.manage-page { position: fixed; inset: 0; z-index: 1; overflow: hidden; }
+.glass-wrap {
+  position: absolute; bottom: 0; left: $space-lg; right: $space-lg;
+  height: calc(100vh - 100px); display: flex; flex-direction: column;
+}
+.glass-card {
+  background: rgba(26, 26, 31, 0.92);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border: 1px solid $glass-border; border-bottom: none;
+  display: flex; flex-direction: column; height: 100%;
+  transform: translateY(100%);
+  transition: transform 0.45s cubic-bezier(0.25, 0.8, 0.25, 1);
+  overflow: hidden;
+  &.slide-in { transform: translateY(0); }
+}
+.card-header {
+  display: flex; align-items: center; gap: $space-md;
+  padding: $space-md $space-xl;
+  border-bottom: 1px solid $glass-border; flex-shrink: 0;
+  .btn-back { background: none; border: none; color: $text-secondary; cursor: pointer; font-size: 0.9rem; padding: 0; &:hover { color: $text-primary; } }
+  .card-title { font-family: $font-mono; font-size: 1rem; font-weight: 600; color: $text-primary; flex: 1; }
+  .header-actions { display: flex; align-items: center; gap: $space-sm; }
+}
+.pending-badge { padding: 3px 10px; background: rgba($color-warning, 0.15); color: $color-warning; border-radius: 12px; font-size: 0.75rem; font-weight: 500; }
+.btn-sm { padding: 4px 12px; font-size: 0.8rem; }
+
+.admin-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: $space-sm $space-xl; background: $bg-surface; border-bottom: 1px solid $glass-border; flex-shrink: 0;
+  .admin-left { display: flex; align-items: center; gap: 8px; }
+  .admin-label { font-size: 0.8rem; color: $text-secondary; }
+  .admin-select { padding: 4px 8px; background: $bg-elevated; border: 1px solid $glass-border; color: $text-primary; font-size: 0.8rem; &:focus { outline: none; border-color: $color-primary; } option { background: $bg-surface; } }
+  .admin-links { display: flex; gap: $space-sm; }
+  .admin-link { padding: 4px 12px; background: $bg-hover; color: $color-primary; border-radius: 4px; text-decoration: none; font-size: 0.8rem; &:hover { background: rgba($color-primary, 0.15); } }
+}
+
+.card-body { flex: 1; overflow-y: auto; padding: $space-xl; }
+
+.article-list { display: flex; flex-direction: column; gap: 8px; }
+.article-item {
+  padding: $space-md; transition: background 0.15s;
+  &:hover { background: $bg-hover; }
+  .article-info { margin-bottom: 8px; }
+  .article-title { font-size: 1rem; font-weight: 500; color: $text-primary; margin-bottom: 4px; }
+  .article-meta { font-size: 0.8rem; color: $text-tertiary; span { margin-right: 8px; } }
+}
+.badge-draft { color: $color-warning; }
+.badge-published { color: $color-success; }
+.badge-audited { color: $color-primary; }
+.article-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.act-btn {
+  padding: 4px 12px; font-size: 0.78rem; border: 1px solid $glass-border; background: transparent;
+  color: $text-secondary; cursor: pointer; &:hover { border-color: $color-primary; color: $color-primary; }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+.act-publish { color: $color-success; border-color: rgba($color-success, 0.3); &:hover { border-color: $color-success; } }
+.act-edit { color: $color-primary; border-color: rgba($color-primary, 0.3); &:hover { border-color: $color-primary; } }
+.act-delete { color: $color-error; border-color: rgba($color-error, 0.3); &:hover { border-color: $color-error; } }
+.act-hard { color: $color-error; border-color: rgba($color-error, 0.3); &:hover { background: rgba($color-error, 0.1); } }
+.act-audit { color: $color-accent; border-color: rgba($color-accent, 0.3); &:hover { border-color: $color-accent; } }
+.act-pin { color: $color-secondary; border-color: rgba($color-secondary, 0.3); &:hover { border-color: $color-secondary; } }
+
+.pagination { display: flex; justify-content: center; align-items: center; gap: $space-md; margin-top: $space-xl; }
+.page-btn { padding: 6px 16px; background: $bg-elevated; border: 1px solid $glass-border; color: $text-secondary; cursor: pointer; font-size: 0.85rem; &:hover { color: $text-primary; border-color: $color-primary; } &:disabled { opacity: 0.4; cursor: not-allowed; } }
+.page-info { font-size: 0.8rem; color: $text-tertiary; }
+.state-msg { display: flex; flex-direction: column; align-items: center; gap: $space-md; padding: $space-2xl 0; p { color: $text-secondary; font-size: 0.95rem; } }
+.spinner { width: 24px; height: 24px; border: 2px solid rgba($text-tertiary, 0.25); border-top-color: $color-primary; border-radius: 50%; animation: mspin 0.8s linear infinite; }
+@keyframes mspin { to { transform: rotate(360deg); } }
+.mt-20 { margin-top: 20px; }
 </style>

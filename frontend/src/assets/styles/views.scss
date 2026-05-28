@@ -398,7 +398,7 @@
 /* =======================================
    编辑与详情页 (Article Edit / Detail)
    ======================================= */
-.editor-container-wide, .article-edit-page { max-width: 1200px; margin: 0 auto; padding: 90px 20px 20px; }
+.editor-container-wide, .article-edit-page { max-width: 1200px;   }
 .editor-header { margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
 .editor-actions { display: flex; gap: 12px; align-items: center; }
 .editor-form { background: $bg-white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); min-width: 80%; max-width: 1200px; width: 100%; margin: 0 auto; }

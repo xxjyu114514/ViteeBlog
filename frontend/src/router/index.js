@@ -52,7 +52,7 @@ const routes = [
   {
     path: '/manage-articles',
     component: ArticleManageView,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, noCardTransition: true }
   },
   {
     path: '/categories',
@@ -78,19 +78,19 @@ const routes = [
     path: '/edit-article',
     name: 'article-edit',
     component: ArticleEditView,
-    meta: { index: 7, title: '编辑文章', requiresAuth: true }
+    meta: { index: 7, title: '编辑文章', requiresAuth: true, noCardTransition: true }
   },
   {
     path: '/edit-article/:id',
     name: 'article-edit-detail',
     component: ArticleEditView,
-    meta: { index: 8, title: '编辑文章', requiresAuth: true }
+    meta: { index: 8, title: '编辑文章', requiresAuth: true, noCardTransition: true }
   },
   {
     path: '/favorites',
     name: 'favorites',
     component: () => import('@/views/FavoritesView.vue'),
-    meta: { index: 12, title: '我的收藏', requiresAuth: true }
+    meta: { index: 12, title: '我的收藏', requiresAuth: true, noCardTransition: true }
   },
   {
     path: '/about-immersive',
@@ -120,7 +120,7 @@ const routes = [
     path: '/social',
     name: 'social',
     component: () => import('@/views/SocialView.vue'),
-    meta: { index: 13, title: '社交关系', requiresAuth: true }
+    meta: { index: 13, title: '社交关系', requiresAuth: true, noCardTransition: true }
   },
   {
     path: '/login',
