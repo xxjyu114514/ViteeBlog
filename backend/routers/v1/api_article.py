@@ -4,6 +4,10 @@ import aiofiles
 import traceback
 import math
 import hashlib
+import zipfile
+import tempfile
+import shutil
+import re
 from datetime import datetime
 from typing import Optional, List
 from fastapi import APIRouter, Depends, Body, HTTPException, status, UploadFile, File, Query, Request
@@ -439,3 +443,338 @@ async def get_article_like_count(article_id: int, db: AsyncSession = Depends(get
         select(func.count(ArticleLike.id)).where(ArticleLike.article_id == article_id)
     )
     return {"article_id": article_id, "like_count": count_res.scalar() or 0}
+
+
+# --- 辅助函数：从内容中提取摘要 ---
+def extract_summary(content: str, max_length: int = 200) -> str:
+    """从内容中提取纯文本前max_length字符作为摘要，去掉Markdown语法符号"""
+    # 去除常见的Markdown标记
+    text = re.sub(r'^#+\s*', '', content, flags=re.MULTILINE)  # 标题标记（只删除行首的#）
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)  # 粗体 **text**
+    text = re.sub(r'\*(.+?)\*', r'\1', text)  # 斜体 *text*
+    text = re.sub(r'\[(.+?)\]\(.+?\)', r'\1', text)  # 链接 [text](url)
+    text = re.sub(r'!\[(.+?)\]\(.+?\)', r'\1', text)  # 图片 ![alt](url)
+    text = re.sub(r'`{1,3}(.+?)`{1,3}', r'\1', text)  # 代码块 `code`
+    text = re.sub(r'^\s*>\s*', '', text, flags=re.MULTILINE)  # 引用 >
+    text = re.sub(r'^\s*[-*+]\s+', '', text, flags=re.MULTILINE)  # 列表项
+    text = re.sub(r'^\s*\d+\.\s+', '', text, flags=re.MULTILINE)  # 有序列表
+    
+    # 清理多余空白
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = ' '.join(text.split())
+    
+    return text[:max_length]
+
+
+# --- 辅助函数：从txt文件提取标题和内容 ---
+def parse_txt_file(content: bytes, filename: str) -> tuple:
+    """解析txt文件，返回(title, content)"""
+    text = content.decode('utf-8', errors='ignore')
+    lines = text.split('\n')
+    
+    # 找第一个长度1-100的非空行作为标题
+    title = None
+    for line in lines:
+        stripped = line.strip()
+        if 1 <= len(stripped) <= 100:
+            title = stripped
+            break
+    
+    # 如果没有符合条件的行，用文件名（去掉.txt后缀）作为标题
+    if not title:
+        title = os.path.splitext(filename)[0]
+    
+    return title, text
+
+
+# --- 辅助函数：从md文件提取标题和内容 ---
+def parse_md_file(content: bytes, filename: str) -> tuple:
+    """解析md文件，返回(title, content)"""
+    text = content.decode('utf-8', errors='ignore')
+    lines = text.split('\n')
+    
+    # 找第一个以"# "开头的行作为标题
+    title = None
+    for line in lines:
+        if line.startswith('# '):
+            title = line[2:].strip()
+            break
+    
+    # 如果没有"# "开头的行，用文件名（去掉.md后缀）作为标题
+    if not title:
+        title = os.path.splitext(filename)[0]
+    
+    return title, text
+
+
+# --- 辅助函数：从docx文件提取标题和内容 ---
+def parse_docx_file(file_path: str, filename: str) -> tuple:
+    """解析docx文件，返回(title, content)"""
+    from docx import Document
+    
+    doc = Document(file_path)
+    paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+    content = '\n'.join(paragraphs)
+    
+    # 标题策略：找第一个样式为Heading 1的段落
+    title = None
+    for para in doc.paragraphs:
+        if para.style.name == 'Heading 1' and para.text.strip():
+            title = para.text.strip()
+            break
+    
+    # 如果没有Heading 1，找第一个bold=True的段落
+    if not title:
+        for para in doc.paragraphs:
+            for run in para.runs:
+                if run.bold and para.text.strip():
+                    title = para.text.strip()
+                    break
+            if title:
+                break
+    
+    # 如果都没有，用文件名（去掉.docx后缀）作为标题
+    if not title:
+        title = os.path.splitext(filename)[0]
+    
+    return title, content
+
+
+# --- 接口 19：POST /admin/import/single (单篇导入文章) ---
+@router.post("/admin/import/single", summary="【管理员】单篇导入文章")
+async def import_single_article(
+    file: UploadFile = File(...),
+    admin: User = Depends(allow_admin_only),
+    db: AsyncSession = Depends(get_db)
+):
+    # 文件大小限制10MB
+    file_content = await file.read()
+    if len(file_content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="文件大小不能超过10MB")
+    
+    # 检测文件扩展名
+    ext = os.path.splitext(file.filename)[1].lower()
+    
+    try:
+        if ext == '.txt':
+            title, content = parse_txt_file(file_content, file.filename)
+        elif ext == '.md':
+            title, content = parse_md_file(file_content, file.filename)
+        elif ext == '.docx':
+            # docx需要先保存到临时文件
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp:
+                tmp.write(file_content)
+                tmp_path = tmp.name
+            try:
+                title, content = parse_docx_file(tmp_path, file.filename)
+            finally:
+                os.unlink(tmp_path)
+        else:
+            raise HTTPException(status_code=400, detail="不支持的文件格式，仅支持 .txt、.md、.docx")
+        
+        # 生成摘要
+        summary = extract_summary(content, 200)
+        
+        # 创建Article对象
+        article = Article(
+            title=title,
+            content=content,
+            summary=summary,
+            user_id=admin.id,
+            status=ArticleStatus.DRAFT,
+            category_id=None,
+            version=1
+        )
+        db.add(article)
+        await db.commit()
+        await db.refresh(article)
+        
+        return {
+            "article_id": article.id,
+            "title": article.title,
+            "message": "文章导入成功，请前往草稿箱编辑"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"导入失败: {str(e)}")
+
+
+# --- 接口 20：POST /admin/import/batch (批量导入文章) ---
+@router.post("/admin/import/batch", summary="【管理员】批量导入文章")
+async def import_batch_articles(
+    files: List[UploadFile] = File(...),
+    admin: User = Depends(allow_admin_only),
+    db: AsyncSession = Depends(get_db)
+):
+    # 总大小限制50MB
+    # 先读取所有文件大小（不消耗文件流）
+    total_size = 0
+    for f in files:
+        content = await f.read()
+        total_size += len(content)
+        await f.seek(0)  # 重置指针以便后续处理
+    
+    if total_size > 50 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="总文件大小不能超过50MB")
+    
+    success_count = 0
+    failed_list = []
+    articles_list = []
+    
+    for file in files:
+        try:
+            # 读取文件内容
+            file_content = await file.read()
+            ext = os.path.splitext(file.filename)[1].lower()
+            
+            # 复用单篇导入的文件解析逻辑
+            if ext == '.txt':
+                title, content = parse_txt_file(file_content, file.filename)
+            elif ext == '.md':
+                title, content = parse_md_file(file_content, file.filename)
+            elif ext == '.docx':
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp:
+                    tmp.write(file_content)
+                    tmp_path = tmp.name
+                try:
+                    title, content = parse_docx_file(tmp_path, file.filename)
+                finally:
+                    os.unlink(tmp_path)
+            else:
+                failed_list.append({
+                    "filename": file.filename,
+                    "reason": "不支持的文件格式"
+                })
+                continue
+            
+            # 生成摘要
+            summary = extract_summary(content, 200)
+            
+            # 创建Article对象（独立事务）
+            article = Article(
+                title=title,
+                content=content,
+                summary=summary,
+                user_id=admin.id,
+                status=ArticleStatus.DRAFT,
+                category_id=None,
+                version=1
+            )
+            db.add(article)
+            await db.commit()
+            await db.refresh(article)
+            
+            articles_list.append({
+                "article_id": article.id,
+                "title": article.title
+            })
+            success_count += 1
+            
+        except Exception as e:
+            await db.rollback()
+            failed_list.append({
+                "filename": file.filename,
+                "reason": str(e)
+            })
+            continue
+    
+    return {
+        "total": len(files),
+        "success": success_count,
+        "failed": failed_list,
+        "articles": articles_list
+    }
+
+
+# --- 接口 21：POST /admin/upload-images/batch (批量上传图片) ---
+@router.post("/admin/upload-images/batch", summary="【管理员】批量上传图片")
+async def batch_upload_images(
+    file: UploadFile = File(...),
+    admin: User = Depends(allow_admin_only)
+):
+    # 校验文件扩展名
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext != '.zip':
+        raise HTTPException(status_code=400, detail="只支持.zip格式的压缩包")
+    
+    # 文件大小限制50MB
+    file_content = await file.read()
+    if len(file_content) > 50 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="文件大小不能超过50MB")
+    
+    # 支持的图片格式
+    allowed_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+    
+    # 创建临时目录解压
+    temp_dir = tempfile.mkdtemp()
+    extract_dir = os.path.join(temp_dir, 'extracted')  # 创建子目录用于解压
+    os.makedirs(extract_dir, exist_ok=True)
+    zip_path = os.path.join(temp_dir, 'upload.zip')
+    
+    try:
+        # 写入zip文件
+        with open(zip_path, 'wb') as f:
+            f.write(file_content)
+        
+        # 解压到子目录（避免zip文件本身被遍历）
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(extract_dir)
+        
+        # 遍历解压后的文件
+        urls = []
+        failed_list = []
+        success_count = 0
+        
+        for root, dirs, files in os.walk(temp_dir):
+            for filename in files:
+                file_ext = os.path.splitext(filename)[1].lower()
+                
+                # 只处理图片格式
+                if file_ext not in allowed_extensions:
+                    failed_list.append({
+                        "filename": filename,
+                        "reason": "不是图片格式"
+                    })
+                    continue
+                
+                try:
+                    # 生成唯一文件名
+                    unique_name = f"{uuid.uuid4().hex}{file_ext}"
+                    dest_path = os.path.join(IMAGE_STORAGE, unique_name)
+                    src_path = os.path.join(root, filename)
+                    
+                    # 确保目标目录存在
+                    os.makedirs(IMAGE_STORAGE, exist_ok=True)
+                    
+                    # 移动到storage/images目录
+                    shutil.move(src_path, dest_path)
+                    
+                    urls.append(f"/storage/images/{unique_name}")
+                    success_count += 1
+                    
+                except Exception as e:
+                    failed_list.append({
+                        "filename": filename,
+                        "reason": str(e)
+                    })
+                    continue
+        
+        return {
+            "total": success_count + len(failed_list),
+            "success": success_count,
+            "failed": failed_list,
+            "urls": urls
+        }
+        
+    except zipfile.BadZipFile:
+        raise HTTPException(status_code=400, detail="无效的zip文件")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"处理失败: {str(e)}")
+    finally:
+        # 清理临时目录
+        try:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        except:
+            pass
