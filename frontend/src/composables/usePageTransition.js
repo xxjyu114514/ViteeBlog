@@ -1,45 +1,75 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
+const IMMERSIVE_ROUTE_NAMES = new Set([
+  'home',
+  'posts-immersive',
+  'about-immersive',
+  'message-immersive'
+])
+
 const isAnimating = ref(false)
+let prevRoute = null
 let prevRouteIndex = 0
 
 export function usePageTransition() {
   const router = useRouter()
 
-  const animOptions = {
+  const slideOptions = {
     duration: 800,
     easing: 'cubic-bezier(0.645, 0.045, 0.355, 1)',
     fill: 'forwards',
   }
 
+  const fadeOptions = {
+    duration: 300,
+    easing: 'cubic-bezier(0.645, 0.045, 0.355, 1)',
+    fill: 'forwards',
+  }
+
   const getIndex = (route) => route?.meta?.index ?? 0
+  const isImmersive = (route) => IMMERSIVE_ROUTE_NAMES.has(route?.name)
 
   onMounted(() => {
-    if (!prevRouteIndex) {
-      prevRouteIndex = getIndex(router.currentRoute.value)
+    if (!prevRoute) {
+      prevRoute = router.currentRoute.value
+      prevRouteIndex = getIndex(prevRoute)
     }
   })
 
   const onEnter = (el, done) => {
     isAnimating.value = true
-    const toIndex = getIndex(router.currentRoute.value)
-    const fromIndex = prevRouteIndex || 0
+    const toRoute = router.currentRoute.value
+    const fromRoute = prevRoute
+
+    const toImmersive = isImmersive(toRoute)
+    const fromImmersive = isImmersive(fromRoute)
+    const bothImmersive = toImmersive && fromImmersive
+
+    const toIndex = getIndex(toRoute)
+    const fromIndex = getIndex(fromRoute)
     const isBackward = toIndex < fromIndex
 
     let animation
-    if (isBackward) {
-      el.style.zIndex = 1
-      animation = el.animate([
-        { opacity: 0.8 },
-        { opacity: 1 },
-      ], animOptions)
+
+    if (bothImmersive) {
+      // 沉浸式 ↔ 沉浸式：滑动动画
+      if (isBackward) {
+        // 后退：淡入
+        el.style.zIndex = 1
+        animation = el.animate([{ opacity: 0.8 }, { opacity: 1 }], slideOptions)
+      } else {
+        // 前进：clipPath 展开
+        el.style.zIndex = 10
+        animation = el.animate([
+          { clipPath: 'inset(0 0 0 100%)' },
+          { clipPath: 'inset(0 0 0 0%)' }
+        ], slideOptions)
+      }
     } else {
+      // 其他所有情况：淡入淡出
       el.style.zIndex = 10
-      animation = el.animate([
-        { clipPath: 'inset(0 0 0 100%)' },
-        { clipPath: 'inset(0 0 0 0%)' },
-      ], animOptions)
+      animation = el.animate([{ opacity: 0 }, { opacity: 1 }], fadeOptions)
     }
 
     animation.onfinish = () => {
@@ -47,28 +77,40 @@ export function usePageTransition() {
       setTimeout(() => { isAnimating.value = false }, 200)
     }
 
+    prevRoute = toRoute
     prevRouteIndex = toIndex
   }
 
   const onLeave = (el, done) => {
-    const toIndex = getIndex(router.currentRoute.value)
-    const fromIndex = prevRouteIndex || 0
+    const toRoute = router.currentRoute.value
+    const fromRoute = prevRoute
+
+    const toImmersive = isImmersive(toRoute)
+    const fromImmersive = isImmersive(fromRoute)
+    const bothImmersive = toImmersive && fromImmersive
+
+    const toIndex = getIndex(toRoute)
+    const fromIndex = getIndex(fromRoute)
     const isBackward = toIndex < fromIndex
 
     let animation
-    if (isBackward) {
-      el.style.zIndex = 10
-      animation = el.animate([
-        { clipPath: 'inset(0 0 0 0%)' },
-        { clipPath: 'inset(0 0 0 100%)' },
-      ], animOptions)
+
+    if (bothImmersive) {
+      if (isBackward) {
+        el.style.zIndex = 10
+        animation = el.animate([
+          { clipPath: 'inset(0 0 0 0%)' },
+          { clipPath: 'inset(0 0 0 100%)' }
+        ], slideOptions)
+      } else {
+        el.style.zIndex = 1
+        animation = el.animate([{ opacity: 1 }, { opacity: 0.6 }], slideOptions)
+      }
     } else {
       el.style.zIndex = 1
-      animation = el.animate([
-        { opacity: 1 },
-        { opacity: 0.6 },
-      ], animOptions)
+      animation = el.animate([{ opacity: 1 }, { opacity: 0 }], fadeOptions)
     }
+
     animation.onfinish = done
   }
 
