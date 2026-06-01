@@ -200,6 +200,23 @@
   transition: border-color $transition-base, box-shadow $transition-base, transform 0.12s ease-out;
   overflow: hidden;
 
+  // 确保整个按钮区域可点击，内部元素不拦截
+  .hero-button__inner {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 0 $space-lg;
+    pointer-events: none;  // 让点击穿透到父级
+  }
+
+  .hero-button__icon,
+  .hero-button__text {
+    pointer-events: none;
+  }
+
   // 边缘渐变（仿文章卡片，1px 超出边框的发光）
   &::before {
     content: '';
@@ -234,6 +251,7 @@
     opacity: 0.5;
     transition: opacity $transition-base;
     z-index: 2;
+    pointer-events: none;
   }
 
   &:hover {
@@ -245,17 +263,6 @@
   // 点击变暗
   &:active {
     filter: brightness(0.85);
-  }
-
-  // 内部布局
-  .hero-button__inner {
-    position: relative;
-    z-index: 3;
-    display: flex;
-    align-items: center;
-    width: 100%;
-    height: 100%;
-    padding: 0 $space-lg;
   }
 
   // 左侧图标
