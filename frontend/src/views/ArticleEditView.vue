@@ -83,7 +83,7 @@ import { useRouter, useRoute } from 'vue-router'
 import Vditor from 'vditor'
 import 'vditor/dist/index.css'
 import { useUserStore } from '@/stores/user'
-import { getArticleDetail, autoSaveArticle, publishArticle, withdrawArticle, loadArticleContent } from '@/services/articleService'
+import { getArticleDetail, autoSaveArticle, publishArticle, withdrawArticle } from '@/services/articleService'
 import { getCategories, getTags } from '@/services/metaService'
 import { buildUrl } from '@/utils/apiUtils'
 
@@ -170,9 +170,8 @@ const loadArticleData = async () => {
   const result = await getArticleDetail(articleId)
   if (result.success) {
     const info = result.data; editingArticle.value = info
-    let contentToLoad = ''
-    if (info.contentPath) { const cr = await loadArticleContent(info.contentPath); contentToLoad = cr.success ? cr.data : '' }
-    currentArticle.value = { title: info.title, content: contentToLoad, category_id: info.category?.id || null, tag_ids: info.tags?.map(t => t.id) || [] }
+    // 文章内容直接由 API 返回（最新后端将 content 存储在数据库）
+    currentArticle.value = { title: info.title, content: info.content || '', category_id: info.category?.id || null, tag_ids: info.tags?.map(t => t.id) || [] }
     if (info.tags) selectedTags.value = info.tags.map(tag => ({ id: tag.id, name: tag.name }))
     await nextTick(); initVditor(currentArticle.value.content)
   } else { showStatus('获取文章失败: ' + result.message, true); setTimeout(() => router.push('/personal'), 1500) }
@@ -216,7 +215,7 @@ onUnmounted(() => { if (vditorInstance) vditorInstance.destroy() })
 
 <style lang="scss">
 @use 'sass:color';
-@use './test_scss.scss' as *;
+@use './_design.scss' as *;
 
 .article-edit-page {
   position: fixed; inset: 0; z-index: 1;

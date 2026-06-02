@@ -4,14 +4,14 @@
    参考：明日方舟（点线面冷色设计）+ GitHub（暗色层级）
    ============================================================ */
 
-// ========== 1. 导入暗色设计系统（从 test_scss，必须放在最前使变量可用） ==========
-@use '../views/test_scss/tokens' as *;
-@use '../views/test_scss/glass';
-@use '../views/test_scss/buttons';
-@use '../views/test_scss/cards';
-@use '../views/test_scss/forms';
-@use '../views/test_scss/typography';
-@use '../views/test_scss/components';
+// ========== 1. 导入暗色设计系统（必须放在最前使变量可用） ==========
+@use '../views/_design/tokens' as *;
+@use '../views/_design/glass';
+@use '../views/_design/buttons';
+@use '../views/_design/cards';
+@use '../views/_design/forms';
+@use '../views/_design/typography';
+@use '../views/_design/components';
 
 // ========== 2. 全局重置 ==========
 * {
@@ -112,3 +112,27 @@ a {
 .mr-10 { margin-right: 10px; }
 .flex-1 { flex: 1; }
 .flex-2 { flex: 2; }
+
+// ========== 7. 排版工具类（从旧 style.css 迁移） ==========
+.meta-text {
+  font-size: 0.85rem;
+  color: $text-secondary;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-large {
+  font-size: 1.45rem;
+  font-weight: 600;
+  color: $text-primary;
+  line-height: 1.3;
+}
+
+// ========== 8. 字体导入（从旧 style.css 迁移） ==========
+@font-face {
+  font-family: 'PingFangCustom';
+  src: url('@/assets/Font/PingFang SC Heavy.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+}

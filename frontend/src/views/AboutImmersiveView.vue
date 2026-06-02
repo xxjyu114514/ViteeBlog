@@ -97,6 +97,8 @@ const navToAboutDetail = () => {
 </script>
 
 <style lang="scss" scoped>
+@use '@/assets/styles/variables' as *;
+
 $skew-width: 12vw; 
 $gap-width: 18vw;
 
@@ -126,7 +128,7 @@ $anim-curve: cubic-bezier(0.25, 1, 0.5, 1);
   left: -20vw;
   width: calc(#{$gap-width} + 40vw);
   height: 100%;
-  background: #ffffff;
+  background: $bg-surface;
   z-index: 5;
   clip-path: polygon(#{$skew-width} 0, 100% 0, calc(100% - #{$skew-width}) 100%, 0 100%);
   will-change: transform;
@@ -150,14 +152,14 @@ $anim-curve: cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 /* 基础自适应布局 */
-.about-immersive-wrapper { width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; overflow: hidden; background: #000; z-index: 10; }
+.about-immersive-wrapper { width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; overflow: hidden; background: $bg-base; z-index: 10; }
 .base-hero-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('../assets/hero-bg.webp') center center / cover no-repeat; z-index: 1; }
 .immersive-overlay { position: relative; width: 100%; height: 100%; z-index: 4; display: flex; }
-.side-panel { height: 100%; background: #ffffff; display: flex; align-items: center; justify-content: center; }
+.side-panel { height: 100%; background: $bg-surface; display: flex; align-items: center; justify-content: center; }
 .left-panel { flex: 1.5; clip-path: polygon(0 0, 100% 0, calc(100% - #{$skew-width}) 100%, 0 100%); padding-right: 5vw; }
 .center-gap { width: $gap-width; position: relative; }
 .right-panel { flex: 1; clip-path: polygon(#{$skew-width} 0, 100% 0, 100% 100%, 0 100%); padding-left: 5vw; cursor: pointer; }
-.title { font-family: 'PingFang SC Heavy'; font-size: 4rem; margin: 0; }
-.desc { color: #666; margin-top: 1rem; font-size: 1.2rem; }
-.arrow { font-size: 2rem; display: inline-block; margin-top: 10px; }
+.title { font-family: 'PingFang SC Heavy'; font-size: 4rem; margin: 0; color: $text-primary; }
+.desc { color: $text-secondary; margin-top: 1rem; font-size: 1.2rem; }
+.arrow { font-size: 2rem; display: inline-block; margin-top: 10px; color: $text-secondary; }
 </style>

@@ -106,7 +106,7 @@
           .section-description { font-size: 1rem; color: $text-secondary; }
         }
 
-        /* .glass-panel 容器扩展（test_scss 提供背景/边框/装饰线） */
+        /* .glass-panel 容器扩展（_design 设计系统提供背景/边框/装饰线） */
         .panel-scroll {
           height: calc(100% - 80px);
           display: flex;
@@ -225,11 +225,6 @@
   }
 
   .text-center { text-align: center; }
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
 
 @keyframes cardSlideUp {

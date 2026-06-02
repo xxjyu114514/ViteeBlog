@@ -371,7 +371,7 @@ onUnmounted(() => {
 
 <style lang="scss">
 @use 'sass:color';
-@use './test_scss.scss' as *;
+@use './_design.scss' as *;
 
 .pc-page {
   background: url(../assets/personl.webp) right top / cover fixed, $bg-base;

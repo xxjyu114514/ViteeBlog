@@ -84,7 +84,7 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue'
-import { getArticleDetail, reviewArticle, loadArticleContent } from '@/services/articleService'
+import { getArticleDetail, reviewArticle } from '@/services/articleService'
 import { formatDateTime, renderMarkdown } from '@/utils'
 
 const props = defineProps({
@@ -119,14 +119,10 @@ const loadData = async (articleId) => {
   const result = await getArticleDetail(articleId)
   if (result.success) {
     const info = result.data
-    let contentToLoad = ''
-    if (info.contentPath) {
-      const contentResult = await loadArticleContent(info.contentPath)
-      contentToLoad = contentResult.success ? contentResult.data : '[内容加载失败]'
-    }
+    // 文章内容直接由 API 返回（最新后端将 content 存储在数据库）
     articleData.value = {
       ...info,
-      content: contentToLoad || info.summary || '[无内容]',
+      content: info.content || info.summary || '[无内容]',
     }
   } else {
     alert('加载文章详情失败：' + result.message)

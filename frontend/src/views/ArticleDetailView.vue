@@ -61,7 +61,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { getArticleDetail as fetchArticleDetail, softDeleteArticle, loadArticleContent, toggleArticleLike, getArticleLikeCount } from '@/services/articleService'
+import { getArticleDetail as fetchArticleDetail, softDeleteArticle, toggleArticleLike, getArticleLikeCount } from '@/services/articleService'
 import { toggleFavorite, checkFavoriteStatus } from '@/services/favoriteService'
 import { followUser, unfollowUser } from '@/services/socialService'
 import CommentForm from '@/components/CommentForm.vue'
@@ -105,12 +105,8 @@ const loadArticle = async () => {
   const result = await fetchArticleDetail(articleId)
   if (result.success) {
     article.value = result.data
-    if (result.data.contentPath) {
-      const contentResult = await loadArticleContent(result.data.contentPath)
-      articleContent.value = contentResult.success ? contentResult.data : (result.data.content || '')
-    } else {
-      articleContent.value = result.data.content || ''
-    }
+    // 文章内容直接由 API 返回（最新后端将 content 存储在数据库）
+    articleContent.value = result.data.content || ''
     if (userStore.isAuthenticated) {
       const favResult = await checkFavoriteStatus(articleId)
       if (favResult.success) isFavorited.value = favResult.data.favorited

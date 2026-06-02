@@ -46,8 +46,4 @@ const onTransitionLeave = (el, done) => {
 }
 </script>
 
-<style scoped>
-/* ... existing styles ... */
-</style>
-
 <!-- 卡片页面背景由 index.scss 提供 -->

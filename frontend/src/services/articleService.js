@@ -2,7 +2,7 @@
  * 文章服务 — /api/v1/article/*
  * 所有函数返回 ApiResponse 格式
  */
-import { get, post, put, del, uploadFile, fetchFileContent } from '@/api/client'
+import { get, post, put, del, uploadFile } from '@/api/client'
 
 /** GET /article/public/list */
 export const getPublicArticles = (params = {}) =>
@@ -76,12 +76,26 @@ export const togglePinArticle = (id) =>
 export const getArticleArchive = () =>
   get('/article/public/archive')
 
-/** 从后端文件系统加载 Markdown 内容 */
-export const loadArticleContent = async (contentPath) => {
-  const result = await fetchFileContent(contentPath)
-  return result.success ? { success: true, data: result.data } : result
-}
-
 /** GET /article/my/pending-count */
 export const getMyPendingCount = () =>
   get('/article/my/pending-count')
+
+/** GET /article/public/search */
+export const searchArticles = (params = {}) =>
+  get('/article/public/search', params)
+
+/** POST /article/admin/import/single */
+export const importSingleArticle = (file) =>
+  uploadFile('/article/admin/import/single', file, 'file')
+
+/** POST /article/admin/import/batch */
+export const importBatchArticles = (files) =>
+  uploadFile('/article/admin/import/batch', files, 'files')
+
+/** POST /article/admin/upload-images/batch */
+export const batchUploadImages = (file) =>
+  uploadFile('/article/admin/upload-images/batch', file, 'file')
+
+/** GET /users/{userId}/articles */
+export const getUserArticles = (userId, params = {}) =>
+  get(`/users/${userId}/articles`, params)

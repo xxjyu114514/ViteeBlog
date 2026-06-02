@@ -5,10 +5,10 @@
 @use 'sass:color';
 
 // 1. 导入新的设计令牌（冷色调机能风）
-@use '../../views/test_scss/tokens' as *;
+@use '../../views/_design/tokens' as *;
 
 // @forward 必须在变量声明之前，将令牌重新导出给下游使用
-@forward '../../views/test_scss/tokens';
+@forward '../../views/_design/tokens';
 
 // ============================================================
 // 2. 向后兼容别名

@@ -68,7 +68,7 @@ onMounted(() => { fetchList(); requestAnimationFrame(() => { slidIn.value = true
 
 <style lang="scss">
 @use 'sass:color';
-@use './test_scss.scss' as *;
+@use './_design.scss' as *;
 
 .social-page { position: fixed; inset: 0; z-index: 1; overflow: hidden; }
 

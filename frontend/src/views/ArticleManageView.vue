@@ -22,6 +22,7 @@
           <div class="admin-links">
             <router-link to="/comment-reports" class="admin-link">举报管理</router-link>
             <router-link to="/comment-admin" class="admin-link">评论巡查</router-link>
+            <router-link to="/admin-import" class="admin-link">导入管理</router-link>
           </div>
         </div>
 
@@ -130,7 +131,7 @@ onMounted(async () => {
 
 <style lang="scss">
 @use 'sass:color';
-@use './test_scss.scss' as *;
+@use './_design.scss' as *;
 
 .manage-page { position: fixed; inset: 0; z-index: 1; overflow: hidden; }
 .glass-wrap {

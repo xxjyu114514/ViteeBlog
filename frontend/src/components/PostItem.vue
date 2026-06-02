@@ -39,7 +39,3 @@ const handleClick = () => {
 
 import "./PostItem.scss"
 </script>
-
-<style lang="scss" scoped>
-
-</style>
