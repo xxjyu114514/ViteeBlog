@@ -6,7 +6,7 @@ from core.config import settings
 from core.database import init_db, IS_LITE
 from routers.v1 import api_auth, api_article,api_meta,api_comment,api_favorite,api_channel,api_social,api_user
 from fastapi.staticfiles import StaticFiles
-
+from middleware.log_middleware import LogMiddleware
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -15,7 +15,10 @@ def create_app() -> FastAPI:
         version="1.0.0"
     )
 
-    # 1. 配置 CORS
+    # 1. 添加日志中间件（最先执行）
+    app.add_middleware(LogMiddleware)
+
+    # 2. 配置 CORS
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -24,14 +27,14 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # 2. 生命周期事件：启动时初始化数据库
+    # 3. 生命周期事件：启动时初始化数据库
     @app.on_event("startup")
     async def startup_event():
         await init_db()
         mode = "SQLite (Lite)" if IS_LITE else "MySQL (Production)"
         print(f">>> ViteeBlog 启动成功 | 当前模式: {mode}")
 
-    # 3. 注册路由
+    # 4. 注册路由
     app.include_router(api_auth.router, prefix="/api/v1/auth", tags=["认证管理"])
     app.include_router(api_article.router, prefix="/api/v1/article", tags=["文章业务"])
     app.include_router(api_meta.router, prefix="/api/v1/meta", tags=["分类与标签管理"])
@@ -41,7 +44,7 @@ def create_app() -> FastAPI:
     app.include_router(api_social.router, prefix="/api/v1/social", tags=["社交关注"])
     app.include_router(api_user.router, prefix="/api/v1/users", tags=["用户主页"])
 
-    # 4. 挂载静态文件目录
+    # 5. 挂载静态文件目录
     app.mount("/storage", StaticFiles(directory="storage"), name="storage")
 
     @app.get("/", tags=["Root"])
