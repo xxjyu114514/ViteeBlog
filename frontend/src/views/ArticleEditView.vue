@@ -225,7 +225,7 @@ onUnmounted(() => { if (vditorInstance) vditorInstance.destroy() })
 
 .glass-wrap {
   position: absolute; bottom: 0; left: $space-lg; right: $space-lg;
-  height: calc(100vh - 100px); display: flex; flex-direction: column;
+  height: calc(100vh - 90px - 5vh); display: flex; flex-direction: column;
 }
 
 .glass-card-editor {
@@ -234,9 +234,10 @@ onUnmounted(() => { if (vditorInstance) vditorInstance.destroy() })
   border: 1px solid $glass-border; border-bottom: none;
   display: flex; flex-direction: column; height: 100%;
   transform: translateY(100%);
-  transition: transform 0.45s cubic-bezier(0.25, 0.8, 0.25, 1);
+  opacity: 0;
+  transition: transform 0.45s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s ease;
   overflow: hidden;
-  &.slide-in { transform: translateY(0); }
+  &.slide-in { transform: translateY(0); opacity: 1; }
 }
 
 .card-header {

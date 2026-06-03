@@ -57,22 +57,38 @@ const routes = [
   {
     path: '/categories',
     component: () => import('@/views/CategoryManageView.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, noCardTransition: true }
   },
   {
     path: '/tags',
     component: () => import('@/views/TagManageView.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, noCardTransition: true }
   },
   {
     path: '/comment-reports',
     component: () => import('@/views/CommentReportListView.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true }
+    meta: { requiresAuth: true, requiresAdmin: true, noCardTransition: true }
   },
   {
     path: '/comment-admin',
     component: () => import('@/views/CommentAdminView.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true }
+    meta: { requiresAuth: true, requiresAdmin: true, noCardTransition: true }
+  },
+  {
+    path: '/article-import',
+    component: () => import('@/views/ArticleImportView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, noCardTransition: true }
+  },
+  {
+    path: '/admin-dashboard',
+    component: () => import('@/views/AdminDashboardView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, noCardTransition: true }
+  },
+  {
+    path: '/users/:id',
+    name: 'user-profile',
+    component: () => import('@/views/UserProfileView.vue'),
+    meta: { index: 15, title: '用户主页', noCardTransition: true }
   },
   {
     path: '/edit-article',
@@ -109,6 +125,12 @@ const routes = [
     name: 'message-immersive',
     component: MessageImmersiveView,
     meta: { index: 3, title: '留言板' }
+  },
+  {
+    path: '/archive',
+    name: 'archive',
+    component: () => import('@/views/ArchiveView.vue'),
+    meta: { index: 14, title: '文章归档' }
   },
   {
     path: '/message',

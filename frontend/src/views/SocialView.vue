@@ -13,7 +13,7 @@
           </div>
           <StateWrapper :loading="loading" :empty="items.length === 0" :empty-text="tab === 'following' ? '还没有关注任何人' : '还没有粉丝'" @retry="fetchList">
             <div class="user-list">
-              <div v-for="user in items" :key="user.id" class="user-item">
+              <div v-for="user in items" :key="user.id" class="user-item" @click="router.push(`/users/${user.id}`)">
                 <div class="user-avatar">
                   <img v-if="user.avatar" :src="getAvatarUrl(user.avatar)" class="avatar-img" />
                   <span v-else class="avatar-letter">{{ user.username.charAt(0).toUpperCase() }}</span>
@@ -74,7 +74,7 @@ onMounted(() => { fetchList(); requestAnimationFrame(() => { slidIn.value = true
 
 .glass-wrap {
   position: absolute; bottom: 0; left: $space-lg; right: $space-lg;
-  height: calc(100vh - 100px); display: flex; flex-direction: column;
+  height: calc(100vh - 90px - 5vh); display: flex; flex-direction: column;
 }
 
 .glass-card {
@@ -83,9 +83,10 @@ onMounted(() => { fetchList(); requestAnimationFrame(() => { slidIn.value = true
   border: 1px solid $glass-border; border-bottom: none;
   display: flex; flex-direction: column; height: 100%;
   transform: translateY(100%);
-  transition: transform 0.45s cubic-bezier(0.25, 0.8, 0.25, 1);
+  opacity: 0;
+  transition: transform 0.45s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s ease;
   overflow: hidden;
-  &.slide-in { transform: translateY(0); }
+  &.slide-in { transform: translateY(0); opacity: 1; }
 }
 
 .card-header {

@@ -17,9 +17,14 @@
             {{ userStore.userInfo?.role === 'admin' ? '管理员' : '普通用户' }}
           </div>
           <div class="profile-stats">
-            <div class="stat-item"><span class="stat-num">--</span><span class="stat-label">文章</span></div>
-            <div class="stat-item"><span class="stat-num">--</span><span class="stat-label">粉丝</span></div>
-            <div class="stat-item"><span class="stat-num">--</span><span class="stat-label">收藏</span></div>
+            <div class="stat-item"><span class="stat-num">{{ profileStats.totalArticles }}</span><span class="stat-label">文章</span></div>
+            <div class="stat-item"><span class="stat-num">{{ profileStats.followersCount }}</span><span class="stat-label">粉丝</span></div>
+            <div class="stat-item"><span class="stat-num">{{ profileStats.totalFavorites }}</span><span class="stat-label">收藏</span></div>
+          </div>
+          <div class="profile-sub-stats">
+            <div class="sub-stat-item"><span class="sub-stat-num">{{ profileStats.totalViews }}</span><span class="sub-stat-label">阅读</span></div>
+            <div class="sub-stat-item"><span class="sub-stat-num">{{ profileStats.totalLikesReceived }}</span><span class="sub-stat-label">获赞</span></div>
+            <div class="sub-stat-item"><span class="sub-stat-num">{{ profileStats.followingCount }}</span><span class="sub-stat-label">关注</span></div>
           </div>
         </div>
       </div>
@@ -28,7 +33,7 @@
       <div class="pc-right tilt-target">
         <div class="button-panel">
           <div class="hero-row row-new">
-            <div class="hero-button btn-new" @click="handleNav('/edit-article')">
+            <div class="hero-button btn-new" data-path="/edit-article">
               <div class="hero-button__inner">
                 <span class="hero-button__icon">✏️</span>
                 <div class="hero-button__text">
@@ -39,7 +44,7 @@
             </div>
           </div>
           <div class="hero-row row-center row-fav">
-            <div class="hero-button btn-fav" @click="handleNav('/favorites')">
+            <div class="hero-button btn-fav" data-path="/favorites">
               <div class="hero-button__inner">
                 <span class="hero-button__icon">⭐</span>
                 <div class="hero-button__text">
@@ -50,7 +55,7 @@
             </div>
           </div>
           <div class="hero-row row-social">
-            <div class="hero-button btn-social" @click="handleNav('/social')">
+            <div class="hero-button btn-social" data-path="/social">
               <div class="hero-button__inner">
                 <span class="hero-button__icon">👥</span>
                 <div class="hero-button__text">
@@ -61,16 +66,16 @@
             </div>
           </div>
           <div class="hero-row row-double row-bottom">
-            <div class="hero-button hero-btn-half btn-manage" @click="handleNav('/manage-articles')">
+            <div class="hero-button hero-btn-half btn-manage" data-path="/manage-articles">
               <div class="hero-button__inner">
                 <span class="hero-button__icon">📂</span>
                 <div class="hero-button__text">
-                  <span class="hero-button__label">{{ userStore.isAdmin ? '管理员' : '我的文章' }}</span>
-                  <span class="hero-button__sub">MANAGE</span>
+                  <span class="hero-button__label">{{ userStore.isAdmin ? '管理中心' : '我的文章' }}</span>
+                  <span class="hero-button__sub">ADMIN</span>
                 </div>
               </div>
             </div>
-            <div class="hero-button hero-btn-half btn-account" @click="showAccountModal = true">
+            <div class="hero-button hero-btn-half btn-account" data-action="account">
               <div class="hero-button__inner">
                 <span class="hero-button__icon">⚙️</span>
                 <div class="hero-button__text">
@@ -90,13 +95,36 @@
         <div class="modal-box" @click.stop>
           <h3>账户设置</h3>
           <div class="account-actions">
+            <button class="btn btn-outline btn-full" @click="triggerAvatarUpload">上传头像</button>
+            <button class="btn btn-outline btn-full" @click="openEditProfile">编辑资料</button>
             <button class="btn btn-outline btn-full" @click="showChangePwd = true">修改密码</button>
             <button class="btn btn-outline btn-full" :class="{ 'btn-loading': deletingAccount }" :disabled="deletingAccount" @click="handleDeleteAccount">
               {{ deletingAccount ? '注销中...' : '注销账号' }}
             </button>
             <button class="btn btn-glass btn-full" @click="handleLogout">退出登录</button>
           </div>
+          <div v-if="avatarMsg" :class="['modal-msg', avatarErr ? 'err' : 'ok']">{{ avatarMsg }}</div>
           <button class="btn btn-ghost btn-full modal-close-btn" @click="showAccountModal = false">关闭</button>
+          <!-- 隐藏的文件上传输入 -->
+          <input ref="avatarInputRef" type="file" accept="image/*" style="display:none" @change="handleAvatarUpload" />
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- 编辑资料弹窗 -->
+    <Teleport to="body">
+      <div v-if="showEditProfile" class="modal-overlay" @click="showEditProfile = false">
+        <div class="modal-box" @click.stop>
+          <h3>编辑资料</h3>
+          <div v-if="editProfileMsg" :class="['modal-msg', editProfileErr ? 'err' : 'ok']">{{ editProfileMsg }}</div>
+          <input v-model="editProfileForm.username" class="modal-input" placeholder="昵称" maxlength="50" />
+          <textarea v-model="editProfileForm.bio" class="modal-input modal-textarea" placeholder="个人简介（选填）" rows="3" maxlength="200"></textarea>
+          <div class="modal-actions">
+            <button class="btn btn-ghost" @click="showEditProfile = false">取消</button>
+            <button class="btn btn-primary" :class="{ 'btn-loading': editProfileSaving }" :disabled="editProfileSaving || !editProfileForm.username.trim()" @click="handleSaveProfile">
+              {{ editProfileSaving ? '保存中' : '保存' }}
+            </button>
+          </div>
         </div>
       </div>
     </Teleport>
@@ -127,16 +155,30 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import * as authService from '@/services/authService'
+import { getUserProfile } from '@/services/userService'
+import { uploadAvatar, updateProfile } from '@/services/authService'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
+const BACKEND_BASE = API_BASE.replace('/api/v1', '')
 const router = useRouter()
 const userStore = useUserStore()
 
 const avatarUrl = ref(
   userStore.userInfo?.avatar
-    ? API_BASE.replace('/api/v1', '') + userStore.userInfo.avatar
+    ? BACKEND_BASE + userStore.userInfo.avatar
     : null
 )
+
+// 用户主页统计数据
+const profileStats = ref({
+  totalArticles: 0,
+  followersCount: 0,
+  totalFavorites: 0,
+  totalViews: 0,
+  totalLikesReceived: 0,
+  totalComments: 0,
+  followingCount: 0,
+})
 
 // ========= 3D 追踪配置 =========
 const tiltConfig = {
@@ -160,9 +202,143 @@ const handleNav = (path) => {
   setTimeout(() => router.push(path), 350)
 }
 
+// 手动点击检测（绕过 3D transform 下浏览器的 hit-test bug）
+let pcRightClickHandler = null
+const initPcRightClick = () => {
+  const HIT_PADDING = 8 // 容差 px，补偿 AABB 与实际透视梯形之间的偏差
+
+  // 鼠标移动：手动控制 hover 样式
+  const pcRightHoverHandler = (e) => {
+    const pcRight = document.querySelector('.pc-right')
+    if (!pcRight) return
+    // 先清除所有 hover
+    pcRight.querySelectorAll('.hero-button.hover').forEach(el => el.classList.remove('hover'))
+    // 检测当前悬停的按钮
+    const buttons = pcRight.querySelectorAll('.hero-button')
+    for (const btn of buttons) {
+      const rect = btn.getBoundingClientRect()
+      if (e.clientX >= rect.left - HIT_PADDING && e.clientX <= rect.right + HIT_PADDING &&
+          e.clientY >= rect.top - HIT_PADDING && e.clientY <= rect.bottom + HIT_PADDING) {
+        btn.classList.add('hover')
+        // 鼠标样式
+        pcRight.style.cursor = 'pointer'
+        return
+      }
+    }
+    pcRight.style.cursor = ''
+  }
+  document.addEventListener('mousemove', pcRightHoverHandler)
+  // 把引用存起来供 cleanup 使用
+  if (!pcRightClickHandler) pcRightClickHandler = function() {}
+  pcRightClickHandler._hover = pcRightHoverHandler
+
+  // 点击：手动碰撞检测
+  const clickHandler = (e) => {
+    const pcRight = document.querySelector('.pc-right')
+    if (!pcRight || !pcRight.contains(e.target)) return
+    e.preventDefault()
+    e.stopPropagation()
+
+    const buttons = pcRight.querySelectorAll('.hero-button')
+    for (const btn of buttons) {
+      const rect = btn.getBoundingClientRect()
+      // 加容差补偿透视偏差
+      if (e.clientX >= rect.left - HIT_PADDING && e.clientX <= rect.right + HIT_PADDING &&
+          e.clientY >= rect.top - HIT_PADDING && e.clientY <= rect.bottom + HIT_PADDING) {
+        const path = btn.dataset.path
+        if (path) {
+          const finalPath = btn.classList.contains('btn-manage') && userStore.isAdmin
+            ? '/admin-dashboard' : path
+          handleNav(finalPath)
+        }
+        if (btn.dataset.action === 'account') {
+          showAccountModal.value = true
+        }
+        break
+      }
+    }
+  }
+  pcRightClickHandler._click = clickHandler
+  document.addEventListener('click', clickHandler, true)
+
+  // 清理 hover 的兜底
+  const clearHover = () => {
+    const pcRight = document.querySelector('.pc-right')
+    if (pcRight) {
+      pcRight.querySelectorAll('.hero-button.hover').forEach(el => el.classList.remove('hover'))
+      pcRight.style.cursor = ''
+    }
+  }
+  pcRightClickHandler._clear = clearHover
+  document.addEventListener('mouseleave', clearHover)
+}
+
 // 弹窗控制
 const showAccountModal = ref(false)
 const showChangePwd = ref(false)
+const showEditProfile = ref(false)
+
+// 头像上传
+const avatarInputRef = ref(null)
+const avatarMsg = ref('')
+const avatarErr = ref(false)
+const triggerAvatarUpload = () => { avatarInputRef.value?.click() }
+const handleAvatarUpload = async (e) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  avatarMsg.value = ''; avatarErr.value = false
+  const r = await uploadAvatar(file)
+  if (r.success && r.data) {
+    avatarUrl.value = BACKEND_BASE + r.data.url
+    avatarMsg.value = '头像上传成功！'
+    avatarErr.value = false
+    // 更新store中的头像
+    if (userStore.userInfo) userStore.userInfo.avatar = r.data.url
+  } else {
+    avatarMsg.value = r.message || '上传失败'
+    avatarErr.value = true
+  }
+  // 清空 input 以便重复选择同一文件
+  e.target.value = ''
+}
+
+// 编辑资料
+const editProfileForm = ref({ username: '', bio: '' })
+const editProfileMsg = ref('')
+const editProfileErr = ref(false)
+const editProfileSaving = ref(false)
+const openEditProfile = () => {
+  editProfileForm.value = {
+    username: userStore.userInfo?.username || '',
+    bio: userStore.userInfo?.bio || '',
+  }
+  editProfileMsg.value = ''
+  editProfileErr.value = false
+  showEditProfile.value = true
+}
+const handleSaveProfile = async () => {
+  if (!editProfileForm.value.username.trim()) return
+  editProfileSaving.value = true
+  editProfileMsg.value = ''
+  const r = await updateProfile({
+    username: editProfileForm.value.username.trim(),
+    bio: editProfileForm.value.bio.trim() || null,
+  })
+  if (r.success) {
+    editProfileMsg.value = '资料更新成功！'
+    editProfileErr.value = false
+    // 更新store
+    if (userStore.userInfo) {
+      userStore.userInfo.username = editProfileForm.value.username.trim()
+      userStore.userInfo.bio = editProfileForm.value.bio.trim()
+    }
+    setTimeout(() => { showEditProfile.value = false }, 1500)
+  } else {
+    editProfileMsg.value = r.message || '保存失败'
+    editProfileErr.value = true
+  }
+  editProfileSaving.value = false
+}
 
 // 修改密码
 const pwdOld = ref('')
@@ -356,16 +532,45 @@ const destroyTilt = () => {
   })
 }
 
+// 加载用户主页统计数据
+const loadProfileStats = async () => {
+  const userId = userStore.userInfo?.id
+  if (!userId) return
+  const r = await getUserProfile(userId)
+  if (r.success && r.data) {
+    profileStats.value = {
+      totalArticles: r.data.totalArticles ?? 0,
+      followersCount: r.data.followersCount ?? 0,
+      totalFavorites: r.data.totalFavorites ?? 0,
+      totalViews: r.data.totalViews ?? 0,
+      totalLikesReceived: r.data.totalLikesReceived ?? 0,
+      totalComments: r.data.totalComments ?? 0,
+      followingCount: r.data.followingCount ?? 0,
+    }
+    // 如果store中没有头像，从后端数据补全
+    if (!avatarUrl.value && r.data.avatar) {
+      avatarUrl.value = BACKEND_BASE + r.data.avatar
+    }
+  }
+}
+
 // 入场动画触发
 onMounted(() => {
+  loadProfileStats()
   requestAnimationFrame(() => {
     document.querySelector('.pc-layout')?.classList.add('entered')
   })
   initTilt()
+  initPcRightClick()
 })
 
 onUnmounted(() => {
   destroyTilt()
+  if (pcRightClickHandler) {
+    if (pcRightClickHandler._click) document.removeEventListener('click', pcRightClickHandler._click, true)
+    if (pcRightClickHandler._hover) document.removeEventListener('mousemove', pcRightClickHandler._hover)
+    if (pcRightClickHandler._clear) document.removeEventListener('mouseleave', pcRightClickHandler._clear)
+  }
 })
 </script>
 
@@ -525,6 +730,35 @@ onUnmounted(() => {
   margin-top: $space-sm;
 }
 
+.profile-sub-stats {
+  display: flex;
+  gap: $space-md;
+  margin-top: $space-xs;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.sub-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.sub-stat-num {
+  font-family: $font-mono;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: $text-secondary;
+}
+
+.sub-stat-label {
+  font-size: 0.6rem;
+  color: $text-tertiary;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
 .stat-item {
   display: flex;
   flex-direction: column;
@@ -554,8 +788,20 @@ onUnmounted(() => {
 .pc-right .button-panel .btn-new     { width: 240px; height: 120px; margin-left: 80px; }
 .pc-right .button-panel .btn-fav     { width: 240px; height: 120px; margin-right: 80px; }
 .pc-right .button-panel .btn-social  { width: 240px; height: 120px; margin-left: 80px; }
-.pc-right .button-panel .btn-manage  { width: 200px; height: 120px; }
-.pc-right .button-panel .btn-account { width: 120px; height: 120px; }
+/* 底部两个按钮在 flex row-double 中由 .hero-btn-half 控制 50% 宽度 */
+.pc-right .button-panel .btn-manage,
+.pc-right .button-panel .btn-account { height: 120px; }
+/* 右侧按钮禁用浏览器 hit-test，由自定义 JS 手动检测点击 */
+.pc-right .hero-button { pointer-events: none; }
+.pc-right .hero-button * { pointer-events: none; }
+/* 手动 hover 样式（替代 :hover，因为 pointer-events: none 禁用浏览器hover） */
+.pc-right .hero-button.hover {
+  border-color: $glass-border-hover;
+  box-shadow: $glow-brand;
+}
+.pc-right .hero-button.hover::after {
+  opacity: 1;
+}
 
 /* 通用 loading 样式 */
 .btn-loading {
@@ -618,6 +864,12 @@ onUnmounted(() => {
   border: 1px solid $glass-border;
   color: $text-primary;
   font-size: 0.95rem;
+}
+.modal-textarea {
+  resize: vertical;
+  font-family: $font-sans;
+  min-height: 60px;
+  box-sizing: border-box;
 }
 .modal-actions {
   display: flex;
