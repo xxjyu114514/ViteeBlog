@@ -274,33 +274,6 @@ export const uploadFile = async (path, file, fieldName = 'file', extraFields = {
   }
 }
 
-/** 获取后端文件内容（如 content_path 指向的 Markdown 文件） */
-export const fetchFileContent = async (contentPath) => {
-  if (!contentPath) return createResponse({ success: false, message: '路径为空' })
-  try {
-    const backendBase = BASE_URL.replace('/api/v1', '')
-    let normalized = contentPath.replace(/\\/g, '/')
-    if (!normalized.startsWith('/')) normalized = '/' + normalized
-    const url = `${backendBase}${normalized}`
-
-    const response = await fetch(url)
-    if (response.ok) {
-      const text = await response.text()
-      return createResponse({ data: text })
-    }
-    // 尝试回退路径
-    const fallbackUrl = `${backendBase}/${contentPath.replace(/^\/+/, '').replace(/\\/g, '/')}`
-    const fallbackResponse = await fetch(fallbackUrl)
-    if (fallbackResponse.ok) {
-      const text = await fallbackResponse.text()
-      return createResponse({ data: text })
-    }
-    return createResponse({ success: false, message: '文件不存在' })
-  } catch (err) {
-    return createResponse({ success: false, message: '加载文件失败' })
-  }
-}
-
 export default {
   request,
   get,
@@ -308,7 +281,6 @@ export default {
   put,
   del,
   uploadFile,
-  fetchFileContent,
   toCamelCase,
   toSnakeCase,
   ApiError,

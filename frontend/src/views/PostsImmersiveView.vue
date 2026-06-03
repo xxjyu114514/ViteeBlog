@@ -20,7 +20,7 @@
             <p class="section-description">展示最新的6篇文章</p>
           </div>
           
-          <!-- 玻璃面板容器（test_scss 组件） -->
+          <!-- 玻璃面板容器（_design 设计系统组件） -->
           <div class="glass-panel panel-scroll">
             <!-- 左上角冰蓝装饰线由 .glass-panel 自带的 ::before 提供 -->
             

@@ -93,7 +93,3 @@ defineExpose({
 
 import "./PostList.scss"
 </script>
-
-<style lang="scss" scoped>
-
-</style>

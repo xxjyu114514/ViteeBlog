@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Optional, List
 from fastapi import APIRouter, Depends, Body, HTTPException, status, UploadFile, File, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, and_, func
+from sqlalchemy import select, update, delete, and_, or_, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 
@@ -537,6 +537,61 @@ def parse_docx_file(file_path: str, filename: str) -> tuple:
     if not title:
         title = os.path.splitext(filename)[0]
     
+    # 提取图片逻辑
+    try:
+        image_urls = []
+        
+        # 遍历文档中的所有关系部分，查找图片
+        for rel_id, rel in doc.part.rels.items():
+            # 检查是否为图片关系
+            if hasattr(rel, 'target_part') and hasattr(rel.target_part, 'content_type'):
+                content_type = rel.target_part.content_type
+                if content_type and content_type.startswith('image/'):
+                    try:
+                        # 获取图片的二进制数据
+                        image_blob = rel.target_part.blob
+                        
+                        # 根据 content_type 确定文件扩展名
+                        ext_map = {
+                            'image/png': '.png',
+                            'image/jpeg': '.jpg',
+                            'image/jpg': '.jpg',
+                            'image/gif': '.gif',
+                            'image/bmp': '.bmp',
+                            'image/webp': '.webp',
+                            'image/tiff': '.tiff',
+                        }
+                        ext = ext_map.get(content_type, '.png')  # 默认使用 .png
+                        
+                        # 生成唯一文件名并保存图片
+                        unique_name = f"{uuid.uuid4().hex}{ext}"
+                        dest_path = os.path.join(IMAGE_STORAGE, unique_name)
+                        
+                        # 确保目录存在
+                        os.makedirs(IMAGE_STORAGE, exist_ok=True)
+                        
+                        # 写入图片文件
+                        with open(dest_path, 'wb') as img_file:
+                            img_file.write(image_blob)
+                        
+                        # 记录图片 URL
+                        image_url = f"/storage/images/{unique_name}"
+                        image_urls.append(image_url)
+                        
+                    except Exception:
+                        # 单个图片提取失败不影响其他图片和正文
+                        continue
+        
+        # 如果提取到了图片，在 content 末尾追加图片 Markdown
+        if image_urls:
+            content += '\n\n---\n## 导入的图片\n\n'
+            for url in image_urls:
+                content += f'![]({url})\n'
+    
+    except Exception:
+        # 图片提取整体失败，静默跳过，不影响标题和正文
+        pass
+    
     return title, content
 
 
@@ -614,7 +669,6 @@ async def import_batch_articles(
     for f in files:
         content = await f.read()
         total_size += len(content)
-        await f.seek(0)  # 重置指针以便后续处理
     
     if total_size > 50 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="总文件大小不能超过50MB")
@@ -778,3 +832,52 @@ async def batch_upload_images(
             shutil.rmtree(temp_dir, ignore_errors=True)
         except:
             pass
+
+
+# --- 接口 22：GET /public/search (全文搜索文章) ---
+@router.get("/public/search", summary="全文搜索文章")
+async def search_articles(
+    q: str = Query(..., min_length=1, description="搜索关键词"),
+    page: int = Query(1, ge=1),
+    size: int = Query(10, ge=1, le=50),
+    db: AsyncSession = Depends(get_db)
+):
+    # 验证搜索关键词
+    if not q or not q.strip():
+        raise HTTPException(status_code=400, detail="请输入搜索关键词")
+    
+    # 构建搜索条件：在 title、summary、content 中模糊匹配
+    filters = [
+        Article.status == ArticleStatus.PUBLISHED,
+        Article.deleted_at == None,
+        or_(
+            Article.title.contains(q),
+            Article.summary.contains(q),
+            Article.content.contains(q)
+        )
+    ]
+    
+    # 查询总数
+    count_stmt = select(func.count(Article.id)).where(and_(*filters))
+    total_res = await db.execute(count_stmt)
+    total = total_res.scalar() or 0
+    
+    # 分页查询，按 created_at 倒序
+    query = (
+        select(Article)
+        .where(and_(*filters))
+        .options(selectinload(Article.category), selectinload(Article.tags))
+        .order_by(Article.created_at.desc())
+        .offset((page - 1) * size)
+        .limit(size)
+    )
+    res = await db.execute(query)
+    items = res.scalars().all()
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": math.ceil(total / size) if total > 0 else 0
+    }

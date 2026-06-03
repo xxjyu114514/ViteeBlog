@@ -1,18 +1,18 @@
 /* ============================================================
-   ViteeBlog 样式测试页 — 重构版
+   ViteeBlog 设计系统展示页
    冷色调机能风 + 毛玻璃系统
    参考：明日方舟（点线面冷色设计）+ GitHub（暗色层级）
    ============================================================ */
 
 // ========== @use / @forward 必须位于所有 CSS 规则之前 ==========
-@use './test_scss/tokens' as *;
-@use './test_scss/glass';
-@use './test_scss/buttons';
-@use './test_scss/cards';
-@use './test_scss/forms';
-@use './test_scss/typography';
-@use './test_scss/components';
-@forward './test_scss/tokens';
+@use './_design/tokens' as *;
+@use './_design/glass';
+@use './_design/buttons';
+@use './_design/cards';
+@use './_design/forms';
+@use './_design/typography';
+@use './_design/components';
+@forward './_design/tokens';
 
 // ========== 基础页面布局 ==========
 .test-page {

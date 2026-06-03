@@ -915,7 +915,142 @@ def downgrade():
 
 ---
 
-### 7. 获取待审核文章列表（管理员）
+### 7. 全文搜索文章（公开接口）
+
+**接口**: `GET /article/public/search?q=关键词&page=1&size=10`  
+**权限**: 公开（无需登录）
+
+**查询参数**:
+| 参数 | 类型 | 默认值 | 必填 | 说明 |
+|------|------|--------|------|------|
+| q | string | - | ✅ | 搜索关键词（最少1个字符） |
+| page | int | 1 | ❌ | 页码（从1开始） |
+| size | int | 10 | ❌ | 每页数量（最大50） |
+
+**搜索范围**:
+- ✅ **标题** (`title`): 模糊匹配
+- ✅ **摘要** (`summary`): 模糊匹配
+- ✅ **正文内容** (`content`): 模糊匹配
+
+**过滤条件**:
+- 仅搜索已发布的文章 (`status='published'`)
+- 排除已删除的文章 (`deleted_at IS NULL`)
+
+**成功响应** (200):
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "title": "FastAPI 入门教程",
+      "summary": "本文介绍 FastAPI 的基本用法...",
+      "cover_image": "/storage/images/abc123.jpg",
+      "view_count": 150,
+      "like_count": 10,
+      "status": "published",
+      "published_at": "2026-04-25T10:00:00",
+      "created_at": "2026-04-25T09:00:00",
+      "category_id": 1,
+      "category": { "id": 1, "name": "技术分享" },
+      "tags": [
+        { "id": 1, "name": "FastAPI" },
+        { "id": 2, "name": "Python" }
+      ]
+    }
+  ],
+  "total": 25,
+  "page": 1,
+  "size": 10,
+  "pages": 3
+}
+```
+
+**响应字段说明**:
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| items | array | 搜索结果列表 |
+| total | int | 符合条件的总记录数 |
+| page | int | 当前页码 |
+| size | int | 每页数量 |
+| pages | int | 总页数 |
+
+**错误响应**:
+- `400`: 请输入搜索关键词（关键词为空或只包含空格）
+
+**前端注意**:
+- ✅ 支持在标题、摘要、正文中进行模糊搜索（SQL LIKE）
+- ✅ 使用 `OR` 逻辑：只要任一字段包含关键词即匹配
+- ✅ 按 `created_at` 降序排列（最新文章在前）
+- ✅ 返回统一的分页格式 `{items, total, page, size, pages}`
+- ✅ 预加载了 `category` 和 `tags` 信息，避免 N+1 查询
+- ✅ 无需登录即可使用，适合首页搜索框
+- ⚠️ 建议添加防抖处理（停止输入后300-500ms再请求）
+- ⚠️ 空关键词会返回 400 错误，前端应先校验
+
+**使用场景示例**:
+```javascript
+// 1. 基本搜索
+const searchArticles = async (keyword, page = 1, size = 10) => {
+  if (!keyword || !keyword.trim()) {
+    ElMessage.warning('请输入搜索关键词')
+    return
+  }
+  
+  try {
+    const response = await axios.get('/api/v1/article/public/search', {
+      params: { q: keyword, page, size }
+    })
+    
+    return response.data
+    // { items: [...], total: 25, page: 1, size: 10, pages: 3 }
+  } catch (error) {
+    if (error.response?.status === 400) {
+      ElMessage.error('请输入有效的搜索关键词')
+    } else {
+      ElMessage.error('搜索失败')
+    }
+  }
+}
+
+// 2. 带防抖的搜索（Vue3 组合式 API）
+import { ref, watch } from 'vue'
+import { debounce } from 'lodash-es'
+
+const searchKeyword = ref('')
+const searchResults = ref([])
+const loading = ref(false)
+
+const performSearch = debounce(async (keyword) => {
+  if (!keyword.trim()) {
+    searchResults.value = []
+    return
+  }
+  
+  loading.value = true
+  try {
+    const data = await searchArticles(keyword, 1, 10)
+    searchResults.value = data.items
+  } finally {
+    loading.value = false
+  }
+}, 500)
+
+// 监听搜索框输入
+watch(searchKeyword, (newVal) => {
+  performSearch(newVal)
+})
+
+// 3. 搜索结果高亮显示
+const highlightKeyword = (text, keyword) => {
+  if (!keyword) return text
+  const regex = new RegExp(`(${keyword})`, 'gi')
+  return text.replace(regex, '<mark>$1</mark>')
+}
+```
+
+---
+
+### 8. 获取待审核文章列表（管理员）
 
 **接口**: `GET /article/admin/pending`  
 **权限**: 仅管理员

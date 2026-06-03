@@ -16,14 +16,24 @@ const PersonalCenterView = () => import('../views/PersonalCenterView.vue')
 const ArticleDetailView = () => import('../views/ArticleDetailView.vue')
 const ArticleManageView = () => import('../views/ArticleManageView.vue')
 const ArticleEditView = () => import('../views/ArticleEditView.vue')
-const TestScssView = () => import('../views/test_scss.vue')
+const DesignSystemView = () => import('../views/_design.vue')
+const SearchView = () => import('../views/SearchView.vue')
+const ArchiveView = () => import('../views/ArchiveView.vue')
+const AdminImportView = () => import('../views/AdminImportView.vue')
+const UserProfileView = () => import('../views/UserProfileView.vue')
 
 const routes = [
   {
-    path: '/test-scss',
-    name: 'test-scss',
-    component: TestScssView,
-    meta: { index: 99, title: 'SCSS 测试页面' }
+    path: '/design-system',
+    name: 'design-system',
+    component: DesignSystemView,
+    meta: { index: 99, title: '设计系统展示' }
+  },
+  {
+    path: '/test_scss',
+    name: 'test_scss',
+    component: () => import('../views/test_scss.vue'),  // 使用懒加载
+    meta: { index: 100, title: 'SCSS组件测试', hidden: true }  // hidden 可选的，表示不在导航中显示
   },
   {
     path: '/',
@@ -150,11 +160,35 @@ const routes = [
     component: LoginView,
     meta: { index: 4, title: '账号登录', guestOnly: true }
   },
-  { 
+  {
     path: '/personal',
     name: 'personal',
     component: PersonalCenterView,
     meta: { index: 5, title: '个人中心', requiresAuth: true }
+  },
+  {
+    path: '/search',
+    name: 'search',
+    component: SearchView,
+    meta: { index: 40, title: '搜索文章' }
+  },
+  {
+    path: '/archive',
+    name: 'archive',
+    component: ArchiveView,
+    meta: { index: 41, title: '文章归档' }
+  },
+  {
+    path: '/admin-import',
+    name: 'admin-import',
+    component: AdminImportView,
+    meta: { index: 42, title: '导入管理', requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/user/:id',
+    name: 'user-profile',
+    component: UserProfileView,
+    meta: { index: 43, title: '用户主页' }
   }
 ]
 

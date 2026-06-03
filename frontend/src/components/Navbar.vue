@@ -19,6 +19,9 @@
       </div>
 
       <div class="nav-right">
+        <!-- 搜索入口 -->
+        <router-link to="/search" class="search-icon" title="搜索文章">🔍</router-link>
+        
         <!-- 未登录状态：显示LOGIN按钮 -->
         <router-link 
           v-if="!userStore.isAuthenticated" 
@@ -55,7 +58,9 @@ const menuItems = [
 ]
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
+@use '@/assets/styles/variables' as *;
+
 /* ===== 导航栏容器：透明底，让毛玻璃层显现 ===== */
 .navbar-fixed {
   position: fixed;
@@ -69,7 +74,7 @@ const menuItems = [
   border-bottom: none;
 }
 
-/* ===== 毛玻璃层（保留你的原创设计） ===== */
+/* ===== 毛玻璃层（保留原创设计） ===== */
 .dynamic-blur-layer {
   position: absolute;
   top: 0; left: 0;
@@ -97,6 +102,7 @@ const menuItems = [
   font-weight: 900;
   letter-spacing: 3px;
   font-size: 1.25rem;
+  color: $text-primary;
 }
 
 .menu-links {
@@ -111,7 +117,7 @@ const menuItems = [
   position: relative;
   padding: 10px 0;
   transition: opacity 0.3s;
-  color: #e6edf3;
+  color: $text-primary;
 }
 
 .nav-item:hover {
@@ -126,8 +132,17 @@ const menuItems = [
   transform: translateX(-50%);
   width: 6px;
   height: 6px;
-  background: #e6edf3;
+  background: $text-primary;
   border-radius: 50%;
+}
+
+.search-icon {
+  text-decoration: none;
+  font-size: 1.1rem;
+  margin-right: 16px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  &:hover { opacity: 1; }
 }
 
 .login-btn,
@@ -136,6 +151,6 @@ const menuItems = [
   font-weight: 800;
   font-size: 0.85rem;
   letter-spacing: 2px;
-  color: #e6edf3;
+  color: $text-primary;
 }
 </style>

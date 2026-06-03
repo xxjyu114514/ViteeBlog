@@ -16,20 +16,22 @@
     </main>
 
     <footer class="footer">
-      <p>© 2024 个人博客系统. 版权所有.</p> [cite: 10]
+      <p>© 2024 个人博客系统. 版权所有.</p>
     </footer>
   </div>
 </template>
 
 <style lang="scss" scoped>
+@use '@/assets/styles/variables' as *;
+
 .navbar {
   height: 64px;
   display: flex;
   align-items: center;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid $border-color-light;
   position: sticky;
   top: 0;
-  background: rgba(255, 255, 255, 0.8);
+  background: $bg-surface;
   backdrop-filter: blur(10px);
   z-index: 100;
 
@@ -46,6 +48,7 @@
     margin-left: 25px;
     font-weight: 500;
     transition: color 0.3s;
+    color: $text-secondary;
     &:hover { color: $color-primary; }
     &.router-link-active { color: $color-primary; }
   }
