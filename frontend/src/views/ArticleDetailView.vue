@@ -20,7 +20,7 @@
           <h1 class="article-title" v-html="renderedTitle"></h1>
           <div class="article-meta flex-between">
             <div class="meta-info">
-              <span class="author">作者: {{ getAuthorName() }}</span>
+              <span class="author-link" @click="goToAuthorProfile">作者: {{ getAuthorName() }}</span>
               <button v-if="canFollow" class="btn-follow" @click="toggleFollow" :disabled="followLoading">
                 {{ followLoading ? '...' : (isFollowing ? '✓ 已关注' : '+ 关注') }}
               </button>
@@ -160,6 +160,10 @@ const toggleFollow = async () => {
   followLoading.value = false
 }
 
+const goToAuthorProfile = () => {
+  const id = article.value?.author?.id || article.value?.userId
+  if (id) router.push(`/users/${id}`)
+}
 const goBack = () => router.push('/')
 const handleBack = () => router.go(-1)
 
@@ -198,6 +202,10 @@ onMounted(() => { loadArticle() })
     &:hover { color: $color-error; }
     &.liked { color: $color-error; }
     &:disabled { opacity: 0.5; }
+  }
+  .author-link {
+    cursor: pointer; color: $color-primary;
+    &:hover { text-decoration: underline; opacity: 0.8; }
   }
   .btn-follow {
     background: none; border: 1px solid $color-primary;

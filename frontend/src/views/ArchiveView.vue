@@ -1,32 +1,31 @@
 <template>
   <div class="page-wrapper-base">
     <div class="nav-placeholder"></div>
+    <div class="back-button" @click="router.go(-1)">← 返回</div>
     <div class="container-narrow">
-      <h1 class="page-title">文章归档</h1>
+      <h1 class="title-large mb-30">文章归档</h1>
 
       <div v-if="loading" class="loading-state">
         <div class="loading-spinner"></div>
-        <p>加载归档数据...</p>
+        <p>加载中...</p>
       </div>
 
       <div v-else-if="archive.length === 0" class="empty-state">
-        <p>暂无归档数据</p>
+        <p>暂无已发布的文章</p>
       </div>
 
       <div v-else class="archive-list">
-        <div v-for="(yearGroup, yearIdx) in archive" :key="yearIdx" class="year-group">
-          <h2 class="year-title">{{ yearGroup.year }}</h2>
-          <div v-for="(monthGroup, mIdx) in yearGroup.months" :key="mIdx" class="month-group">
-            <h3 class="month-title">{{ monthGroup.month }} 月 ({{ monthGroup.count }})</h3>
+        <div v-for="(group, yearIdx) in groupedArchive" :key="yearIdx" class="archive-year-group">
+          <h2 class="year-title">{{ group.year }} 年</h2>
+          <div class="month-list">
             <div
-              v-for="article in monthGroup.articles"
-              :key="article.id"
-              class="archive-item"
-              @click="goArticle(article.id)"
+              v-for="item in group.months"
+              :key="item.month"
+              class="month-item"
+              @click="goToMonth(item.year, item.month)"
             >
-              <span class="archive-date">{{ formatDate(article.publishedAt || article.createdAt) }}</span>
-              <span class="archive-title">{{ article.title }}</span>
-              <span class="archive-views">{{ article.viewCount }} 阅读</span>
+              <span class="month-name">{{ item.month }} 月</span>
+              <span class="month-count">{{ item.count }} 篇</span>
             </div>
           </div>
         </div>
@@ -36,7 +35,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getArticleArchive } from '@/services/articleService'
 
@@ -44,73 +43,59 @@ const router = useRouter()
 const archive = ref([])
 const loading = ref(true)
 
-const formatDate = (d) => {
-  if (!d) return ''
-  const date = new Date(d)
-  return `${date.getMonth() + 1}-${String(date.getDate()).padStart(2, '0')}`
+const groupedArchive = computed(() => {
+  const map = new Map()
+  for (const item of archive.value) {
+    if (!map.has(item.year)) {
+      map.set(item.year, { year: item.year, months: [] })
+    }
+    map.get(item.year).months.push(item)
+  }
+  return Array.from(map.values()).sort((a, b) => b.year - a.year)
+})
+
+const goToMonth = (year, month) => {
+  router.push(`/posts?year=${year}&month=${month}`)
 }
 
-const goArticle = (id) => router.push(`/article/${id}`)
-
 onMounted(async () => {
-  const result = await getArticleArchive()
-  if (result.success) {
-    archive.value = result.data || []
+  const r = await getArticleArchive()
+  if (r.success) {
+    archive.value = r.data || []
   }
   loading.value = false
 })
 </script>
 
-<style lang="scss" scoped>
+<style scoped lang="scss">
 @use '@/assets/styles/variables' as *;
 
-.page-title {
-  font-size: 1.8rem; font-weight: 700; color: $text-primary;
-  margin: 24px 0 32px;
-}
+.title-large { font-size: 1.8rem; font-weight: 700; color: $text-primary; }
 
-.year-group { margin-bottom: 36px; }
+.mb-30 { margin-bottom: 30px; }
+
+.loading-state { text-align: center; padding: 80px 0; p { color: $text-secondary; } }
+.loading-spinner { width: 28px; height: 28px; border: 2px solid rgba(255,255,255,0.08); border-top-color: $color-primary; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-state { text-align: center; padding: 80px 0; p { color: $text-secondary; } }
+
+.archive-year-group { margin-bottom: 36px; }
 
 .year-title {
-  font-size: 1.5rem; font-weight: 700; color: $color-primary;
-  margin: 0 0 16px; padding-bottom: 8px;
-  border-bottom: 2px solid $color-primary;
+  font-size: 1.4rem; font-weight: 600; color: $color-primary;
+  padding-bottom: 12px; border-bottom: 1px solid $border-white-subtle; margin-bottom: 16px;
 }
 
-.month-group { margin: 0 0 20px 20px; }
+.month-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
 
-.month-title {
-  font-size: 1.1rem; font-weight: 600; color: $text-secondary;
-  margin: 0 0 10px;
+.month-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 18px; background: $bg-surface; border: 1px solid $glass-border;
+  cursor: pointer; transition: all 0.2s ease;
+  &:hover { border-color: $color-primary; background: $bg-hover; }
 }
 
-.archive-item {
-  display: flex; align-items: center; gap: 20px;
-  padding: 10px 16px; cursor: pointer; border-radius: 0;
-  transition: background 0.2s;
-  &:hover { background: $bg-hover; }
-}
-
-.archive-date {
-  flex-shrink: 0; width: 50px;
-  font-size: 0.85rem; color: $text-tertiary; font-family: $font-mono;
-}
-
-.archive-title {
-  flex: 1; font-size: 0.95rem; color: $text-primary;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  &:hover { color: $color-primary; }
-}
-
-.archive-views {
-  flex-shrink: 0; font-size: 0.8rem; color: $text-tertiary;
-}
-
-.loading-state, .empty-state { text-align: center; padding: 80px 0; color: $text-secondary; }
-
-.loading-spinner {
-  width: 28px; height: 28px; margin: 0 auto 12px;
-  border: 3px solid $border-color-light; border-top-color: $color-primary;
-  border-radius: 50%; animation: spin 0.8s linear infinite;
-}
+.month-name { font-weight: 500; color: $text-primary; font-size: 0.95rem; }
+.month-count { font-size: 0.8rem; color: $text-tertiary; }
 </style>

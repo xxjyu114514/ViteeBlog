@@ -22,7 +22,7 @@
           <div class="admin-links">
             <router-link to="/comment-reports" class="admin-link">举报管理</router-link>
             <router-link to="/comment-admin" class="admin-link">评论巡查</router-link>
-            <router-link to="/admin-import" class="admin-link">导入管理</router-link>
+            <router-link to="/article-import" class="admin-link">文章导入</router-link>
           </div>
         </div>
 
@@ -136,7 +136,7 @@ onMounted(async () => {
 .manage-page { position: fixed; inset: 0; z-index: 1; overflow: hidden; }
 .glass-wrap {
   position: absolute; bottom: 0; left: $space-lg; right: $space-lg;
-  height: calc(100vh - 100px); display: flex; flex-direction: column;
+  height: calc(100vh - 90px - 5vh); display: flex; flex-direction: column;
 }
 .glass-card {
   background: rgba(26, 26, 31, 0.92);
@@ -144,9 +144,10 @@ onMounted(async () => {
   border: 1px solid $glass-border; border-bottom: none;
   display: flex; flex-direction: column; height: 100%;
   transform: translateY(100%);
-  transition: transform 0.45s cubic-bezier(0.25, 0.8, 0.25, 1);
+  opacity: 0;
+  transition: transform 0.45s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s ease;
   overflow: hidden;
-  &.slide-in { transform: translateY(0); }
+  &.slide-in { transform: translateY(0); opacity: 1; }
 }
 .card-header {
   display: flex; align-items: center; gap: $space-md;

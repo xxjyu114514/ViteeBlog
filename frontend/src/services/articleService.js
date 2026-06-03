@@ -84,18 +84,35 @@ export const getMyPendingCount = () =>
 export const searchArticles = (params = {}) =>
   get('/article/public/search', params)
 
-/** POST /article/admin/import/single */
+/** POST /article/admin/import/single 单篇导入文章 */
 export const importSingleArticle = (file) =>
   uploadFile('/article/admin/import/single', file, 'file')
 
-/** POST /article/admin/import/batch */
-export const importBatchArticles = (files) =>
-  uploadFile('/article/admin/import/batch', files, 'files')
+/** POST /article/admin/import/batch 批量导入文章（多文件） */
+export const importBatchArticles = async (files) => {
+  const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
+  const { useUserStore } = await import('@/stores/user')
+  const token = useUserStore().token
+  const formData = new FormData()
+  for (const file of files) {
+    formData.append('files', file)
+  }
+  try {
+    const response = await fetch(`${BASE_URL}/article/admin/import/batch`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    })
+    const json = await response.json()
+    if (!response.ok) {
+      return { success: false, message: json?.detail || '批量导入失败', data: null, status: response.status }
+    }
+    return { success: true, data: json, message: null, status: response.status }
+  } catch {
+    return { success: false, message: '网络连接失败', data: null, status: 0 }
+  }
+}
 
-/** POST /article/admin/upload-images/batch */
+/** POST /article/admin/upload-images/batch 批量上传图片（ZIP包） */
 export const batchUploadImages = (file) =>
   uploadFile('/article/admin/upload-images/batch', file, 'file')
-
-/** GET /users/{userId}/articles */
-export const getUserArticles = (userId, params = {}) =>
-  get(`/users/${userId}/articles`, params)

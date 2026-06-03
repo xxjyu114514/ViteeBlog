@@ -7,9 +7,15 @@
       <div class="channel-sidebar">
         <h3 class="sidebar-title">频道</h3>
         <div class="channel-list">
-          <button v-for="ch in channels" :key="ch.id" :class="['channel-item', { active: currentChannel?.id === ch.id }]" @click="selectChannel(ch)">
-            <span class="channel-name"># {{ ch.name }}</span>
-          </button>
+          <div v-for="ch in channels" :key="ch.id" :class="['channel-item-wrap', { active: currentChannel?.id === ch.id }]">
+            <button class="channel-item" @click="selectChannel(ch)">
+              <span class="channel-name"># {{ ch.name }}</span>
+            </button>
+            <div v-if="userStore.isAdmin" class="channel-admin-actions">
+              <button class="ch-btn ch-edit" @click.stop="openEditChannel(ch)" title="编辑频道">✎</button>
+              <button class="ch-btn ch-del" @click.stop="handleDeleteChannel(ch.id)" title="删除频道" :disabled="deletingChannelId === ch.id">✕</button>
+            </div>
+          </div>
         </div>
         <button v-if="userStore.isAdmin" class="btn-add-channel" @click="showCreateChannel = true">+ 创建频道</button>
       </div>
@@ -35,8 +41,9 @@
                 </div>
                 <div v-if="msg.withdrawnAt" class="msg-content withdrawn">该消息已被撤回</div>
                 <div v-else class="msg-content">{{ msg.content }}</div>
-                <div v-if="!msg.withdrawnAt && msg.userId === userStore.userInfo?.id" class="msg-actions">
-                  <button class="btn-withdraw" @click="handleWithdraw(msg.id)">撤回</button>
+                <div class="msg-actions">
+                  <button v-if="!msg.withdrawnAt && msg.userId === userStore.userInfo?.id" class="btn-withdraw" @click="handleWithdraw(msg.id)">撤回</button>
+                  <button v-if="msg.withdrawnAt && msg.userId === userStore.userInfo?.id" class="btn-reedit" @click="handleReEdit(msg.id)" :disabled="reEditingId === msg.id">{{ reEditingId === msg.id ? '加载中...' : '重新编辑' }}</button>
                 </div>
               </div>
             </div>
@@ -62,6 +69,23 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- 编辑频道弹窗 -->
+    <Teleport to="body">
+      <div v-if="showEditChannel" class="modal-overlay" @click="showEditChannel = false">
+        <div class="modal-box" @click.stop>
+          <h3>编辑频道</h3>
+          <div v-if="editChannelMsg" :class="['modal-msg', editChannelErr ? 'err' : 'ok']">{{ editChannelMsg }}</div>
+          <input v-model="editChannelName" placeholder="频道名称" class="modal-input" @keydown.enter="handleUpdateChannel" />
+          <div class="modal-actions">
+            <button class="btn-cancel" @click="showEditChannel = false">取消</button>
+            <button class="btn-confirm" @click="handleUpdateChannel" :disabled="!editChannelName.trim() || updatingChannel">
+              {{ updatingChannel ? '保存中...' : '保存' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -69,7 +93,7 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { getChannels, getMessages, sendMessage, withdrawMessage, createChannel } from '@/services/channelService'
+import { getChannels, getMessages, sendMessage, withdrawMessage, createChannel, getWithdrawnContent, updateChannel, deleteChannel } from '@/services/channelService'
 import { formatDateTime } from '@/utils'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
@@ -87,6 +111,14 @@ const nextCursor = ref(null)
 const messageAreaRef = ref(null)
 const showCreateChannel = ref(false)
 const newChannelName = ref('')
+const reEditingId = ref(null)
+const showEditChannel = ref(false)
+const editChannelName = ref('')
+const editChannelId = ref(null)
+const updatingChannel = ref(false)
+const editChannelMsg = ref('')
+const editChannelErr = ref(false)
+const deletingChannelId = ref(null)
 let pollTimer = null
 
 const getFileUrl = (path) => path ? API_BASE.replace('/api/v1', '') + path : ''
@@ -161,11 +193,70 @@ const handleWithdraw = async (messageId) => {
   else { alert(r.message || '撤回失败') }
 }
 
+const handleReEdit = async (messageId) => {
+  if (reEditingId.value) return
+  reEditingId.value = messageId
+  const r = await getWithdrawnContent(messageId)
+  if (r.success && r.data) {
+    inputContent.value = r.data.content || ''
+    // 聚焦到输入框
+    await nextTick()
+    const textarea = document.querySelector('.chat-input')
+    if (textarea) textarea.focus()
+  } else {
+    alert(r.message || '获取失败')
+  }
+  reEditingId.value = null
+}
+
 const handleCreateChannel = async () => {
   if (!newChannelName.value.trim()) return
   const r = await createChannel(newChannelName.value.trim())
   if (r.success) { channels.value.push(r.data); showCreateChannel.value = false; newChannelName.value = '' }
   else { alert(r.message || '创建失败') }
+}
+
+const openEditChannel = (ch) => {
+  editChannelId.value = ch.id
+  editChannelName.value = ch.name
+  editChannelMsg.value = ''
+  editChannelErr.value = false
+  showEditChannel.value = true
+}
+
+const handleUpdateChannel = async () => {
+  if (!editChannelName.value.trim() || updatingChannel.value) return
+  updatingChannel.value = true
+  editChannelMsg.value = ''
+  const r = await updateChannel(editChannelId.value, editChannelName.value.trim())
+  if (r.success) {
+    editChannelMsg.value = '频道名称已更新'
+    editChannelErr.value = false
+    // 更新本地数据
+    const ch = channels.value.find(c => c.id === editChannelId.value)
+    if (ch) ch.name = editChannelName.value.trim()
+    setTimeout(() => { showEditChannel.value = false }, 1000)
+  } else {
+    editChannelMsg.value = r.message || '更新失败'
+    editChannelErr.value = true
+  }
+  updatingChannel.value = false
+}
+
+const handleDeleteChannel = async (channelId) => {
+  if (!confirm('确定要删除此频道吗？所有聊天记录将一并删除！')) return
+  deletingChannelId.value = channelId
+  const r = await deleteChannel(channelId)
+  if (r.success) {
+    channels.value = channels.value.filter(c => c.id !== channelId)
+    if (currentChannel.value?.id === channelId) {
+      currentChannel.value = null
+      messages.value = []
+    }
+  } else {
+    alert(r.message || '删除失败')
+  }
+  deletingChannelId.value = null
 }
 
 onMounted(() => { fetchChannels() })
@@ -179,8 +270,30 @@ onUnmounted(() => { stopPolling() })
 .channel-sidebar { width: 200px; background: $bg-smoke; padding: 16px; display: flex; flex-direction: column; border-right: 1px solid $border-color; }
 .sidebar-title { font-size: 0.85rem; color: $text-secondary; margin: 0 0 12px; text-transform: uppercase; letter-spacing: 1px; }
 .channel-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
-.channel-item { padding: 8px 12px; border-radius: 8px; cursor: pointer; text-align: left; border: none; background: none; font-size: 0.95rem; color: $text-main; &:hover { background: rgba($color-primary, 0.08); } &.active { background: $color-primary; color: $bg-base; } }
+.channel-item-wrap {
+  display: flex; align-items: center; gap: 4px;
+  border-radius: 8px;
+  &.active { background: $color-primary; .channel-item { color: $bg-base; } }
+}
+.channel-item {
+  flex: 1; padding: 8px 12px; cursor: pointer; text-align: left;
+  border: none; background: none; font-size: 0.95rem; color: $text-main;
+  &:hover { background: rgba($color-primary, 0.08); }
+}
+.channel-admin-actions {
+  display: flex; gap: 2px; padding-right: 4px;
+}
+.ch-btn {
+  width: 20px; height: 20px; padding: 0; border: none; border-radius: 4px;
+  cursor: pointer; font-size: 0.7rem; display: flex; align-items: center; justify-content: center;
+  background: transparent; opacity: 0.5; transition: opacity 0.15s;
+  &:hover { opacity: 1; }
+}
+.ch-edit { color: $color-primary; &:hover { background: rgba($color-primary, 0.15); } }
+.ch-del { color: $color-danger; &:hover { background: rgba($color-danger, 0.15); } &:disabled { opacity: 0.3; cursor: not-allowed; } }
 .btn-add-channel { margin-top: 12px; padding: 8px; border: 1px dashed $border-color; border-radius: 8px; background: none; cursor: pointer; color: $text-secondary; font-size: 0.85rem; &:hover { border-color: $color-primary; color: $color-primary; } }
+
+.modal-msg { padding: 8px 12px; font-size: 0.85rem; margin-bottom: 8px; border-radius: 4px; &.err { background: rgba($color-danger, 0.1); color: $color-danger; } &.ok { background: rgba($color-success, 0.1); color: $color-success; } }
 
 .chat-main { flex: 1; display: flex; flex-direction: column; }
 .chat-placeholder { display: flex; align-items: center; justify-content: center; height: 100%; color: $text-secondary; }
@@ -202,6 +315,7 @@ onUnmounted(() => { stopPolling() })
 .msg-content { font-size: 0.95rem; line-height: 1.5; color: $text-main; white-space: pre-wrap; &.withdrawn { font-style: italic; color: $text-secondary; } }
 .msg-actions { margin-top: 4px; }
 .btn-withdraw { font-size: 0.75rem; color: $color-danger; background: none; border: none; cursor: pointer; padding: 0; &:hover { text-decoration: underline; } }
+.btn-reedit { font-size: 0.75rem; color: $color-primary; background: none; border: none; cursor: pointer; padding: 0; &:hover { text-decoration: underline; } &:disabled { opacity: 0.5; cursor: not-allowed; } }
 
 .chat-input-area { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid $border-color; background: $bg-surface; }
 .chat-input { flex: 1; padding: 10px 12px; border: 1px solid $border-color; border-radius: 8px; font-size: 0.95rem; resize: none; height: 44px; font-family: inherit; box-sizing: border-box; &:focus { outline: none; border-color: $color-primary; } }
