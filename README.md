@@ -102,7 +102,6 @@ Authorization: Bearer <Your_Token>
 - 由于后端使用了 `Body(embed=True)`，请求体必须是嵌套结构
 - `user_in` 对象包含用户注册信息
 - `email_code` 与 `user_in` 同级
-```
 
 **参数约束**:
 - `username`: 3-50个字符
@@ -1045,6 +1044,93 @@ const highlightKeyword = (text, keyword) => {
   if (!keyword) return text
   const regex = new RegExp(`(${keyword})`, 'gi')
   return text.replace(regex, '<mark>$1</mark>')
+}
+```
+
+---
+
+### 7.1 搜索建议/自动补全（公开接口）
+
+**接口**: `GET /article/public/search/suggest?q=关键词&limit=8`  
+**权限**: 公开（无需登录）
+
+**查询参数**:
+| 参数 | 类型 | 默认值 | 必填 | 说明 |
+|------|------|--------|------|------|
+| q | string | - | ✅ | 搜索关键词（最少1个字符） |
+| limit | int | 8 | ❌ | 返回条数（范围1-20） |
+
+**功能说明**:
+- ✅ 仅搜索文章标题（模糊匹配）
+- ✅ 仅返回已发布且未删除的文章
+- ✅ 按创建时间倒序排列
+- ✅ 返回简化格式，只包含 `id` 和 `title`
+
+**成功响应** (200):
+```json
+[
+  {
+    "id": 1,
+    "title": "FastAPI 入门教程"
+  },
+  {
+    "id": 2,
+    "title": "FastAPI 高级用法"
+  }
+]
+```
+
+**错误响应**:
+- `422`: 参数验证失败（q为空或limit超出范围）
+
+**前端注意**:
+- ✅ 用于搜索框的自动补全功能
+- ✅ 返回数组格式，非分页结构
+- ✅ 建议在用户输入时防抖调用（300-500ms）
+- ✅ 空关键词会返回 422 错误，前端应先校验
+- ⚠️ limit 范围为 1-20，默认返回 8 条
+
+**使用场景示例**:
+```javascript
+// 搜索建议（带防抖）
+import { ref, watch } from 'vue'
+import { debounce } from 'lodash-es'
+
+const searchKeyword = ref('')
+const suggestions = ref([])
+const loading = ref(false)
+
+const fetchSuggestions = async (keyword) => {
+  if (!keyword || !keyword.trim()) {
+    suggestions.value = []
+    return
+  }
+  
+  try {
+    const response = await axios.get('/api/v1/article/public/search/suggest', {
+      params: { q: keyword, limit: 8 }
+    })
+    suggestions.value = response.data
+    // [{ id: 1, title: '...' }, ...]
+  } catch (error) {
+    console.error('获取搜索建议失败:', error)
+  }
+}
+
+// 防抖处理
+const debouncedFetch = debounce((keyword) => {
+  fetchSuggestions(keyword)
+}, 300)
+
+// 监听输入
+watch(searchKeyword, (newVal) => {
+  debouncedFetch(newVal)
+})
+
+// 点击建议项跳转
+const selectSuggestion = (item) => {
+  router.push(`/search?q=${encodeURIComponent(item.title)}&id=${item.id}`)
+  suggestions.value = []
 }
 ```
 
@@ -3364,7 +3450,7 @@ const updateStats = (type, delta) => {
 
 ## 🔄 后续更新计划
 
-- [ ] 文章搜索功能
+- [x] 文章搜索功能（全文搜索 + 搜索建议）
 - [ ] 文章版本历史
 - [x] 图片上传与管理
 - [x] 分类与标签管理（增删改查）
@@ -3373,6 +3459,8 @@ const updateStats = (type, delta) => {
 - [x] 评论系统（发表/回复/删除/举报）
 - [x] 点赞与收藏
 - [x] 个人主页与统计数据
+- [x] 社交关注系统
+- [x] 频道广场聊天系统
 
 ---
 
@@ -3488,6 +3576,7 @@ Authorization: Bearer <Token>
 Authorization: Bearer <Token>  // 可选，登录后才有 is_following 字段
 ```
 
+// 当前用户是否回关了此粉丝
 **成功响应** (200):
 ```json
 {
@@ -3500,7 +3589,7 @@ Authorization: Bearer <Token>  // 可选，登录后才有 is_following 字段
       "role": "common",
       "created_at": "2026-04-20T10:00:00",
       "avatar": null,
-      "is_following": true  // 仅登录后可见，表示当前用户是否关注了此人
+      "is_following": true  
     },
     {
       "id": 5,
@@ -3550,7 +3639,7 @@ Authorization: Bearer <Token>  // 可选，登录后才有 is_following 字段
 ```
 Authorization: Bearer <Token>  // 可选，登录后才有 is_following 字段
 ```
-
+// 当前用户是否回关了此粉丝
 **成功响应** (200):
 ```json
 {
@@ -3563,7 +3652,7 @@ Authorization: Bearer <Token>  // 可选，登录后才有 is_following 字段
       "role": "common",
       "created_at": "2026-04-18T09:00:00",
       "avatar": null,
-      "is_following": true  // 当前用户是否回关了此粉丝
+      "is_following": true  
     },
     {
       "id": 12,
@@ -3778,11 +3867,13 @@ Authorization: Bearer <Token>  // 可选，登录后才有 is_following 字段
 | media_attachments | array | 条件必填 | 媒体附件数组，与 content 至少填一个 |
 | quote_message_id | int | ❌ | 引用的消息ID（可选） |
 
+// 必须符合白名单规则
+ // 可选值: "image", "video", "file"
 **media_attachments 结构**:
 ```json
 {
-  "type": "image",  // 可选值: "image", "video", "file"
-  "url": "/storage/images/abc123.jpg"  // 必须符合白名单规则
+  "type": "image", 
+  "url": "/storage/images/abc123.jpg"  
 }
 ```
 
@@ -4023,8 +4114,8 @@ Authorization: Bearer <Token>  // 可选，登录后才有 is_following 字段
 
 ---
 
-**最后更新时间**: 2026-05-22  
-**文档版本**: v5.0  
+**最后更新时间**: 2026-05-27  
+**文档版本**: v5.1  
 **维护者**: Backend Team
 
 ##### 感谢所有贡献者！

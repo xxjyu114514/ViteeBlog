@@ -75,3 +75,9 @@ class ArticleDetailOut(BaseModel):
     tags: List[TagSimpleOut] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SearchSuggestionOut(BaseModel):
+    id: int
+    title: str
+    model_config = ConfigDict(from_attributes=True)

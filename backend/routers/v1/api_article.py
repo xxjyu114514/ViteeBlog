@@ -881,3 +881,32 @@ async def search_articles(
         "size": size,
         "pages": math.ceil(total / size) if total > 0 else 0
     }
+
+
+# --- 接口 23：GET /public/search/suggest (搜索建议/自动补全) ---
+@router.get("/public/search/suggest", summary="搜索建议（自动补全）")
+async def search_suggestions(
+    q: str = Query(..., min_length=1, description="搜索关键词"),
+    limit: int = Query(8, ge=1, le=20, description="返回条数"),
+    db: AsyncSession = Depends(get_db)
+):
+    # 如果 q 为空或只包含空格，返回空列表
+    if not q or not q.strip():
+        return []
+    
+    # 只搜索文章标题，模糊匹配
+    stmt = (
+        select(Article.id, Article.title)
+        .where(
+            Article.status == ArticleStatus.PUBLISHED,
+            Article.deleted_at == None,
+            Article.title.contains(q.strip())
+        )
+        .order_by(Article.created_at.desc())
+        .limit(limit)
+    )
+    res = await db.execute(stmt)
+    rows = res.all()
+    
+    # 只返回 id 和 title 两个字段
+    return [{"id": row.id, "title": row.title} for row in rows]
