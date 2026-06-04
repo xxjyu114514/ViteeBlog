@@ -184,12 +184,8 @@ const routes = [
     component: AdminImportView,
     meta: { index: 42, title: '导入管理', requiresAuth: true, requiresAdmin: true }
   },
-  {
-    path: '/user/:id',
-    name: 'user-profile',
-    component: UserProfileView,
-    meta: { index: 43, title: '用户主页' }
-  }
+
+
 ]
 
 const router = createRouter({
