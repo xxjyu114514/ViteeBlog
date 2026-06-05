@@ -266,8 +266,24 @@ onUnmounted(() => { stopPolling() })
 <style scoped lang="scss">
 @use '@/assets/styles/variables' as *;
 
-.channel-layout { display: flex; height: calc(100vh - 80px); max-width: 1200px; margin: 0 auto; border: 1px solid $border-color; border-radius: 12px; overflow: hidden; }
-.channel-sidebar { width: 200px; background: $bg-smoke; padding: 16px; display: flex; flex-direction: column; border-right: 1px solid $border-color; }
+.page-wrapper-base {
+  background: $bg-dark url(#{$img-message-bg}) center / cover no-repeat fixed;
+  min-height: 100vh;
+  position: relative;
+}
+
+.channel-layout {
+  display: flex;
+  height: calc(100vh - 100px);
+  max-width: 1200px;
+  margin: 0 auto;
+  overflow: hidden;
+  background: rgba(45, 51, 59, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+.channel-sidebar { width: 200px; background: rgba(45, 51, 59, 0.5); padding: 16px; display: flex; flex-direction: column; border-right: 1px solid rgba(255, 255, 255, 0.08); }
 .sidebar-title { font-size: 0.85rem; color: $text-secondary; margin: 0 0 12px; text-transform: uppercase; letter-spacing: 1px; }
 .channel-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
 .channel-item-wrap {
@@ -295,20 +311,20 @@ onUnmounted(() => { stopPolling() })
 
 .modal-msg { padding: 8px 12px; font-size: 0.85rem; margin-bottom: 8px; border-radius: 4px; &.err { background: rgba($color-danger, 0.1); color: $color-danger; } &.ok { background: rgba($color-success, 0.1); color: $color-success; } }
 
-.chat-main { flex: 1; display: flex; flex-direction: column; }
+.chat-main { flex: 1; display: flex; flex-direction: column; background: rgba(45, 51, 59, 0.3); }
 .chat-placeholder { display: flex; align-items: center; justify-content: center; height: 100%; color: $text-secondary; }
-.chat-header { padding: 12px 20px; border-bottom: 1px solid $border-color; h2 { margin: 0; font-size: 1.1rem; } }
+.chat-header { padding: 12px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); h2 { margin: 0; font-size: 1.1rem; } }
 
 .message-area { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
-.btn-load-more { align-self: center; padding: 6px 16px; border: 1px solid $border-color; border-radius: 6px; background: $bg-surface; cursor: pointer; font-size: 0.85rem; &:hover { background: $bg-smoke; } }
+.btn-load-more { align-self: center; padding: 6px 16px; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; background: rgba(255,255,255,0.06); cursor: pointer; font-size: 0.85rem; &:hover { background: rgba(255,255,255,0.10); } }
 .empty-chat { text-align: center; color: $text-secondary; padding: 40px 0; }
 
 .message-item { display: flex; gap: 10px; max-width: 80%; &.own { align-self: flex-end; flex-direction: row-reverse; } &.withdrawn { opacity: 0.5; } }
 .msg-avatar { flex-shrink: 0; }
 .avatar-img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
 .avatar-letter { width: 36px; height: 36px; border-radius: 50%; background: $color-primary; color: $bg-base; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 600; }
-.msg-body { background: $bg-smoke; padding: 8px 12px; border-radius: 12px; min-width: 100px; }
-.own .msg-body { background: rgba($color-primary, 0.1); }
+.msg-body { background: rgba(45, 51, 59, 0.5); padding: 8px 12px; border-radius: 12px; min-width: 100px; }
+.own .msg-body { background: rgba($color-primary, 0.12); }
 .msg-header { display: flex; gap: 8px; margin-bottom: 4px; }
 .msg-author { font-weight: 600; font-size: 0.85rem; color: $text-main; }
 .msg-time { font-size: 0.75rem; color: $text-secondary; }
@@ -317,7 +333,7 @@ onUnmounted(() => { stopPolling() })
 .btn-withdraw { font-size: 0.75rem; color: $color-danger; background: none; border: none; cursor: pointer; padding: 0; &:hover { text-decoration: underline; } }
 .btn-reedit { font-size: 0.75rem; color: $color-primary; background: none; border: none; cursor: pointer; padding: 0; &:hover { text-decoration: underline; } &:disabled { opacity: 0.5; cursor: not-allowed; } }
 
-.chat-input-area { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid $border-color; background: $bg-surface; }
+.chat-input-area { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid rgba(255, 255, 255, 0.08); background: rgba(45, 51, 59, 0.4); }
 .chat-input { flex: 1; padding: 10px 12px; border: 1px solid $border-color; border-radius: 8px; font-size: 0.95rem; resize: none; height: 44px; font-family: inherit; box-sizing: border-box; &:focus { outline: none; border-color: $color-primary; } }
 .btn-send { padding: 0 20px; border: none; border-radius: 8px; background: $color-primary; color: $bg-base; font-weight: 500; cursor: pointer; &:disabled { opacity: 0.5; } &:hover:not(:disabled) { background: $color-primary-hover; } }
 

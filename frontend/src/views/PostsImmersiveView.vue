@@ -161,7 +161,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  background: $bg-dark url('@/assets/hero-bg.webp') center / cover no-repeat;
+  background: $bg-dark url(#{$img-posts-bg}) center / cover no-repeat;
   background-position-y: 30%;
 
   // 页面切换动画用毛玻璃覆盖层（默认 opacity:0 不可见）

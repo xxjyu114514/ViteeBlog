@@ -48,4 +48,3 @@ const handleClick = () => {
   router.push('/message')
 }
 </script>
-

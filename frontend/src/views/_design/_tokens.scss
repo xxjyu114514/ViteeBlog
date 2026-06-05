@@ -1,4 +1,5 @@
 @use 'sass:color';
+@forward '../../assets/styles/images';
 /* ============================================================
    设计令牌 (Design Tokens) — 冷色调机能风  v2
    参考：GitHub Dark 多层灰度体系 + 明日方舟冷色
@@ -88,3 +89,5 @@ $transition-slow:   0.4s ease;
   --bg-elevated: #{$bg-elevated};
   --font-mono: #{$font-mono};
 }
+
+

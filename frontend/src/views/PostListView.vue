@@ -162,7 +162,7 @@ onMounted(() => { loadArticles() })
     position: fixed;
     top: 0; left: 0;
     width: 100vw; height: 100vh;
-    background: $bg-dark url('@/assets/hero-bg.webp') center / cover no-repeat;
+    background: $bg-dark url(#{$img-posts-list-bg}) center / cover no-repeat;
     background-position-y: 30%;
     filter: blur(8px) brightness(0.5);
     z-index: -1;

@@ -101,7 +101,7 @@ a {
 .page-wrapper-base.card-page {
   width: 100vw;
   min-width: 100vw;
-  background: url('../assets/personl.png') right top / cover fixed, $bg-base;
+  background: url(#{$img-personal-bg}) right top / cover fixed, $bg-base;
 }
 
 // ========== 6. 辅助间距类 ==========
@@ -132,7 +132,7 @@ a {
 // ========== 8. 字体导入（从旧 style.css 迁移） ==========
 @font-face {
   font-family: 'PingFangCustom';
-  src: url('@/assets/Font/PingFang SC Heavy.ttf') format('truetype');
+  src: url(#{$font-heavy}) format('truetype');
   font-weight: 900;
   font-style: normal;
 }

@@ -1,0 +1,24 @@
+// ============================================================
+//   ViteeBlog 图片路径集中管理
+//   每个页面独立变量，改一处 → 全项目生效
+//   使用方式：background: url(#{$img-xxx-bg}) center/cover;
+// ============================================================
+
+// --- 全屏背景（各页面独立变量，可指向同一图片也可各自不同） ---
+$img-home-bg:        '@/assets/hero-bg.webp';   // 首页
+$img-posts-bg:       '@/assets/hero-bg.webp';   // 文章列表（沉浸式）
+$img-posts-list-bg:  '@/assets/hero-bg.webp';   // 文章列表（子页面）
+$img-post-detail-bg: '@/assets/hero-bg.webp';   // 文章详情
+$img-about-bg:       '@/assets/hero-bg.webp';   // 关于页面 / 设计系统
+$img-message-bg:     '@/assets/hero-bg.webp';   // 留言（子页面）
+$img-personal-bg:    '@/assets/personl.webp';   // 个人主页
+
+// --- 团队头像（关于页面，放 assets/team/ 目录下） ---
+$img-team-1:  '@/assets/team/photo-1.jpg';   // 北极星
+$img-team-2:  '@/assets/team/photo-2.jpg';   // 方舟骑士
+$img-team-3:  '@/assets/team/photo-3.jpg';   // 数据游侠
+$img-team-4:  '@/assets/team/photo-4.jpg';   // 代码诗人
+$img-team-5:  '@/assets/team/photo-5.jpg';   // 观测者
+
+// --- 字体文件 ---
+$font-heavy:    '@/assets/Font/PingFang SC Heavy.ttf';  // 标题字体

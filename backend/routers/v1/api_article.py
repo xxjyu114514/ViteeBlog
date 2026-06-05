@@ -17,7 +17,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 
 from dependencies import get_db, get_current_user, allow_admin_only, get_current_user_optional
-from models.blog_models import Article, ArticleStatus, User, Category, Tag, UserRole, article_tag, ArticleLike
+from models.blog_models import Article, ArticleStatus, User, Category, Tag, UserRole, article_tag, ArticleLike, Comment
 from schemas.article_schema import ArticleCreate, ArticleReviewAction, ArticleDetailOut
 
 router = APIRouter()
@@ -341,7 +341,28 @@ async def list_public_articles(page: int = Query(1, ge=1), size: int = Query(10,
     total_res = await db.execute(select(func.count()).select_from(query.subquery()))
     total = total_res.scalar() or 0
     res = await db.execute(query.offset((page - 1) * size).limit(size))
-    return {"items": res.scalars().all(), "total": total, "page": page, "size": size, "pages": math.ceil(total / size)}
+    articles = res.scalars().all()
+    # 填充 like_count / comment_count（非 DB 列，需单独查询）
+    if articles:
+        article_ids = [a.id for a in articles]
+        # 点赞数
+        like_counts = await db.execute(
+            select(ArticleLike.article_id, func.count().label('cnt'))
+            .where(ArticleLike.article_id.in_(article_ids))
+            .group_by(ArticleLike.article_id)
+        )
+        like_map = {row.article_id: row.cnt for row in like_counts}
+        # 评论数
+        comment_counts = await db.execute(
+            select(Comment.article_id, func.count().label('cnt'))
+            .where(Comment.article_id.in_(article_ids), Comment.deleted_at == None)
+            .group_by(Comment.article_id)
+        )
+        comment_map = {row.article_id: row.cnt for row in comment_counts}
+        for a in articles:
+            a.like_count = like_map.get(a.id, 0)
+            a.comment_count = comment_map.get(a.id, 0)
+    return {"items": articles, "total": total, "page": page, "size": size, "pages": math.ceil(total / size)}
 
 
 # --- 接口 14：GET /admin/all-articles (全站文章列表) ---

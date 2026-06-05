@@ -153,7 +153,7 @@ $anim-curve: cubic-bezier(0.25, 1, 0.5, 1);
 
 /* 基础自适应布局 */
 .about-immersive-wrapper { width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; overflow: hidden; background: $bg-base; z-index: 10; }
-.base-hero-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('../assets/hero-bg.webp') center center / cover no-repeat; z-index: 1; }
+.base-hero-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url(#{$img-about-bg}) center center / cover no-repeat; z-index: 1; }
 .immersive-overlay { position: relative; width: 100%; height: 100%; z-index: 4; display: flex; }
 .side-panel { height: 100%; background: $bg-surface; display: flex; align-items: center; justify-content: center; }
 .left-panel { flex: 1.5; clip-path: polygon(0 0, 100% 0, calc(100% - #{$skew-width}) 100%, 0 100%); padding-right: 5vw; }

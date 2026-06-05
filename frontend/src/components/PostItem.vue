@@ -1,7 +1,7 @@
 <template>
   <div class="post-item-card card card-hover" @click="handleClick">
     <div class="post-meta meta-text">
-      <span class="date">{{ formatDate(post.published_at) }}</span>
+      <span class="date">{{ formatDate(post.publishedAt) }}</span>
       <span class="dot">·</span>
       <span class="views">{{ post.viewCount }} 阅读</span>
     </div>

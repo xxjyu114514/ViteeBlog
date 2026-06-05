@@ -13,32 +13,36 @@
       <div
         v-for="(person, idx) in team"
         :key="idx"
-        class="gallery-item"
-        :class="{ expanded: expandedIndex === idx, collapsed: expandedIndex !== -1 && expandedIndex !== idx }"
-        :style="getItemStyle(idx)"
-        @click="toggleExpand(idx)"
+        class="gallery-item-wrap"
+        :class="{ 'is-hidden': expandedIndex !== -1 && expandedIndex !== idx }"
       >
-        <!-- 左：人物图片 / 右：纯色背景 -->
-        <div class="person-bg" :style="{ background: person.gradient }"></div>
-        <img class="person-img" :src="person.image" :alt="person.name" />
-
-        <!-- 折叠时：名字浮在底部 -->
+        <!-- 名字在矩形的上面 -->
         <Transition name="label-fade">
           <div v-if="expandedIndex !== idx" class="person-label">
             <span class="person-name">{{ person.name }}</span>
           </div>
         </Transition>
 
-        <!-- 展开时：右侧人物介绍 -->
-        <Transition name="detail-slide">
-          <div v-if="expandedIndex === idx" class="person-detail">
-            <div class="person-info">
-              <h2 class="detail-name">{{ person.name }}</h2>
-              <p class="detail-role">{{ person.role }}</p>
-              <p class="detail-desc">{{ person.description }}</p>
+        <div
+          class="gallery-item"
+          :class="{ expanded: expandedIndex === idx }"
+          :style="getItemStyle(idx)"
+          @click="toggleExpand(idx)"
+        >
+          <div class="person-bg" :style="{ background: person.gradient }"></div>
+          <img class="person-img" :src="person.image" :alt="person.name" />
+
+          <!-- 展开时：右侧人物介绍 -->
+          <Transition name="detail-slide">
+            <div v-if="expandedIndex === idx" class="person-detail">
+              <div class="person-info">
+                <h2 class="detail-name">{{ person.name }}</h2>
+                <p class="detail-role">{{ person.role }}</p>
+                <p class="detail-desc">{{ person.description }}</p>
+              </div>
             </div>
-          </div>
-        </Transition>
+          </Transition>
+        </div>
       </div>
     </section>
   </div>
@@ -72,36 +76,36 @@ const team = [
   {
     name: 'xxjyu',
     role: '创始人 & 全栈工程师',
-    description: '擅长 Vue 3、FastAPI、PostgreSQL，专注于构建高性能 Web 应用。热爱开源，持续探索前沿技术。',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=900&fit=crop',
+    description: '擅长 Vue 3、FastAPI、Mysql 专注于构建高性能 Web 应用。热爱开源，持续探索前沿技术。请支持异世界情绪谢谢',
+    image: new URL('@/assets/team/photo-1.jpg', import.meta.url).href,
     gradient: 'linear-gradient(to top, #0f0c29 0%, #0f0c29 80%, transparent 100%)',
   },
   {
-    name: '区',
+    name: '鱼生manman香',
     role: 'UI/UX 设计师',
-    description: '冷色调设计语言的缔造者。专注毛玻璃与机能风格的融合，追求极致的视觉体验与交互细节。',
-    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&h=900&fit=crop',
+    description: '冷色调设计语言的缔造者。专注毛玻璃与机能风格的融合，追求极致的视觉体验与交互细节。Tell Me Tell Me 鏡よ鏡一番 好きな私になるの',
+    image: new URL('@/assets/team/photo-2.jpg', import.meta.url).href,
     gradient: 'linear-gradient(to top, #1a1a2e 0%, #1a1a2e 80%, transparent 100%)',
   },
   {
-    name: '杨威先生',
+    name: '张雪峰先生',
     role: '后端架构师',
-    description: 'Python 全栈开发者，精通 FastAPI 与数据库设计。对 API 性能优化与系统架构有深入理解。',
-    image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=600&h=900&fit=crop',
+    description: 'Python 全栈开发者，精通 FastAPI 与数据库设计。对 API 性能优化与系统架构有深入理解。你写不过我你信吗！',
+    image: new URL('@/assets/team/photo-3.jpg', import.meta.url).href,
     gradient: 'linear-gradient(to top, #0d1117 0%, #0d1117 80%, transparent 100%)',
   },
   {
     name: '91丘先生',
-    role: '后端工作者',
-    description: '热爱 Vue 生态与前端工程化。追求代码的可维护性和优雅性，致力于打造流畅的用户体验。',
-    image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&h=900&fit=crop',
+    role: '数据库工程师',
+    description: '追求mysql工程化。追求代码的可维护性和优雅性，致力于打造流畅的用户体验。劳资头像帅否',
+    image: new URL('@/assets/team/photo-4.jpg', import.meta.url).href,
     gradient: 'linear-gradient(to top, #1b1b2f 0%, #1b1b2f 80%, transparent 100%)',
   },
   {
-    name: '周',
+    name: '周孔龙',
     role: '产品经理 & 内容运营',
-    description: '负责博客的内容规划与社区运营。关注开发者成长，致力于打造有温度的技术交流平台。',
-    image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=600&h=900&fit=crop',
+    description: '负责博客的内容规划与社区运营。关注开发者成长，致力于打造有温度的技术交流平台。哈哈哈哈哈哈哈哈哈',
+    image: new URL('@/assets/team/photo-5.jpg', import.meta.url).href,
     gradient: 'linear-gradient(to top, #0a0a23 0%, #0a0a23 80%, transparent 100%)',
   },
 ]
@@ -115,7 +119,7 @@ const toggleExpand = (idx) => {
 const getItemStyle = (idx) => {
   const base = {
     width: expandedIndex.value === -1 ? '20vw' : expandedIndex.value === idx ? '100vw' : '0',
-    height: '100vh',
+    height: '70vh',
   }
   return base
 }
@@ -186,21 +190,27 @@ const getItemStyle = (idx) => {
   overflow: hidden;
 }
 
-.gallery-item {
-  position: relative;
-  flex-shrink: 0;
-  cursor: pointer;
-  overflow: hidden;
-  transition: width 0.6s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.4s ease 0.15s;
+.gallery-item-wrap {
   display: flex;
+  flex-direction: column;
   align-items: center;
+  transition: width 0.6s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.4s ease 0.15s;
 
-  &.collapsed {
+  &.is-hidden {
     width: 0 !important;
     opacity: 0;
     pointer-events: none;
     transition: width 0.5s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.2s ease;
   }
+}
+
+.gallery-item {
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
 }
 
 .person-img {
@@ -210,6 +220,7 @@ const getItemStyle = (idx) => {
   height: 100%;
   z-index: 1;
   object-fit: cover;
+  filter: brightness(0.7);
   transition: filter 0.4s, width 0.6s cubic-bezier(0.65, 0, 0.35, 1);
 }
 
@@ -225,28 +236,21 @@ const getItemStyle = (idx) => {
 }
 
 .gallery-item:hover .person-img {
-  filter: brightness(1.15);
+  filter: brightness(1);
 }
 
 /* 折叠时：底部名字 */
 .person-label {
-  position: absolute;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2;
   white-space: nowrap;
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
   letter-spacing: 0.3em;
+  margin-bottom: 8px;
 }
 
 .person-name {
   font-family: $font-mono;
-  font-size: 1.2rem;
-  font-weight: 700;
+  font-size: 1.6rem;
+  font-weight: 800;
   color: #fff;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
 }
 
 /* 展开时：右侧详情 */

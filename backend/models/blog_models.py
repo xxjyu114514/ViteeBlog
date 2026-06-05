@@ -98,6 +98,7 @@ class Article(Base):
     likes: Mapped[List["ArticleLike"]] = relationship(back_populates="article", cascade="all, delete-orphan")
 
     like_count: int = 0
+    comment_count: int = 0
     is_liked: bool = False
 
 

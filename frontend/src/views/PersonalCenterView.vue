@@ -76,12 +76,9 @@
               </div>
             </div>
             <div class="hero-button hero-btn-half btn-account" data-action="account">
-              <div class="hero-button__inner">
+              <div class="hero-button__inner btn-account__inner">
                 <span class="hero-button__icon">⚙️</span>
-                <div class="hero-button__text">
-                  <span class="hero-button__label">账户设置</span>
-                  <span class="hero-button__sub">SETTINGS</span>
-                </div>
+                <span class="hero-button__label btn-account__label">设置</span>
               </div>
             </div>
           </div>
@@ -609,8 +606,90 @@ onUnmounted(() => {
 @use 'sass:color';
 @use './_design.scss' as *;
 
+// ============================================================
+//   个人主页 — 可调变量集合
+//   每个按钮独立尺寸 / 图标 / 文字，改这里即可
+//   注意：修改文字/图标后需同步改模板中对应内容
+// ============================================================
+
+// --- 按钮面板 ---
+$panel-max-height: 80vh;        // 面板最大高度
+$panel-gap:        $space-md;   // 按钮行间距
+
+// --- 白色渐变（所有 hero-button 共用） ---
+$gradient-start:   0%;
+$gradient-end:     100%;
+$gradient-fade-in: 65%;         // 渐变开始位置
+$gradient-peak:    78%;
+$gradient-stop-1:  80%;
+$gradient-stop-2:  90%;
+$gradient-stop-3:  100%;
+$gradient-opacity: (fade:0.04, mid:0.08, strong:0.10, peak:0.15);
+
+// ============================================================
+//   每个按钮独立配置
+//   w/h = 宽高, offset = 左右偏移, dir = 渐变方向
+//   模板对应 data-path 见下方注释
+// ============================================================
+
+$btn-new: (
+  w:      40vh,                   // 宽度
+  h:      20vh,                   // 高度
+  offset: 5vw,                    // 左偏移
+  dir:    to right,               // 渐变方向
+  icon:   '✏️',                  // 图标
+  label:  '新建文章',              // 主文字
+  sub:    'NEW_POST',             // 副文字
+  path:   '/edit-article',        // 跳转路径
+);
+
+$btn-fav: (
+  w:      38vh,
+  h:      18vh,
+  offset: 5vw,
+  dir:    to right,
+  icon:   '⭐',
+  label:  '已收藏文章',
+  sub:    'FAVORITES',
+  path:   '/favorites',
+);
+
+$btn-social: (
+  w:      36vh,
+  h:      16vh,
+  offset: 5vw,
+  dir:    to right,
+  icon:   '👥',
+  label:  '关注列表',
+  sub:    'SOCIAL',
+  path:   '/social',
+);
+
+$btn-manage: (
+  w:      33vh,                   // row-double 内 50% 宽度
+  h:      17vh,
+  dir:    to right,
+  icon:   '📂',
+  label:  '管理中心',             // 管理员显示此文字
+  label2: '我的文章',             // 普通用户显示此文字（模板中用 v-if）
+  sub:    'ADMIN',
+  path:   '/admin-dashboard',
+  path2:  '/manage-articles',
+);
+
+$btn-account: (
+  w:      17vh,
+  h:      17vh,
+  dir:    to bottom,              // 渐变朝下
+  icon:   '⚙️',
+  label:  '设置',
+  action: 'account',              // data-action
+);
+
+// ============================================================
+
 .pc-page {
-  background: url(../assets/personl.webp) right top / cover fixed, $bg-base;
+  background: url(#{$img-personal-bg}) right top / cover fixed, $bg-base;
   color: $text-primary;
   font-family: $font-sans;
   height: 100vh;
@@ -688,7 +767,8 @@ onUnmounted(() => {
 .button-panel {
   display: flex;
   flex-direction: column;
-  gap: $space-md;
+  gap: $panel-gap;
+  max-height: $panel-max-height;
 }
 .row-center {
   justify-content: center;
@@ -696,9 +776,6 @@ onUnmounted(() => {
 .row-double {
   display: flex;
   gap: $space-md;
-  .hero-btn-half {
-    width: 50%;
-  }
 }
 
 /* 3D 追踪目标 */
@@ -815,13 +892,12 @@ onUnmounted(() => {
   margin-right: 40px;
 }
 
-/* 按钮尺寸 */
-.pc-right .button-panel .btn-new     { width: 240px; height: 120px; margin-left: 80px; }
-.pc-right .button-panel .btn-fav     { width: 240px; height: 120px; margin-right: 80px; }
-.pc-right .button-panel .btn-social  { width: 240px; height: 120px; margin-left: 80px; }
-/* 底部两个按钮在 flex row-double 中由 .hero-btn-half 控制 50% 宽度 */
-.pc-right .button-panel .btn-manage,
-.pc-right .button-panel .btn-account { height: 120px; }
+/* 按钮尺寸（由顶部 $btn-* map 控制） */
+.pc-right .button-panel .btn-new     { width: map-get($btn-new, w); height: map-get($btn-new, h); margin-left: map-get($btn-new, offset); }
+.pc-right .button-panel .btn-fav     { width: map-get($btn-fav, w); height: map-get($btn-fav, h); margin-right: map-get($btn-fav, offset); }
+.pc-right .button-panel .btn-social  { width: map-get($btn-social, w); height: map-get($btn-social, h); margin-left: map-get($btn-social, offset); }
+.pc-right .button-panel .btn-manage  { width: map-get($btn-manage, w); height: map-get($btn-manage, h); }
+.pc-right .button-panel .btn-account { width: map-get($btn-account, w); height: map-get($btn-account, h); }
 /* 右侧按钮禁用浏览器 hit-test，由自定义 JS 手动检测点击 */
 .pc-right .hero-button { pointer-events: none; }
 .pc-right .hero-button * { pointer-events: none; }
@@ -922,5 +998,49 @@ onUnmounted(() => {
 }
 .btn-full {
   width: 100%;
+}
+
+/* ===== 账户设置按钮：方形 + 渐变朝下 + 图标在上 ===== */
+.pc-right .btn-account {
+  background:
+    linear-gradient(map-get($btn-account, dir),
+      transparent $gradient-start,
+      transparent $gradient-fade-in,
+      rgba(255, 255, 255, map-get($gradient-opacity, fade)) $gradient-peak,
+      rgba(255, 255, 255, map-get($gradient-opacity, mid))   $gradient-stop-1,
+      rgba(255, 255, 255, map-get($gradient-opacity, strong)) $gradient-stop-2,
+      rgba(255, 255, 255, map-get($gradient-opacity, peak))  $gradient-stop-3
+    ),
+    rgba($bg-elevated, 0.82);
+}
+
+.btn-account__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-account__label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: $text-primary;
+  font-family: $font-mono;
+  letter-spacing: 0.05em;
+}
+
+/* ===== 新建文章按钮：蓝色渐变 ===== */
+.pc-right .btn-new {
+  background:
+    linear-gradient(to top,
+      rgba(29, 78, 216, 0.28) 0%,
+      rgba(37, 99, 235, 0.22) 10%,
+      rgba(37, 99, 235, 0.15) 25%,
+      rgba(37, 99, 235, 0.06) 38%,
+      transparent 43%,
+      transparent 100%
+    ),
+    rgba($bg-elevated, 0.82);
 }
 </style>

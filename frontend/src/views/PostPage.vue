@@ -242,7 +242,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   display: flex;
   align-items: center;
-  background: $bg-dark url('@/assets/hero-bg.webp') center / cover no-repeat;
+  background: $bg-dark url(#{$img-post-detail-bg}) center / cover no-repeat;
   background-position-y: 30%;
   transition: height 0.5s ease-in-out;
   z-index: 1;

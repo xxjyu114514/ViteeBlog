@@ -310,7 +310,7 @@
     radial-gradient(ellipse at 30% 50%, rgba($color-primary, 0.08) 0%, transparent 60%),
     radial-gradient(ellipse at 70% 50%, rgba($color-secondary, 0.06) 0%, transparent 60%),
     linear-gradient(135deg, $bg-base 0%, $bg-surface 100%);
-  background: url(../../assets/about-bg.jpg) fixed ;
+  background: url(#{$img-about-bg}) fixed ;
 }
 
 // ============================================================
@@ -411,7 +411,7 @@
   display: flex;
   justify-content: flex-start;
   padding: $space-2xl;
-  background: url(../../assets/about-bg.jpg) fixed;
+  background: url(#{$img-about-bg}) fixed;
   min-height: 400px;
   perspective: 800px;
 }

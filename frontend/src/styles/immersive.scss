@@ -46,7 +46,7 @@
   overflow: hidden; background: $bg-dark;
   .hero-static {
     position: relative; width: 100%; height: 100%;
-    background: $bg-dark url('@/assets/hero-bg.webp') center/cover no-repeat; color: $text-primary;
+    background: $bg-dark url(#{$img-home-bg}) center/cover no-repeat; color: $text-primary;
   }
   .hero-content {
     position: absolute; left: 60px; bottom: 80px; text-align: left; z-index: 10; padding: 20px 30px;
@@ -68,7 +68,7 @@
 .posts-immersive-wrapper {
   .hero-static {
     height: 45vh; min-height: 280px; display: flex; align-items: center; position: relative;
-    background: $bg-dark url('@/assets/hero-bg.webp') center/cover no-repeat;
+    background: $bg-dark url(#{$img-posts-bg}) center/cover no-repeat;
     background-position-y: 30%;
 
     .header-content {

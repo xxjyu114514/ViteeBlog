@@ -74,7 +74,7 @@ const loadArticles = async () => {
 const filteredArticles = computed(() => {
   if (currentTab.value === 'hot') {
     // 热门文章按阅读量排序
-    return [...articles.value].sort((a, b) => b.viewCount - a.view_count)
+    return [...articles.value].sort((a, b) => b.viewCount - a.viewCount)
   } else {
     // 最新文章按发布时间排序（已经是降序）
     return articles.value
