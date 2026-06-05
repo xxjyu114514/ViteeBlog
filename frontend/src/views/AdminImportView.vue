@@ -2,7 +2,6 @@
   <div class="page-wrapper-base">
     <div class="nav-placeholder"></div>
     <div class="container-narrow">
-      <div class="back-button" @click="router.go(-1)">← 返回</div>
       <h1 class="page-title">导入管理</h1>
 
       <!-- 单篇导入 -->

@@ -4,7 +4,10 @@
     
     <div class="nav-container container flex-between">
       <div class="logo-section">
-        <span class="logo-text">OBSERVATION</span>
+        <Transition name="logo-swap" mode="out-in">
+          <span v-if="!showBackBtn" key="logo" class="logo-text">OBSERVATION</span>
+          <button v-else key="back" class="btn-back" @click="router.back()"><</button>
+        </Transition>
       </div>
       
       <div class="menu-links">
@@ -45,9 +48,17 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
+const route = useRoute()
+const router = useRouter()
 const userStore = useUserStore()
+
+// 不需要返回按钮的顶层页面
+const mainPages = ['/', '/posts-immersive', '/about-immersive', '/message-immersive', '/personal']
+const showBackBtn = computed(() => !mainPages.includes(route.path))
 
 const menuItems = [
   { name: '首页', path: '/' },
@@ -71,6 +82,23 @@ const menuItems = [
   align-items: center;
   background: transparent;
   border-bottom: none;
+}
+
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+  background: #333;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.1rem;
+  padding: 6px 16px;
+  border: none;
+  border-radius: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  &:active { filter: brightness(0.7); }
 }
 
 /* ===== 毛玻璃层（保留原创设计） ===== */
@@ -151,5 +179,21 @@ const menuItems = [
   font-size: 0.85rem;
   letter-spacing: 2px;
   color: $text-primary;
+}
+
+/* ===== 标题 ↔ 返回按钮切换动画 ===== */
+.logo-swap-enter-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.logo-swap-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.logo-swap-enter-from {
+  opacity: 0;
+  transform: translateX(-12px);
+}
+.logo-swap-leave-to {
+  opacity: 0;
+  transform: translateX(12px);
 }
 </style>

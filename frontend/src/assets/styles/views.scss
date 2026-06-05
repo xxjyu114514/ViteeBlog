@@ -19,3 +19,7 @@
   flex: 1; min-width: 450px; display: flex; align-items: center; justify-content: center; padding: 60px; padding-top: 100px; position: relative; z-index: 10;
   .form-card { width: 100%; max-width: 360px; }
 }
+
+/* ========================================
+   全局返回按钮（统一样式，各视图复用）
+   ======================================== */

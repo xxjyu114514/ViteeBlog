@@ -451,6 +451,51 @@
           </div>
         </div>
       </section>
+
+      <!-- ==================== 16. Hero 蓝色渐变按钮（测试） ==================== -->
+      <section class="component-section">
+        <h2 class="section-title">Hero 蓝色渐变按钮（测试）</h2>
+        <div class="hero-button-group" style="margin-top: 16px; background: #0d1117;">
+          <div class="hero-button-blue">
+            <div class="hero-button__inner">
+              <span class="hero-button__icon">📝</span>
+              <div class="hero-button__text">
+                <span class="hero-button__label">写文章</span>
+                <span class="hero-button__sub">BLUE TEST</span>
+              </div>
+            </div>
+          </div>
+          <div class="hero-button-blue">
+            <div class="hero-button__inner">
+              <span class="hero-button__icon">💬</span>
+              <div class="hero-button__text">
+                <span class="hero-button__label">留言板</span>
+                <span class="hero-button__sub">BLUE TEST</span>
+              </div>
+            </div>
+          </div>
+          <div class="hero-button-blue">
+            <div class="hero-button__inner">
+              <span class="hero-button__icon">👤</span>
+              <div class="hero-button__text">
+                <span class="hero-button__label">关于我</span>
+                <span class="hero-button__sub">BLUE TEST</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="text-secondary" style="margin-top: 12px;">蓝色渐变在底部 1/5（垂直方向 <code>to top</code>），0% 为底部边缘</p>
+      </section>
+
+      <!-- ==================== 17. 返回按钮样式（测试） ==================== -->
+      <section class="component-section">
+        <h2 class="section-title">返回按钮样式（测试）</h2>
+        <div style="display: flex; gap: 24px; flex-wrap: wrap; align-items: center;">
+          <button class="btn-back-test"><</button>
+          <div class="back-link-test">&lt;</div>
+        </div>
+        <p class="text-secondary" style="margin-top: 12px;">预期效果：fixed 浮空、灰底白色加粗 &lt;、0 圆角、min-width: 100px、点击变暗</p>
+      </section>
     </div>
   </div>
 </template>
@@ -638,6 +683,145 @@ const colorTokens = [
 
 .error-message {
   color: $color-error;
+}
+
+// ========== Hero 蓝色渐变按钮测试 ==========
+.hero-button-blue {
+  width: 240px;
+  height: 120px;
+  flex-shrink: 0;
+  background:
+    linear-gradient(to top,
+      rgba(29, 78, 216, 0.28) 0%,
+      rgba(37, 99, 235, 0.22) 10%,
+      rgba(37, 99, 235, 0.15) 25%,
+      rgba(37, 99, 235, 0.06) 38%,
+      transparent 43%,
+      transparent 100%
+    ),
+    rgba($bg-elevated, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  position: relative;
+  cursor: pointer;
+  border: $glass-border;
+  transition: border-color $transition-base, box-shadow $transition-base, transform 0.12s ease-out;
+  overflow: hidden;
+
+  .hero-button__inner {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 0 $space-lg;
+    pointer-events: none;
+  }
+
+  .hero-button__icon,
+  .hero-button__text {
+    pointer-events: none;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    bottom: -1px;
+    background: linear-gradient(to top,
+      rgba(29, 78, 216, 0.28) 0%,
+      rgba(37, 99, 235, 0.22) 10%,
+      rgba(37, 99, 235, 0.15) 25%,
+      rgba(37, 99, 235, 0.06) 38%,
+      transparent 43%,
+      transparent 100%
+    );
+    pointer-events: none;
+    z-index: 1;
+    opacity: 1;
+    border: 1px solid transparent;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 32px;
+    background: $color-primary;
+    opacity: 0.5;
+    transition: opacity $transition-base;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  &:hover {
+    border-color: $glass-border-hover;
+    box-shadow: $glow-brand;
+    &::after { opacity: 1; }
+  }
+
+  &:active {
+    filter: brightness(0.85);
+  }
+
+  .hero-button__icon {
+    font-size: 2rem;
+    line-height: 1;
+    opacity: 0.9;
+    flex-shrink: 0;
+  }
+
+  .hero-button__text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    margin-left: 4rem;
+  }
+
+  .hero-button__label {
+    font-family: $font-mono;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: $text-primary;
+    letter-spacing: 0.03em;
+    line-height: 1.2;
+  }
+
+  .hero-button__sub {
+    font-family: $font-mono;
+    font-size: 0.7rem;
+    color: $text-tertiary;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+}
+
+// ========== 返回按钮测试样式 ==========
+.btn-back-test,
+.back-link-test {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 100px;
+  background: #333;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 0;
+  transition: filter 0.2s;
+  &:active {
+    filter: brightness(0.7);
+  }
 }
 
 // 响应式调整

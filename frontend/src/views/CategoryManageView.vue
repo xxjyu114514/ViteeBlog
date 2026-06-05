@@ -3,7 +3,6 @@
     <div class="glass-wrap">
       <div class="glass-card" :class="{ 'slide-in': slidIn }">
         <div class="card-header">
-          <button class="btn-back" @click="handleBack">← 返回</button>
           <span class="card-title">分类管理</span>
           <div class="header-actions">
             <button class="btn btn-primary btn-sm" @click="showCreateModal" :disabled="creating">{{ creating ? '创建中...' : '新建分类' }}</button>
@@ -131,7 +130,7 @@ onMounted(() => { fetchCategories(); requestAnimationFrame(() => { slidIn.value 
   display: flex; align-items: center; gap: $space-md;
   padding: $space-md $space-xl;
   border-bottom: 1px solid $glass-border; flex-shrink: 0;
-  .btn-back { background: none; border: none; color: $text-secondary; cursor: pointer; font-size: 0.9rem; padding: 0; &:hover { color: $text-primary; } }
+  // .btn-back 5df2572851685c40 views.scss 4e2d5b9a4e49
   .card-title { font-family: $font-mono; font-size: 1rem; font-weight: 600; color: $text-primary; flex: 1; }
   .header-actions { display: flex; align-items: center; gap: $space-sm; }
 }

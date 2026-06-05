@@ -1,7 +1,6 @@
 <template>
   <div class="page-wrapper-base">
     <div class="nav-placeholder"></div>
-    <div class="back-button" @click="router.go(-1)">← 返回</div>
     <div class="container-narrow">
       <h1 class="title-large mb-30">文章归档</h1>
 
