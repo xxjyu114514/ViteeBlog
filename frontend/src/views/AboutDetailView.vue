@@ -74,35 +74,35 @@ const renderedContent = computed(() => renderMarkdown(pageContent))
 // ===== 团队成员数据 =====
 const team = [
   {
-    name: 'xxjyu',
+    name: '78区子羽先生',
     role: '创始人 & 全栈工程师',
     description: '擅长 Vue 3、FastAPI、Mysql 专注于构建高性能 Web 应用。热爱开源，持续探索前沿技术。请支持异世界情绪谢谢',
     image: new URL('@/assets/team/photo-1.jpg', import.meta.url).href,
     gradient: 'linear-gradient(to top, #0f0c29 0%, #0f0c29 80%, transparent 100%)',
   },
   {
-    name: '鱼生manman香',
+    name: '13区智烨',
     role: 'UI/UX 设计师',
     description: '冷色调设计语言的缔造者。专注毛玻璃与机能风格的融合，追求极致的视觉体验与交互细节。Tell Me Tell Me 鏡よ鏡一番 好きな私になるの',
     image: new URL('@/assets/team/photo-2.jpg', import.meta.url).href,
     gradient: 'linear-gradient(to top, #1a1a2e 0%, #1a1a2e 80%, transparent 100%)',
   },
   {
-    name: '张雪峰先生',
+    name: '陈伟权先生',
     role: '后端架构师',
     description: 'Python 全栈开发者，精通 FastAPI 与数据库设计。对 API 性能优化与系统架构有深入理解。你写不过我你信吗！',
     image: new URL('@/assets/team/photo-3.jpg', import.meta.url).href,
     gradient: 'linear-gradient(to top, #0d1117 0%, #0d1117 80%, transparent 100%)',
   },
   {
-    name: '91丘先生',
+    name: '91丘溢聪先生',
     role: '数据库工程师',
     description: '追求mysql工程化。追求代码的可维护性和优雅性，致力于打造流畅的用户体验。劳资头像帅否',
     image: new URL('@/assets/team/photo-4.jpg', import.meta.url).href,
     gradient: 'linear-gradient(to top, #1b1b2f 0%, #1b1b2f 80%, transparent 100%)',
   },
   {
-    name: '周孔龙',
+    name: '周子俊孔龙',
     role: '产品经理 & 内容运营',
     description: '负责博客的内容规划与社区运营。关注开发者成长，致力于打造有温度的技术交流平台。哈哈哈哈哈哈哈哈哈',
     image: new URL('@/assets/team/photo-5.jpg', import.meta.url).href,
