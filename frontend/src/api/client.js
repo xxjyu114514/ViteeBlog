@@ -19,6 +19,42 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api
 const TIMEOUT_MS = 10000
 
 // ============================================================
+// 请求缓存（仅对 GET 生效）
+// ============================================================
+const cacheStore = new Map()
+const CACHE_TTL = 30_000 // 默认 30 秒
+
+const getCacheKey = (path, params) => {
+  if (!params) return path
+  return `${path}?${JSON.stringify(params)}`
+}
+
+const getCached = (key) => {
+  const entry = cacheStore.get(key)
+  if (!entry) return null
+  if (Date.now() > entry.expiresAt) {
+    cacheStore.delete(key)
+    return null
+  }
+  return entry.data
+}
+
+const setCache = (key, data, ttl = CACHE_TTL) => {
+  cacheStore.set(key, { data, expiresAt: Date.now() + ttl })
+}
+
+// ============================================================
+// 重试配置
+// ============================================================
+const MAX_RETRIES = 2
+/** 需要重试的 HTTP 状态码 */
+const isRetryableStatus = (status) =>
+  status === 0 || status === 408 || status === 429 || status === 500 || status === 502 || status === 503
+
+/** 延迟辅助 */
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+// ============================================================
 // snake_case ↔ camelCase 转换工具
 // ============================================================
 
@@ -129,7 +165,10 @@ export async function request(path, options = {}) {
     skipAuth = false,
     silentError = false,
     signal,
+    cacheTTL,        // 仅对 GET 生效，传 null 或 0 跳过缓存
   } = options
+
+  const isGet = method === 'GET'
 
   // 构造完整 URL
   let url = `${BASE_URL}${path}`
@@ -146,77 +185,119 @@ export async function request(path, options = {}) {
     if (qs) url += `?${qs}`
   }
 
-  // 构造 headers
-  const headers = { 'Content-Type': 'application/json' }
-  if (!skipAuth) {
-    const userStore = useUserStore()
-    if (userStore.token) {
-      headers['Authorization'] = `Bearer ${userStore.token}`
-    }
+  // ---- 缓存查找（仅 GET） ----
+  const cacheKey = isGet ? getCacheKey(path, params) : null
+  if (isGet && cacheTTL !== 0 && cacheTTL !== null) {
+    const cached = getCached(cacheKey)
+    if (cached) return cached
   }
 
-  // 构造 fetch 选项
-  const fetchOptions = {
-    method,
-    headers,
-    signal,
-  }
-  if (body) {
-    fetchOptions.body = JSON.stringify(toSnakeCase(body))
-  }
-
-  // 超时控制
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
-  fetchOptions.signal = signal || controller.signal
-
-  try {
-    const response = await fetch(url, fetchOptions)
-    clearTimeout(timeoutId)
-
-    // 空响应（204 No Content）
-    if (response.status === 204) {
-      return createResponse({ status: 204 })
+  // ---- 真正发起请求（含重试） ----
+  const doFetch = async (attempt) => {
+    // 构造 headers
+    const headers = { 'Content-Type': 'application/json' }
+    if (!skipAuth) {
+      const userStore = useUserStore()
+      if (userStore.token) {
+        headers['Authorization'] = `Bearer ${userStore.token}`
+      }
     }
 
-    // 解析 JSON
-    let json
+    // 超时控制器（始终创建，和用户 signal 共存）
+    const timeoutController = new AbortController()
+    const timeoutId = setTimeout(() => timeoutController.abort(), TIMEOUT_MS)
+
+    // 桥接：用户 signal 触发时也取消 timeoutController
+    if (signal) {
+      if (signal.aborted) {
+        clearTimeout(timeoutId)
+        return createResponse({ success: false, message: '请求已取消', status: 0 })
+      }
+      signal.addEventListener('abort', () => timeoutController.abort(), { once: true })
+    }
+
+    // 合并信号：使用 timeoutController 的 signal
+    const fetchOptions = { method, headers, signal: timeoutController.signal }
+    if (body) {
+      fetchOptions.body = JSON.stringify(toSnakeCase(body))
+    }
+
     try {
-      json = await response.json()
-    } catch {
-      json = null
-    }
+      const response = await fetch(url, fetchOptions)
+      clearTimeout(timeoutId)
 
-    if (!response.ok) {
-      // 401 统一处理 —— 排除登录/注册请求
-      if (response.status === 401 && !silentError && !path.includes('/auth/login') && !path.includes('/auth/register')) {
-        const userStore = useUserStore()
-        userStore.logout()
-        window.location.href = '/login'
-        return createResponse({ success: false, message: '登录已过期', status: 401 })
+      // 空响应（204 No Content）
+      if (response.status === 204) {
+        return createResponse({ status: 204 })
       }
 
-      const detail = json?.detail || null
-      return createResponse({
-        success: false,
-        data: json,
-        message: detail,
+      // 解析 JSON
+      let json
+      try {
+        json = await response.json()
+      } catch {
+        json = null
+      }
+
+      if (!response.ok) {
+        // 401 统一处理 —— 排除登录/注册请求
+        if (response.status === 401 && !silentError && !path.includes('/auth/login') && !path.includes('/auth/register')) {
+          const userStore = useUserStore()
+          userStore.logout()
+          import('@/router').then(({ default: router }) => router.push('/login'))
+          return createResponse({ success: false, message: '登录已过期', status: 401 })
+        }
+
+        // 可重试的错误，且未用完重试次数
+        if (attempt < MAX_RETRIES && isRetryableStatus(response.status)) {
+          const delay = Math.min(1000 * Math.pow(2, attempt), 4000) // 1s → 2s → 4s
+          await sleep(delay)
+          return doFetch(attempt + 1)
+        }
+
+        const detail = json?.detail || null
+        return createResponse({
+          success: false,
+          data: json,
+          message: detail,
+          status: response.status,
+        })
+      }
+
+      // 成功：数据转 camelCase
+      const result = createResponse({
+        data: toCamelCase(json),
         status: response.status,
       })
-    }
 
-    // 成功：数据转 camelCase
-    return createResponse({
-      data: toCamelCase(json),
-      status: response.status,
-    })
-  } catch (err) {
-    clearTimeout(timeoutId)
-    if (err.name === 'AbortError') {
-      return createResponse({ success: false, message: '请求超时，请稍后重试', status: 408 })
+      // 缓存成功响应（仅 GET）
+      if (isGet && cacheTTL !== 0 && cacheTTL !== null) {
+        setCache(cacheKey, result, cacheTTL ?? CACHE_TTL)
+      }
+
+      return result
+    } catch (err) {
+      clearTimeout(timeoutId)
+      if (err.name === 'AbortError') {
+        // 区分用户主动取消 vs 超时
+        if (signal?.aborted) {
+          return createResponse({ success: false, message: '请求已取消', status: 0 })
+        }
+        return createResponse({ success: false, message: '请求超时，请稍后重试', status: 408 })
+      }
+
+      // 网络错误可重试
+      if (attempt < MAX_RETRIES) {
+        const delay = Math.min(1000 * Math.pow(2, attempt), 4000)
+        await sleep(delay)
+        return doFetch(attempt + 1)
+      }
+
+      return createResponse({ success: false, message: '网络连接失败，请检查网络后重试', status: 0 })
     }
-    return createResponse({ success: false, message: '网络连接失败，请检查网络后重试', status: 0 })
   }
+
+  return doFetch(0)
 }
 
 // ============================================================

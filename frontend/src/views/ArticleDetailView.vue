@@ -61,7 +61,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { getArticleDetail as fetchArticleDetail, softDeleteArticle, toggleArticleLike, getArticleLikeCount } from '@/services/articleService'
+import { getArticleDetail as fetchArticleDetail, softDeleteArticle, toggleArticleLike } from '@/services/articleService'
 import { toggleFavorite, checkFavoriteStatus } from '@/services/favoriteService'
 import { followUser, unfollowUser } from '@/services/socialService'
 import CommentForm from '@/components/CommentForm.vue'
@@ -99,10 +99,15 @@ const getAuthorName = () => {
 const renderedContent = computed(() => { if (!articleContent.value) return ''; return renderMarkdown(articleContent.value) })
 const renderedTitle = computed(() => { if (!article.value?.title) return ''; return renderInline(article.value.title) })
 
+let loadReqId = 0
+
 const loadArticle = async () => {
+  const reqId = ++loadReqId
   loading.value = true; error.value = null
   const articleId = route.params.id
   const result = await fetchArticleDetail(articleId)
+  // 竞态保护：丢弃过期响应
+  if (reqId !== loadReqId) return
   if (result.success) {
     article.value = result.data
     // 文章内容直接由 API 返回（最新后端将 content 存储在数据库）
@@ -143,12 +148,19 @@ const toggleLike = async () => {
   if (!userStore.isAuthenticated) { router.push('/login'); return }
   if (likeLoading.value) return
   likeLoading.value = true
+  // 乐观更新
+  const wasLiked = isLiked.value
   isLiked.value = !isLiked.value
   likeCount.value += isLiked.value ? 1 : -1
   const r = await toggleArticleLike(route.params.id)
-  if (!r.success) { isLiked.value = !isLiked.value; likeCount.value -= isLiked.value ? 1 : -1 }
-  const countR = await getArticleLikeCount(route.params.id)
-  if (countR.success) likeCount.value = countR.data.likeCount ?? likeCount.value
+  if (!r.success) {
+    // 回滚
+    isLiked.value = wasLiked
+    likeCount.value += wasLiked ? 1 : -1
+  } else if (r.data?.likeCount !== undefined) {
+    // 使用服务端返回的权威计数
+    likeCount.value = r.data.likeCount
+  }
   likeLoading.value = false
 }
 

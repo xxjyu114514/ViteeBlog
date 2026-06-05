@@ -204,54 +204,83 @@ const handleNav = (path) => {
 
 // 手动点击检测（绕过 3D transform 下浏览器的 hit-test bug）
 let pcRightClickHandler = null
+
+/** 缓存按钮尺寸以降低 getBoundingClientRect 调用频率 */
+let cachedButtonRects = []
+let rectThrottleTimer = null
+const RECT_REFRESH_MS = 100 // 每 100ms 刷新一次缓存
+
+const refreshButtonRects = () => {
+  const pcRight = document.querySelector('.pc-right')
+  if (!pcRight) return
+  const buttons = pcRight.querySelectorAll('.hero-button')
+  cachedButtonRects = Array.from(buttons).map((btn) => ({
+    el: btn,
+    rect: btn.getBoundingClientRect(),
+  }))
+}
+
+const throttledRefreshRects = () => {
+  if (rectThrottleTimer) return
+  rectThrottleTimer = setTimeout(() => {
+    refreshButtonRects()
+    rectThrottleTimer = null
+  }, RECT_REFRESH_MS)
+}
+
 const initPcRightClick = () => {
   const HIT_PADDING = 8 // 容差 px，补偿 AABB 与实际透视梯形之间的偏差
 
-  // 鼠标移动：手动控制 hover 样式
+  // 初始化缓存
+  refreshButtonRects()
+  // 窗口 resize 时重新获取尺寸
+  window.addEventListener('resize', refreshButtonRects)
+
+  // 鼠标移动：手动控制 hover 样式（使用缓存的 rect，每 100ms 刷新一次）
   const pcRightHoverHandler = (e) => {
     const pcRight = document.querySelector('.pc-right')
     if (!pcRight) return
     // 先清除所有 hover
     pcRight.querySelectorAll('.hero-button.hover').forEach(el => el.classList.remove('hover'))
-    // 检测当前悬停的按钮
-    const buttons = pcRight.querySelectorAll('.hero-button')
-    for (const btn of buttons) {
-      const rect = btn.getBoundingClientRect()
+
+    // 使用缓存的 rect 进行碰撞检测
+    for (const { el, rect } of cachedButtonRects) {
       if (e.clientX >= rect.left - HIT_PADDING && e.clientX <= rect.right + HIT_PADDING &&
           e.clientY >= rect.top - HIT_PADDING && e.clientY <= rect.bottom + HIT_PADDING) {
-        btn.classList.add('hover')
-        // 鼠标样式
+        el.classList.add('hover')
         pcRight.style.cursor = 'pointer'
         return
       }
     }
     pcRight.style.cursor = ''
+    // 鼠标静止时低频刷新缓存
+    throttledRefreshRects()
   }
   document.addEventListener('mousemove', pcRightHoverHandler)
   // 把引用存起来供 cleanup 使用
   if (!pcRightClickHandler) pcRightClickHandler = function() {}
   pcRightClickHandler._hover = pcRightHoverHandler
 
-  // 点击：手动碰撞检测
+  // 点击：手动碰撞检测（仍使用实时 rect 保证精度）
   const clickHandler = (e) => {
     const pcRight = document.querySelector('.pc-right')
     if (!pcRight || !pcRight.contains(e.target)) return
     e.preventDefault()
     e.stopPropagation()
 
-    const buttons = pcRight.querySelectorAll('.hero-button')
-    for (const btn of buttons) {
-      const rect = btn.getBoundingClientRect()
-      // 加容差补偿透视偏差
+    // 点击时刷新缓存以确保精度
+    refreshButtonRects()
+
+    for (const { el, rect } of cachedButtonRects) {
       if (e.clientX >= rect.left - HIT_PADDING && e.clientX <= rect.right + HIT_PADDING &&
           e.clientY >= rect.top - HIT_PADDING && e.clientY <= rect.bottom + HIT_PADDING) {
-        const path = btn.dataset.path
+        const path = el.dataset.path
         if (path) {
-          const finalPath = btn.classList.contains('btn-manage') && userStore.isAdmin
+          const finalPath = el.classList.contains('btn-manage') && userStore.isAdmin
             ? '/admin-dashboard' : path
           handleNav(finalPath)
         }
-        if (btn.dataset.action === 'account') {
+        if (el.dataset.action === 'account') {
           showAccountModal.value = true
         }
         break
@@ -571,6 +600,8 @@ onUnmounted(() => {
     if (pcRightClickHandler._hover) document.removeEventListener('mousemove', pcRightClickHandler._hover)
     if (pcRightClickHandler._clear) document.removeEventListener('mouseleave', pcRightClickHandler._clear)
   }
+  window.removeEventListener('resize', refreshButtonRects)
+  if (rectThrottleTimer) { clearTimeout(rectThrottleTimer); rectThrottleTimer = null }
 })
 </script>
 

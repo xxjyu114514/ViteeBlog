@@ -52,7 +52,6 @@ const userStore = useUserStore()
 const menuItems = [
   { name: '首页', path: '/' },
   { name: '文章', path: '/posts-immersive' },
-  { name: '归档', path: '/archive' },
   { name: '关于', path: '/about-immersive' },
   { name: '留言', path: '/message-immersive' }
 ]

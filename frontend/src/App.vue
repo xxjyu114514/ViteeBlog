@@ -5,7 +5,7 @@
     <transition @enter="onTransitionEnter" @leave="onTransitionLeave" :css="false">
       <component 
         :is="Component" 
-        :key="route.path" 
+        :key="componentKey" 
         :class="['page-wrapper-base', { 'padding-page': !isImmersivePage, 'card-page': route.meta?.noCardTransition }]" 
       />
     </transition>
@@ -28,20 +28,22 @@ const isImmersivePage = computed(() => {
   return immersiveRoutes.includes(route.name)
 })
 
-// 包装过渡动画：如果目标/来源路由有 noCardTransition，跳过动画
+// 稳定 key：/posts-immersive 和 /posts 使用相同 key 以复用同一组件实例
+const componentKey = computed(() => {
+  if (route.name === 'posts-immersive' || route.name === 'posts') return 'post-page'
+  return route.path
+})
+
+// 包装过渡动画：如果路由有 noCardTransition，跳过动画（仅给后台管理等非过渡页面使用）
 const hasCardTransition = (r) => r?.meta?.noCardTransition
 
 const onTransitionEnter = (el, done) => {
-  if (hasCardTransition(route) || hasCardTransition(router.currentRoute.value)) {
-    done(); return
-  }
+  if (hasCardTransition(route)) { done(); return }
   onEnter(el, done)
 }
 
 const onTransitionLeave = (el, done) => {
-  if (hasCardTransition(route) || hasCardTransition(router.currentRoute.value)) {
-    done(); return
-  }
+  if (hasCardTransition(route)) { done(); return }
   onLeave(el, done)
 }
 </script>

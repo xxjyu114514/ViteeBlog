@@ -53,13 +53,10 @@ export function usePageTransition() {
     let animation
 
     if (bothImmersive) {
-      // 沉浸式 ↔ 沉浸式：滑动动画
       if (isBackward) {
-        // 后退：淡入
         el.style.zIndex = 1
         animation = el.animate([{ opacity: 0.8 }, { opacity: 1 }], slideOptions)
       } else {
-        // 前进：clipPath 展开
         el.style.zIndex = 10
         animation = el.animate([
           { clipPath: 'inset(0 0 0 100%)' },
@@ -67,7 +64,6 @@ export function usePageTransition() {
         ], slideOptions)
       }
     } else {
-      // 其他所有情况：淡入淡出
       el.style.zIndex = 10
       animation = el.animate([{ opacity: 0 }, { opacity: 1 }], fadeOptions)
     }

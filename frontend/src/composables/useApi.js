@@ -18,10 +18,15 @@ export function useApi(fetcher, ...args) {
   const submitLock = ref(false)
 
   const execute = async (...callArgs) => {
-    if (submitLock.value) return null
+    // 检查最后一个参数是否为 options，从中读取 method
+    const lastArg = callArgs.length > 0 ? callArgs[callArgs.length - 1] : null
+    const isQuery = lastArg?.method === 'GET' || lastArg?.method === undefined
+
+    // 非查询请求（POST/PUT/DELETE）受提交锁保护
+    if (!isQuery && submitLock.value) return null
 
     loading.value = true
-    submitLock.value = true
+    if (!isQuery) submitLock.value = true
     error.value = null
 
     try {
@@ -43,7 +48,7 @@ export function useApi(fetcher, ...args) {
       return null
     } finally {
       loading.value = false
-      submitLock.value = false
+      if (!isQuery) submitLock.value = false
     }
   }
 

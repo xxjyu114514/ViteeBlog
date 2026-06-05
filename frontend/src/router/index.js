@@ -3,8 +3,7 @@ import { useUserStore } from '@/stores/user'
 
 // 1. 静态导入核心页面
 import HomeView from '../views/HomeView.vue'
-import PostListView from '../views/PostListView.vue'
-import PostsImmersiveView from '../views/PostsImmersiveView.vue'
+import PostPage from '../views/PostPage.vue'
 import AboutImmersiveView from '../views/AboutImmersiveView.vue'
 import MessageImmersiveView from '../views/MessageImmersiveView.vue'
 
@@ -44,13 +43,13 @@ const routes = [
   {
     path: '/posts-immersive',
     name: 'posts-immersive',
-    component: PostsImmersiveView,
+    component: PostPage,
     meta: { index: 1, title: '文章列表' }
   },
   {
     path: '/posts',
     name: 'posts',
-    component: PostListView,
+    component: PostPage,
     meta: { index: 10, title: '文章列表' }
   },
   {
