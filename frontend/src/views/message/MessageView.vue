@@ -275,9 +275,22 @@ onUnmounted(() => { stopPolling() })
 @use '@/assets/styles/variables' as *;
 
 .page-wrapper-base {
-  background: $bg-dark url(#{$img-message-bg}) center / cover no-repeat fixed;
+  background: $bg-dark;
   min-height: 100vh;
   position: relative;
+
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: url(#{$img-message-bg}) center / cover no-repeat fixed;
+    background-position-y: 30%;
+    filter: blur(8px) brightness(0.5);
+    z-index: 0;
+    pointer-events: none;
+  }
 }
 
 .channel-layout {
@@ -286,12 +299,14 @@ onUnmounted(() => { stopPolling() })
   max-width: 1200px;
   margin: 0 auto;
   overflow: hidden;
-  background: rgba(45, 51, 59, 0.82);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  position: relative;
+  z-index: 1;
+  background: rgba($bg-surface, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid $glass-border;
 }
-.channel-sidebar { width: 200px; background: rgba(45, 51, 59, 0.5); padding: 16px; display: flex; flex-direction: column; border-right: 1px solid rgba(255, 255, 255, 0.08); }
+.channel-sidebar { width: 200px; background: rgba($bg-surface, 0.5); padding: 16px; display: flex; flex-direction: column; border-right: 1px solid $glass-border; }
 .sidebar-title { font-size: 0.85rem; color: $text-secondary; margin: 0 0 12px; text-transform: uppercase; letter-spacing: 1px; }
 .channel-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
 .channel-item-wrap {
