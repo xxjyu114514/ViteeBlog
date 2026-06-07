@@ -214,7 +214,7 @@ onUnmounted(() => { if (vditorInstance) vditorInstance.destroy() })
 
 <style lang="scss">
 @use 'sass:color';
-@use './_design.scss' as *;
+@use '../_design.scss' as *;
 
 .article-edit-page {
   position: fixed; inset: 0; z-index: 1;

@@ -436,5 +436,5 @@ onUnmounted(() => {
 
 <style lang="scss" scoped>
 // 引入设计令牌
-@use './_design.scss' as *;
+@use '../_design.scss' as *;
 </style>

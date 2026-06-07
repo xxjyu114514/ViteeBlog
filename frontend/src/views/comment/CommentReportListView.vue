@@ -110,7 +110,7 @@ onMounted(() => { fetchReports(); requestAnimationFrame(() => { slidIn.value = t
 
 <style lang="scss">
 @use 'sass:color';
-@use './_design.scss' as *;
+@use '../_design.scss' as *;
 
 .report-page { position: fixed; inset: 0; z-index: 1; overflow: hidden; }
 

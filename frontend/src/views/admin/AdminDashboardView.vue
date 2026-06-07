@@ -111,7 +111,7 @@ onMounted(async () => {
 
 <style lang="scss">
 @use 'sass:color';
-@use './_design.scss' as *;
+@use '../_design.scss' as *;
 
 .admin-page { position: fixed; inset: 0; z-index: 1; overflow: hidden; }
 

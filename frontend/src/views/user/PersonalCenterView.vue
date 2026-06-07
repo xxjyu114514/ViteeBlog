@@ -604,7 +604,7 @@ onUnmounted(() => {
 
 <style lang="scss">
 @use 'sass:color';
-@use '../design.scss' as *;
+@use '../_design.scss' as *;
 
 // ============================================================
 //   个人主页 — 可调变量集合
