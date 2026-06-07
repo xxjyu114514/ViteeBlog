@@ -80,8 +80,6 @@ import { importSingleArticle, importBatchArticles, batchUploadImages } from '@/s
 
 const router = useRouter()
 const slidIn = ref(false)
-const goBack = () => router.push('/manage-articles')
-
 // 单篇导入
 const singleInputRef = ref(null)
 const singleLoading = ref(false)

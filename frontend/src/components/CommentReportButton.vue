@@ -12,7 +12,6 @@
 
 <script setup>
 import { useUserStore } from '@/stores/user'
-import { useRouter } from 'vue-router'
 
 const props = defineProps({
   commentId: {
@@ -22,7 +21,6 @@ const props = defineProps({
 })
 
 const userStore = useUserStore()
-const router = useRouter()
 
 const emit = defineEmits(['report-click'])
 

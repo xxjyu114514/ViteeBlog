@@ -61,22 +61,14 @@ const loadComments = async () => {
     const result = await getCommentsApi(props.articleId)
     
     if (result.success) {
-      // 调试：输出原始数据
-      console.log('原始API响应:', result)
-      console.log('扁平评论列表:', result.data.items)
-      
       // 将扁平列表转换为嵌套树结构
       const flatComments = result.data.items || []
       const nestedComments = buildCommentTree(flatComments)
-      
-      // 调试：输出转换后的数据
-      console.log('转换后的嵌套评论:', nestedComments)
-      
+
       comments.value = nestedComments
       emit('comments-loaded', result.data.total)
     } else {
       error.value = result.message || '加载评论失败，请稍后重试'
-      console.log('API调用失败:', result)
     }
   } catch (err) {
     console.error('Load comments error:', err)

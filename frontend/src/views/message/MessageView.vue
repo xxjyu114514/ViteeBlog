@@ -187,9 +187,17 @@ const handleSend = async () => {
 }
 
 const handleWithdraw = async (messageId) => {
+  const msg = messages.value.find(m => m.id === messageId)
+  if (msg?.createdAt) {
+    const elapsed = Date.now() - new Date(msg.createdAt).getTime()
+    if (elapsed > 120000) {
+      alert('消息发送已超过2分钟，无法撤回')
+      return
+    }
+  }
   if (!confirm('确定要撤回这条消息吗？')) return
   const r = await withdrawMessage(messageId)
-  if (r.success) { const msg = messages.value.find(m => m.id === messageId); if (msg) msg.withdrawnAt = new Date().toISOString() }
+  if (r.success) { if (msg) msg.withdrawnAt = new Date().toISOString() }
   else { alert(r.message || '撤回失败') }
 }
 

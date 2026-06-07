@@ -7,15 +7,6 @@
         </div>
         <div class="card-body">
           <div class="toolbar">
-            <div class="filter-section">
-              <label>状态筛选：</label>
-              <select v-model="filterStatus" @change="handleFilterChange" class="filter-select">
-                <option value="all">全部评论</option>
-                <option value="pending">违规评论</option>
-                <option value="approved">正常评论</option>
-                <option value="deleted">已删除评论</option>
-              </select>
-            </div>
             <div class="action-section" v-if="selectedCommentIds.length > 0">
               <span class="selection-info">已选择 {{ selectedCommentIds.length }} 条</span>
               <button class="btn-batch-approve" @click="handleBatchApprove" :disabled="batchLoading">{{ batchLoading ? '处理中...' : '批量恢复' }}</button>
@@ -54,7 +45,6 @@ import CommentReviewCard from '@/components/CommentReviewCard.vue'
 
 const router = useRouter()
 const slidIn = ref(false)
-const filterStatus = ref('all')
 const currentPage = ref(1)
 const pageSize = ref(20)
 const totalComments = ref(0)
@@ -86,8 +76,6 @@ const toggleSelect = (id, checked) => {
   if (checked) { if (!selectedCommentIds.value.includes(id)) selectedCommentIds.value.push(id) }
   else { selectedCommentIds.value = selectedCommentIds.value.filter(i => i !== id) }
 }
-
-const handleFilterChange = () => { currentPage.value = 1; fetchComments() }
 
 const handleApprove = async (commentId) => {
   if (actionLoading.value.has(commentId)) return
@@ -128,7 +116,7 @@ const handleBatchReject = async () => {
 const goToPage = (page) => { if (page >= 1 && page <= totalPages.value) currentPage.value = page }
 
 onMounted(() => { fetchComments(); requestAnimationFrame(() => { slidIn.value = true }) })
-watch([currentPage, filterStatus], () => fetchComments())
+watch(currentPage, () => fetchComments())
 </script>
 
 <style lang="scss">

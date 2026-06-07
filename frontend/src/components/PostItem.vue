@@ -19,7 +19,11 @@ import { useRouter } from 'vue-router'
 import { formatDate, renderInline } from '@/utils'
 
 const props = defineProps({
-  post: Object
+  post: {
+    type: Object,
+    required: true,
+    validator: (value) => value && typeof value.id !== 'undefined' && typeof value.title !== 'undefined'
+  }
 })
 
 const router = useRouter()

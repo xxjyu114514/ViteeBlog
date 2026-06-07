@@ -74,7 +74,6 @@ const fetchCategories = async () => {
 const showCreateModal = () => { editingCategory.value = null; categoryName.value = ''; showModal.value = true }
 const showEditModal = (category) => { editingCategory.value = { ...category }; categoryName.value = category.name; showModal.value = true }
 const closeModal = () => { showModal.value = false; editingCategory.value = null; categoryName.value = '' }
-const handleBack = () => router.go(-1)
 
 const handleSubmit = async () => {
   if (!categoryName.value.trim()) return

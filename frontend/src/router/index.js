@@ -1,196 +1,26 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
-// 1. 静态导入核心页面
-import HomeView from '../views/HomeView.vue'
-import PostPage from '../views/PostPage.vue'
-import AboutImmersiveView from '../views/AboutImmersiveView.vue'
-import MessageImmersiveView from '../views/MessageImmersiveView.vue'
-
-// 2. 懒加载功能页面
-const AboutView = () => import('../views/AboutView.vue')
-const MessageView = () => import('../views/MessageView.vue')
-const LoginView = () => import('../views/LoginView.vue')
-const PersonalCenterView = () => import('../views/PersonalCenterView.vue')
-const ArticleDetailView = () => import('../views/ArticleDetailView.vue')
-const ArticleManageView = () => import('../views/ArticleManageView.vue')
-const ArticleEditView = () => import('../views/ArticleEditView.vue')
-const DesignSystemView = () => import('../views/_design.vue')
-const SearchView = () => import('../views/SearchView.vue')
-const ArchiveView = () => import('../views/ArchiveView.vue')
-const AdminImportView = () => import('../views/AdminImportView.vue')
-const UserProfileView = () => import('../views/UserProfileView.vue')
+import coreRoutes from './modules/core'
+import articleRoutes from './modules/article'
+import authRoutes from './modules/auth'
+import userRoutes from './modules/user'
+import adminRoutes from './modules/admin'
+import commentRoutes from './modules/comment'
+import aboutRoutes from './modules/about'
+import messageRoutes from './modules/message'
+import miscRoutes from './modules/misc'
 
 const routes = [
-  {
-    path: '/design-system',
-    name: 'design-system',
-    component: DesignSystemView,
-    meta: { index: 99, title: '设计系统展示' }
-  },
-  {
-    path: '/test_scss',
-    name: 'test_scss',
-    component: () => import('../views/test_scss.vue'),  // 使用懒加载
-    meta: { index: 100, title: 'SCSS组件测试', hidden: true }  // hidden 可选的，表示不在导航中显示
-  },
-  {
-    path: '/',
-    name: 'home',
-    component: HomeView,
-    meta: { index: 0, title: '首页' }
-  },
-  {
-    path: '/posts-immersive',
-    name: 'posts-immersive',
-    component: PostPage,
-    meta: { index: 1, title: '文章列表' }
-  },
-  {
-    path: '/posts',
-    name: 'posts',
-    component: PostPage,
-    meta: { index: 10, title: '文章列表' }
-  },
-  {
-    path: '/article/:id',
-    name: 'article-detail',
-    component: ArticleDetailView,
-    meta: { index: 11, title: '文章详情' }
-  },
-  {
-    path: '/manage-articles',
-    component: ArticleManageView,
-    meta: { requiresAuth: true, noCardTransition: true }
-  },
-  {
-    path: '/categories',
-    component: () => import('@/views/CategoryManageView.vue'),
-    meta: { requiresAuth: true, noCardTransition: true }
-  },
-  {
-    path: '/tags',
-    component: () => import('@/views/TagManageView.vue'),
-    meta: { requiresAuth: true, noCardTransition: true }
-  },
-  {
-    path: '/comment-reports',
-    component: () => import('@/views/CommentReportListView.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true, noCardTransition: true }
-  },
-  {
-    path: '/comment-admin',
-    component: () => import('@/views/CommentAdminView.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true, noCardTransition: true }
-  },
-  {
-    path: '/article-import',
-    component: () => import('@/views/ArticleImportView.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true, noCardTransition: true }
-  },
-  {
-    path: '/admin-dashboard',
-    component: () => import('@/views/AdminDashboardView.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true, noCardTransition: true }
-  },
-  {
-    path: '/users/:id',
-    name: 'user-profile',
-    component: () => import('@/views/UserProfileView.vue'),
-    meta: { index: 15, title: '用户主页', noCardTransition: true }
-  },
-  {
-    path: '/edit-article',
-    name: 'article-edit',
-    component: ArticleEditView,
-    meta: { index: 7, title: '编辑文章', requiresAuth: true, noCardTransition: true }
-  },
-  {
-    path: '/edit-article/:id',
-    name: 'article-edit-detail',
-    component: ArticleEditView,
-    meta: { index: 8, title: '编辑文章', requiresAuth: true, noCardTransition: true }
-  },
-  {
-    path: '/favorites',
-    name: 'favorites',
-    component: () => import('@/views/FavoritesView.vue'),
-    meta: { index: 12, title: '我的收藏', requiresAuth: true, noCardTransition: true }
-  },
-  {
-    path: '/about-immersive',
-    name: 'about-immersive',
-    component: AboutImmersiveView,
-    meta: { index: 2, title: '关于我' }
-  },
-  {
-    path: '/about',
-    name: 'about',
-    component: AboutView,
-    meta: { index: 20, title: '关于我' }
-  },
-  {
-    path: '/about-detail',
-    name: 'about-detail',
-    component: () => import('@/views/AboutDetailView.vue'),
-    meta: { index: 21, title: '关于观测笔记' }
-  },
-  {
-    path: '/message-immersive',
-    name: 'message-immersive',
-    component: MessageImmersiveView,
-    meta: { index: 3, title: '留言板' }
-  },
-  {
-    path: '/archive',
-    name: 'archive',
-    component: () => import('@/views/ArchiveView.vue'),
-    meta: { index: 14, title: '文章归档' }
-  },
-  {
-    path: '/message',
-    name: 'message',
-    component: MessageView,
-    meta: { index: 30, title: '留言板' }
-  },
-  {
-    path: '/social',
-    name: 'social',
-    component: () => import('@/views/SocialView.vue'),
-    meta: { index: 13, title: '社交关系', requiresAuth: true, noCardTransition: true }
-  },
-  {
-    path: '/login',
-    name: 'login',
-    component: LoginView,
-    meta: { index: 4, title: '账号登录', guestOnly: true }
-  },
-  {
-    path: '/personal',
-    name: 'personal',
-    component: PersonalCenterView,
-    meta: { index: 5, title: '个人中心', requiresAuth: true }
-  },
-  {
-    path: '/search',
-    name: 'search',
-    component: SearchView,
-    meta: { index: 40, title: '搜索文章' }
-  },
-  {
-    path: '/archive',
-    name: 'archive',
-    component: ArchiveView,
-    meta: { index: 41, title: '文章归档' }
-  },
-  {
-    path: '/admin-import',
-    name: 'admin-import',
-    component: AdminImportView,
-    meta: { index: 42, title: '导入管理', requiresAuth: true, requiresAdmin: true }
-  },
-
-
+  ...coreRoutes,
+  ...articleRoutes,
+  ...authRoutes,
+  ...userRoutes,
+  ...adminRoutes,
+  ...commentRoutes,
+  ...aboutRoutes,
+  ...messageRoutes,
+  ...miscRoutes,
 ]
 
 const router = createRouter({

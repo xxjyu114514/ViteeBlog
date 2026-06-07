@@ -58,43 +58,14 @@
 
         <!-- 文章卡片列表 -->
         <div v-else class="article-list">
-          <div
+          <ArticleCard
             v-for="(article, index) in displayArticles"
             :key="article.id"
-            class="article-card"
-            :class="{ 'is-immersive-item': isImmersive }"
-            @click="goToArticle(article.id)"
-          >
-            <div class="article-card__header">
-              <div v-if="isImmersive" class="meta-row">
-                <span class="item-index">{{ String(index + 1).padStart(2, '0') }}</span>
-                <h3 class="article-card__title">{{ article.title || '无标题文章' }}</h3>
-              </div>
-              <template v-else>
-                <h3 class="article-card__title">
-                  <a href="javascript:void(0)">{{ article.title || '无标题文章' }}</a>
-                </h3>
-                <div class="article-card__meta">
-                  <span>作者</span>
-                  <span>{{ formatDate(article.publishedAt) }}</span>
-                  <span>· {{ article.viewCount || 0 }} 阅读</span>
-                </div>
-              </template>
-            </div>
-
-            <div v-if="article.summary" class="article-card__content">
-              <p class="article-card__excerpt">{{ article.summary }}</p>
-            </div>
-
-            <div class="article-card__footer">
-              <div class="article-card__stats">
-                <span>❤️ {{ article.likeCount || 0 }}</span>
-                <span>💬 {{ article.commentCount || 0 }}</span>
-              </div>
-              <span v-if="isImmersive" class="static-arrow">→</span>
-              <span v-else class="article-card__tag">阅读全文 →</span>
-            </div>
-          </div>
+            :article="article"
+            :index="index"
+            :immersive="isImmersive"
+            @click="goToArticle"
+          />
         </div>
       </div>
 
@@ -112,6 +83,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { usePrimaryPageWheel } from '@/composables/usePrimaryPageWheel'
 import { getPublicArticles } from '@/services/articleService'
 import { formatDate } from '@/utils'
+import ArticleCard from '@/components/ArticleCard.vue'
 
 const router = useRouter()
 const route = useRoute()

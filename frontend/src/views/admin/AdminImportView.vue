@@ -63,7 +63,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { uploadArticleImage, importSingleArticle, importBatchArticles, batchUploadImages } from '@/services/articleService'
+import { importSingleArticle, importBatchArticles, batchUploadImages } from '@/services/articleService'
 
 const router = useRouter()
 const singleInput = ref(null)

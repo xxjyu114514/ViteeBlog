@@ -18,6 +18,7 @@
     </div>
 
     <textarea
+      ref="textareaRef"
       v-if="!showPreview"
       v-model="commentContent"
       class="form-input"
@@ -58,6 +59,7 @@ const commentContent = ref('')
 const loading = ref(false)
 const error = ref(null)
 const showPreview = ref(false)
+const textareaRef = ref(null)
 
 const canSubmit = computed(() => {
   return commentContent.value.trim().length > 0 && commentContent.value.trim().length <= 1000
@@ -71,7 +73,7 @@ const renderedPreview = computed(() => {
 const clearError = () => { error.value = null }
 
 const insertMarkdown = (before, after) => {
-  const textarea = document.querySelector('.form-input')
+  const textarea = textareaRef.value
   if (!textarea) return
   const start = textarea.selectionStart
   const end = textarea.selectionEnd

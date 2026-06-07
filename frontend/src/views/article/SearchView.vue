@@ -61,7 +61,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { searchArticles } from '@/services/articleService'
 
@@ -106,9 +106,15 @@ const goArticle = (id) => router.push(`/article/${id}`)
 
 const highlight = (text) => {
   if (!text || !keyword.value.trim()) return text
+  const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
   const regex = new RegExp(`(${keyword.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
-  return text.replace(regex, '<mark>$1</mark>')
+  return escaped.replace(regex, '<mark>$1</mark>')
 }
+
+onUnmounted(() => {
+  clearTimeout(debounceTimer)
+  debounceTimer = null
+})
 </script>
 
 <style lang="scss" scoped>

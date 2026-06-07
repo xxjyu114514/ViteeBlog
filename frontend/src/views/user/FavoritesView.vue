@@ -70,7 +70,6 @@ const handleUnfavorite = async (articleId) => {
 }
 
 const goToPage = (page) => { if (page >= 1 && page <= totalPages.value) fetchFavorites(page) }
-const goBack = () => router.push('/personal')
 
 onMounted(() => { fetchFavorites(); requestAnimationFrame(() => { slidIn.value = true }) })
 </script>
