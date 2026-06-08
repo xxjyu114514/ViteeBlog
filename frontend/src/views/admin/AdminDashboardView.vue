@@ -96,8 +96,6 @@ const router = useRouter()
 const slidIn = ref(false)
 const pendingCount = ref(0)
 
-const goBack = () => router.push('/personal')
-
 const handleNav = (path) => {
   router.push(path)
 }

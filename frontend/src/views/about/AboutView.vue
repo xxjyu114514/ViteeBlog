@@ -1,9 +1,5 @@
 <template>
   <div class="about-container">
-    <div class="back-button" @click="handleBack">
-      ← 返回
-    </div>
-    
     <section class="about-hero">
       <h1 class="glass-text">About Me</h1>
     </section>
@@ -106,10 +102,8 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { usePageTransition } from '@/composables/usePageTransition'
 
 const router = useRouter()
-const { isAnimating } = usePageTransition()
 
 // 滚动偏移状态
 const scrollY = ref(0)
@@ -125,11 +119,6 @@ const mainMarginTop = computed(() => {
   const scrollOffset = Math.min(scrollY.value * 0.3, 50) // 滚动影响系数0.3，最大额外偏移50px
   return `${baseOffset - scrollOffset}px`
 })
-
-const handleBack = () => {
-  if (isAnimating.value) return
-  router.push('/about-immersive')
-}
 
 const getInitials = () => {
   return 'OB'

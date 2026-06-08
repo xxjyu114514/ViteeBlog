@@ -1,9 +1,5 @@
 <template>
   <div class="page-wrapper-base padding-page post-page-wrapper">
-    <div class="back-button" @click="router.push('/posts-immersive')">
-      ← 返回
-    </div>
-
     <!-- 可滚动内容区：背景图 + 毛玻璃 -->
     <div class="content-scroller">
       <div class="glass-background">
@@ -121,27 +117,6 @@ onMounted(() => { loadArticles() })
 
 .post-page-wrapper {
   position: relative;
-}
-
-.back-button {
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  z-index: 100;
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  color: $text-secondary;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: all 0.2s;
-  &:hover {
-    color: $text-primary;
-    border-color: rgba($color-primary, 0.3);
-  }
 }
 
 .content-scroller {

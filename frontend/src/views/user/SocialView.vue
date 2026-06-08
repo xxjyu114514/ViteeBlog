@@ -46,7 +46,6 @@ const followersTotal = ref(0)
 const slidIn = ref(false)
 
 const getAvatarUrl = (path) => path ? API_BASE.replace('/api/v1', '') + path : ''
-const goBack = () => router.push('/personal')
 
 const fetchList = async () => {
   const userId = userStore.userInfo?.id

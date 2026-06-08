@@ -6,7 +6,6 @@
         <div class="card-header">
           <span class="card-title">{{ editingArticle ? '编辑文章' : '新建文章' }}</span>
           <div class="header-actions">
-            <button class="btn btn-ghost" @click="goBack">返回</button>
             <button class="btn btn-primary" @click="handleSave" :disabled="saving || !canSave || isPending">
               {{ saving ? '保存中...' : '保存' }}
             </button>
@@ -205,8 +204,6 @@ const handleWithdraw = async () => {
   else showStatus(r.message, true)
   withdrawing.value = false
 }
-
-const goBack = () => router.push('/personal')
 
 onMounted(() => { loadArticleData(); requestAnimationFrame(() => { slidIn.value = true }) })
 onUnmounted(() => { if (vditorInstance) vditorInstance.destroy() })

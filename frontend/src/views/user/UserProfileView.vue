@@ -164,8 +164,6 @@ const formatDate = (dateStr) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-const goBack = () => router.go(-1)
-
 onMounted(() => {
   loadProfile()
   requestAnimationFrame(() => { slidIn.value = true })

@@ -124,10 +124,6 @@ const onZipFile = async (e) => {
 
 .page-title { font-size: 1.8rem; font-weight: 700; color: $text-primary; margin: 24px 0; }
 
-.back-button {
-  display: inline-flex; align-items: center; gap: 4px;
-  color: $color-primary; cursor: pointer; font-size: 0.95rem; margin-bottom: 8px;
-}
 
 .import-section { padding: 24px; margin-bottom: 24px; }
 

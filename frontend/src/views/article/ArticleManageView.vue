@@ -97,7 +97,6 @@ const totalPages = computed(() => Math.ceil(totalArticles.value / pageSize.value
 const canEdit = (article) => userStore.isAdmin || article.userId === userStore.userInfo?.id
 const canDelete = (article) => userStore.isAdmin || article.userId === userStore.userInfo?.id
 const canPublish = (article) => article.status === 'draft' && (userStore.isAdmin || article.userId === userStore.userInfo?.id)
-const goBack = () => router.push('/personal')
 
 const fetchArticles = async (page = 1) => {
   loading.value = true

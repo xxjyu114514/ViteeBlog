@@ -1,7 +1,5 @@
 <template>
   <div class="pc-page">
-    <div class="back-button" @click="router.push('/')">← 返回</div>
-
     <div class="pc-layout" :class="{ 'is-leaving': isLeaving }">
       <!-- 左侧：个人信息卡片 -->
       <div class="glass-hero-card profile-card tilt-target">
@@ -604,6 +602,7 @@ onUnmounted(() => {
 
 <style lang="scss">
 @use 'sass:color';
+@use 'sass:map';
 @use '../_design.scss' as *;
 
 // ============================================================
@@ -697,26 +696,6 @@ $btn-account: (
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
-}
-
-.back-button {
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  z-index: 100;
-  padding: 8px 16px;
-  background: $glass-bg;
-  backdrop-filter: blur(12px);
-  color: $text-secondary;
-  border: 1px solid $glass-border;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: all 0.2s;
-  &:hover {
-    color: $text-primary;
-    border-color: rgba($color-primary, 0.3);
-  }
 }
 
 .pc-layout {

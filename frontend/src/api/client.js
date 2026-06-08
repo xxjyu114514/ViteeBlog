@@ -185,9 +185,9 @@ export async function request(path, options = {}) {
     if (qs) url += `?${qs}`
   }
 
-  // ---- 缓存查找（仅 GET） ----
+  // ---- 缓存查找（仅 GET，必须显式传入 cacheTTL > 0 才生效） ----
   const cacheKey = isGet ? getCacheKey(path, params) : null
-  if (isGet && cacheTTL !== 0 && cacheTTL !== null) {
+  if (isGet && cacheTTL && cacheTTL > 0) {
     const cached = getCached(cacheKey)
     if (cached) return cached
   }
@@ -270,8 +270,8 @@ export async function request(path, options = {}) {
         status: response.status,
       })
 
-      // 缓存成功响应（仅 GET）
-      if (isGet && cacheTTL !== 0 && cacheTTL !== null) {
+      // 缓存成功响应（仅 GET，且必须显式传入 cacheTTL > 0）
+      if (isGet && cacheTTL && cacheTTL > 0) {
         setCache(cacheKey, result, cacheTTL ?? CACHE_TTL)
       }
 

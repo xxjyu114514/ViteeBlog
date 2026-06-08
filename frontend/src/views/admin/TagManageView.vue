@@ -69,7 +69,6 @@ const fetchTags = async () => {
 const openModalForCreate = () => { tagName.value = ''; editingTag.value = null; isModalOpen.value = true }
 const openModalForEdit = (tag) => { tagName.value = tag.name; editingTag.value = tag; isModalOpen.value = true }
 const closeModal = () => { isModalOpen.value = false; tagName.value = ''; editingTag.value = null }
-const handleBack = () => router.go(-1)
 
 const handleCreateOrUpdateTag = async () => {
   if (!tagName.value.trim()) return

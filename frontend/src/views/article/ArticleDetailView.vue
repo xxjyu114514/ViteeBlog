@@ -10,11 +10,9 @@
         <h2 class="error-title">文章加载失败</h2>
         <p class="error-message">{{ error }}</p>
         <button class="btn-primary mt-20" @click="loadArticle">重新加载</button>
-        <button class="btn-secondary mt-10" @click="goBack">返回首页</button>
       </div>
     </div>
     <div v-else-if="article" class="article-detail-container">
-      <div class="back-button" @click="handleBack">← 返回</div>
       <div class="container-narrow">
         <div class="article-header">
           <h1 class="article-title" v-html="renderedTitle"></h1>
@@ -176,8 +174,6 @@ const goToAuthorProfile = () => {
   const id = article.value?.author?.id || article.value?.userId
   if (id) router.push(`/users/${id}`)
 }
-const goBack = () => router.push('/')
-const handleBack = () => router.go(-1)
 
 onMounted(() => { loadArticle() })
 </script>
@@ -189,11 +185,6 @@ onMounted(() => { loadArticle() })
 
 .article-detail-container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
 
-.back-button {
-  margin-bottom: 24px; color: $color-primary; cursor: pointer; font-size: 0.95rem;
-  display: inline-flex; align-items: center; gap: 4px;
-  &:hover { color: color.adjust($color-primary, $lightness: 8%); }
-}
 
 .article-header { margin-bottom: 32px; }
 
