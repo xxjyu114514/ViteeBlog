@@ -1,7 +1,7 @@
 import HomeView from '@/views/misc/HomeView.vue'
 import PostPage from '@/views/article/PostPage.vue'
 import AboutImmersiveView from '@/views/about/AboutImmersiveView.vue'
-import MessageImmersiveView from '@/views/message/MessageImmersiveView.vue'
+import MessagePage from '@/views/message/MessagePage.vue'
 
 export default [
   {
@@ -31,7 +31,7 @@ export default [
   {
     path: '/message-immersive',
     name: 'message-immersive',
-    component: MessageImmersiveView,
+    component: MessagePage,
     meta: { index: 3, title: '留言板' }
   },
 ]

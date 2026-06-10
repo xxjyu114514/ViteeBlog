@@ -2,7 +2,7 @@
   <div class="login-page">
     <div class="login-visual">
       <div class="bg-wrapper">
-        <img src="../assets/login-bg.webp" alt="Background" class="bg-image" />
+        <img src="@/assets/login-bg.webp" alt="Background" class="bg-image" />
         <div class="bottom-shadow-overlay"></div>
       </div>
       <div class="visual-content">

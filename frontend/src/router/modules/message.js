@@ -1,10 +1,10 @@
-const MessageView = () => import('@/views/message/MessageView.vue')
+const MessagePage = () => import('@/views/message/MessagePage.vue')
 
 export default [
   {
     path: '/message',
     name: 'message',
-    component: MessageView,
+    component: MessagePage,
     meta: { index: 30, title: '留言板' }
   },
 ]
