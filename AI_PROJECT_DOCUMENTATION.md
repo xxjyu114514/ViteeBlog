@@ -65,7 +65,10 @@ ViteeBlog (前后端分离)
 - **注册流程**: 邮箱验证码两步验证
 - **登录机制**: JWT Token (60分钟有效期)
 - **安全保护**: 连续3次失败锁定15分钟
-- **角色管理**: `common` (普通用户) / `admin` (管理员)
+- **角色管理**: 
+  - `common` (普通用户): 基本功能，可发布文章、评论
+  - `admin` (普通管理员): 可审核文章、管理分类/标签、处理举报
+  - `super_admin` (超级管理员): 拥有所有管理员权限 + 用户角色管理
 
 ### 4.2 文章管理系统
 #### 状态流转
@@ -133,9 +136,28 @@ DRAFT → PENDING → PUBLISHED
 - `POST /meta/categories`: 创建分类 (管理员)
 - `GET /meta/tags`: 获取所有标签
 
-### 6.4 管理员专属
-- `GET /article/admin/pending`: 获取待审核文章
-- `POST /article/admin/articles/{id}/review`: 审核文章
+### 6.4 管理员专属接口
+
+#### 日常管理接口（ADMIN 和 SUPER_ADMIN 均可使用）
+- `GET /article/admin/pending`: 获取待审核文章列表
+- `POST /article/admin/articles/{id}/review`: 审核文章（通过/驳回）
+- `POST /meta/categories`: 创建分类
+- `DELETE /meta/categories/{id}`: 删除分类
+- `DELETE /meta/tags/{id}`: 删除标签
+- `GET /comment/admin/pending`: 获取待审核评论
+- `POST /comment/admin/comments/{id}/review`: 审核评论
+
+#### 用户角色管理接口（ADMIN 和 SUPER_ADMIN 均可使用）
+- `PUT /auth/admin/users/{user_id}/role`: 修改用户角色（升级/降级）
+
+**重要说明**：
+- 普通管理员和超级管理员都可以修改用户角色
+- **不能**将任何人升级为超级管理员（只能通过数据库手动设置）
+- **不能**修改超级管理员的角色（即使是超管也不行）
+- 可以将普通用户升级为普通管理员
+- 可以将管理员降级为普通用户
+- 不能修改自己的角色
+- 全站必须至少保留一名普通管理员
 
 ## 7. 开发与部署指南
 
@@ -258,7 +280,228 @@ frontend/
 - **Q**: 普通用户无法访问管理功能
   **A**: 这是正常的安全机制，需要管理员权限
 
-## 12. 贡献指南
+## 12. 超级管理员功能详解
+
+### 12.1 角色体系设计
+
+ViteeBlog 采用三级权限体系，确保系统安全性和管理灵活性：
+
+| 角色 | 代码 | 权限范围 |
+|------|------|----------|
+| 普通用户 | `common` | 发布文章、评论、点赞、收藏等基本功能 |
+| 普通管理员 | `admin` | 审核文章/评论、管理分类标签、处理举报、**修改用户角色** |
+| 超级管理员 | `super_admin` | 所有管理员权限（但**不能**通过接口创建其他超管） |
+
+### 12.2 权限分级原则
+
+#### 设计理念
+- **最小权限原则**: 普通管理员拥有必要的日常管理权限
+- **职责分离**: 敏感操作（升级为超管）仅限数据库手动设置
+- **防误操作**: 防止管理员之间互相降级导致的管理混乱
+- **安全保护**: 超级管理员角色不能被修改
+
+#### 权限继承
+```
+SUPER_ADMIN
+  └── 继承 ADMIN 的所有权限
+        ├── 审核文章/评论
+        ├── 管理分类/标签
+        ├── 处理举报
+        └── 修改用户角色（但不能升级为超管）
+```
+
+### 12.3 用户角色管理接口
+
+#### 接口详情
+```http
+PUT /api/v1/auth/admin/users/{user_id}/role
+Authorization: Bearer {admin_token 或 super_admin_token}
+Content-Type: application/json
+
+{
+  "new_role": "admin"  // 可选值: "common", "admin"
+}
+```
+
+#### 请求参数
+- **user_id** (路径参数): 目标用户的 ID
+- **new_role** (请求体): 新的角色值
+  - `"common"`: 普通用户
+  - `"admin"`: 普通管理员
+  - ❌ **不能**使用 `"super_admin"`（会返回错误）
+
+#### 响应示例
+
+**成功响应 (200 OK)**:
+```json
+{
+  "message": "成功将用户 BaoZi 从 common 变更为 admin"
+}
+```
+
+**失败响应**:
+```json
+// 403 Forbidden - 不能升级为超级管理员
+{
+  "detail": "无法通过接口升级为超级管理员，请联系系统管理员手动设置"
+}
+
+// 403 Forbidden - 不能修改超级管理员
+{
+  "detail": "无法修改超级管理员的角色"
+}
+
+// 400 Bad Request - 不能修改自己的角色
+{
+  "detail": "不能修改自己的角色"
+}
+
+// 400 Bad Request - 必须保留至少一名管理员
+{
+  "detail": "全站必须至少保留一名普通管理员"
+}
+```
+
+### 12.4 安全校验规则
+
+系统在修改用户角色时会执行以下安全检查：
+
+1. **身份验证**: 必须是管理员（ADMIN 或 SUPER_ADMIN）
+2. **自我保护**: 不能修改自己的角色
+3. **超管保护**: 不能修改超级管理员的角色
+4. **禁止升级超管**: 不能将任何人升级为超级管理员
+5. **管理员保留**: 降级最后一个普通管理员时会阻止
+6. **用户存在**: 目标用户必须存在
+
+### 12.5 典型使用场景
+
+#### 场晦1：提升新用户为管理员
+```bash
+# 管理员登录获取 token
+POST /api/v1/auth/login
+{
+  "username": "BaoZi",
+  "password": "123456"
+}
+
+# 提升用户 ID=2 为管理员
+PUT /api/v1/auth/admin/users/2/role
+Authorization: Bearer {admin_token}
+{
+  "new_role": "admin"
+}
+```
+
+#### 场晦2：降级违规管理员
+```bash
+# 将违规的管理员降级为普通用户
+PUT /api/v1/auth/admin/users/3/role
+Authorization: Bearer {admin_token}
+{
+  "new_role": "common"
+}
+```
+
+#### 场晦3：手动设置超级管理员（数据库操作）
+```sql
+-- 只能通过数据库手动设置超级管理员
+UPDATE user SET role = 'SUPER_ADMIN' WHERE id = 1;
+```
+
+### 12.6 测试用例
+
+项目提供了完整的 HTTP 测试文件：`backend/test_super_admin.http`
+
+#### 测试覆盖
+1. ✅ 超管降级管理员 → 应该成功
+2. ✅ 超管升级普通用户 → 应该成功
+3. ✅ 管理员降级其他管理员 → 应该成功
+4. ❌ 尝试升级为超管 → 应该失败 (403)
+5. ❌ 尝试修改超管角色 → 应该失败 (403)
+6. ❌ 修改自己角色 → 应该失败 (400)
+7. ✅ 管理员调用日常管理接口 → 应该成功
+8. ✅ 超管调用日常管理接口 → 应该成功
+
+#### 执行测试
+```bash
+# 1. 启动后端服务器
+cd backend
+venv\Scripts\activate
+python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
+
+# 2. 在 VS Code 中打开 test_super_admin.http
+# 3. 按顺序执行登录和测试请求
+```
+
+### 12.7 数据库迁移
+
+超级管理员功能需要数据库支持 `SUPER_ADMIN` 枚举值。
+
+#### 迁移步骤
+```bash
+cd backend
+
+# 生成迁移脚本
+python -m alembic revision --autogenerate -m "add_super_admin_role"
+
+# 应用迁移
+python -m alembic upgrade head
+
+# 验证迁移
+python -m alembic current
+```
+
+#### 手动设置超级管理员
+如果数据库中还没有超级管理员，可以直接修改：
+
+```sql
+-- 查看当前管理员
+SELECT id, username, email, role FROM user WHERE role IN ('ADMIN', 'SUPER_ADMIN');
+
+-- 提升用户为超级管理员
+UPDATE user SET role = 'SUPER_ADMIN' WHERE id = 1;
+```
+
+### 12.8 最佳实践
+
+#### 建议
+1. **至少两个超级管理员**: 防止单点故障
+2. **谨慎授予 SUPER_ADMIN**: 仅信任的核心人员
+3. **定期审计**: 检查管理员权限分配情况
+4. **日志监控**: 关注角色变更操作日志
+5. **备份策略**: 变更前备份数据库
+
+#### 避免
+1. ❌ 不要将所有管理员都设为 SUPER_ADMIN
+2. ❌ 不要在未确认的情况下修改角色
+3. ❌ 不要删除最后一个普通管理员
+4. ❌ 不要在生产环境直接执行 SQL 修改
+
+### 12.9 故障排查
+
+#### 问题1：提示“无法通过接口升级为超级管理员”
+**原因**: 尝试通过 API 设置为 SUPER_ADMIN  
+**解决**: 只能通过数据库手动设置
+
+```sql
+UPDATE user SET role = 'SUPER_ADMIN' WHERE id = 你的ID;
+```
+
+#### 问题2：提示“无法修改超级管理员的角色”
+**原因**: 目标用户是 SUPER_ADMIN（受保护）  
+**解决**: 超级管理员角色不能被修改，即使是超管也不行
+
+#### 问题3：提示“不能修改自己的角色”
+**原因**: 尝试修改自己的角色（安全机制）  
+**解决**: 这是正常行为，需要另一个管理员来修改
+
+#### 问题4：提示“全站必须至少保留一名普通管理员”
+**原因**: 降级操作会导致没有普通管理员  
+**解决**: 先创建或提升一个新的普通管理员
+
+---
+
+## 13. 贡献指南
 
 ### 12.1 代码规范
 - **Python**: 遵循 PEP 8 规范
@@ -278,6 +521,7 @@ frontend/
 
 ---
 
-**文档版本**: v1.0  
-**最后更新**: 2026-05-04  
+**文档版本**: v2.1  
+**最后更新**: 2026-06-11  
+**主要更新**: 修正用户角色管理权限说明 - 普通管理员也可修改角色  
 **适用对象**: AI助手、开发者、技术团队

@@ -9,8 +9,9 @@ from datetime import datetime
 
 
 class UserRole(str, enum.Enum):
-    ADMIN = "admin"
-    COMMON = "common"
+    SUPER_ADMIN = "super_admin"  # 超级管理员：最高权限，不可被降级
+    ADMIN = "admin"  # 普通管理员：可以管理用户和文章
+    COMMON = "common"  # 普通用户
 
 
 class ArticleStatus(str, enum.Enum):

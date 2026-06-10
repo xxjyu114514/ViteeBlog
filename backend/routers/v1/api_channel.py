@@ -22,8 +22,8 @@ router = APIRouter(prefix="", tags=["频道广场聊天系统"])
 # 依赖项：严格的管理员权限拦截器
 # ==============================================================================
 async def verify_admin(current_user: User = Depends(get_current_user)) -> User:
-    """验证当前登录用户是否为管理员"""
-    if current_user.role != UserRole.ADMIN:
+    """验证当前登录用户是否为管理员（包括普通管理员和超级管理员）"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
             detail="权限不足！只有系统管理员可以操作此接口"

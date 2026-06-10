@@ -139,7 +139,7 @@ async def delete_comment(
         raise HTTPException(status_code=404, detail="评论不存在")
 
     # 权限校验：作者或管理员
-    if comment.user_id != user.id and user.role != UserRole.ADMIN:
+    if comment.user_id != user.id and user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
         raise HTTPException(status_code=403, detail="无权删除他人评论")
 
     comment.deleted_at = datetime.now()

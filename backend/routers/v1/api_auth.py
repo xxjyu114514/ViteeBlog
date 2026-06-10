@@ -6,7 +6,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, status, HTTPException, Body, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from dependencies import get_db, allow_admin_only, get_current_user
+from dependencies import get_db, allow_admin_only, get_current_user, allow_super_admin_only
 from schemas.user_schema import (
     UserCreate, UserLogin, UserOut, Token, EmailCodeRequest,
     VerifyCodeRequest, PasswordChange, ForgotPasswordRequest, ResetPasswordRequest,
@@ -91,15 +91,23 @@ async def send_register_code(payload: EmailCodeRequest, db: AsyncSession = Depen
     return {"message": "验证码已成功发送至您的邮箱，请查收"}
 
 
-@router.put("/admin/users/{user_id}/role", summary="【超级管理员】修改用户角色")
+@router.put("/admin/users/{user_id}/role", summary="【管理员】修改用户角色")
 async def update_user_role(
         user_id: int,
         new_role: UserRole = Body(..., embed=True),
-        admin: User = Depends(allow_admin_only),
+        current_admin: User = Depends(allow_admin_only),
         db: AsyncSession = Depends(get_db)
 ):
+    """
+    修改用户角色（ADMIN 和 SUPER_ADMIN 均可使用）
+    - 可以将普通用户提升为普通管理员
+    - 可以将管理员降级为普通用户
+    - 不能将任何人升级为超级管理员（只能手动在数据库中设置）
+    - 不能修改超级管理员的角色
+    - 不能修改自己的角色
+    """
     # 安全校验 1：不能修改自己的权限
-    if user_id == admin.id:
+    if user_id == current_admin.id:
         raise HTTPException(status_code=400, detail="不能修改自己的角色")
 
     # 安全校验 2：目标用户必须存在
@@ -108,16 +116,31 @@ async def update_user_role(
     if not target_user:
         raise HTTPException(status_code=404, detail="目标用户不存在")
 
-    # 安全校验 3：降级管理员时，确保全站至少保留一名管理员
+    # 安全校验 3：不能将任何人升级为超级管理员
+    if new_role == UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="无法通过接口升级为超级管理员，请联系系统管理员手动设置")
+
+    # 安全校验 4：不能修改超级管理员的角色
+    if target_user.role == UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="无法修改超级管理员的角色")
+
+    # 安全校验 5：降级普通管理员时，确保全站至少保留一名普通管理员
     if target_user.role == UserRole.ADMIN and new_role != UserRole.ADMIN:
-        admin_count_res = await db.execute(select(func.count(User.id)).where(User.role == UserRole.ADMIN))
+        admin_count_res = await db.execute(
+            select(func.count(User.id)).where(
+                User.role == UserRole.ADMIN,
+                User.is_active == True,
+                User.deleted_at == None
+            )
+        )
         if admin_count_res.scalar() <= 1:
-            raise HTTPException(status_code=400, detail="全站必须至少保留一名管理员")
+            raise HTTPException(status_code=400, detail="全站必须至少保留一名普通管理员")
 
     # 执行更新
+    old_role = target_user.role.value
     target_user.role = new_role
     await db.commit()
-    return {"message": f"成功将用户角色更新为 {new_role}"}
+    return {"message": f"成功将用户 {target_user.username} 从 {old_role} 变更为 {new_role.value}"}
 
 
 @router.put("/change-password", summary="修改个人密码")
@@ -195,7 +218,7 @@ async def delete_account(
     db: AsyncSession = Depends(get_db)
 ):
     # 管理员不能注销自己的账号
-    if current_user.role == UserRole.ADMIN:
+    if current_user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
         raise HTTPException(status_code=400, detail="管理员账号不能注销，请先转让管理员权限")
 
     current_user.is_active = False
