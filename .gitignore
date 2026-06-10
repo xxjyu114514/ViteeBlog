@@ -99,12 +99,14 @@ $RECYCLE.BIN/
 *.orig
 *.log
 
-# 忽略 storage 下的具体文件，但保留目录结构
-storage/articles/*
-storage/images/*
+# 忽略 backend storage 下的具体文件，但保留目录结构
+backend/storage/articles/*
+backend/storage/images/*
+backend/storage/avatars/*
+backend/storage/chat/*
 
 # 强制不忽略 .gitkeep 文件
-!**/ .gitkeep
+!backend/storage/**/.gitkeep
 
 backend/alembic/*
 backend/alembic/versions/4225090b7b65_initial_migration.py

@@ -1,15 +1,23 @@
 <template>
   <div class="about-detail-page">
     <!-- ===== 顶部：文章区域 ===== -->
-    <section class="article-section">
+    <section class="article-section" :class="{ entered: slidIn }">
       <div class="article-container">
         <h1 class="article-title">{{ pageTitle }}</h1>
         <div class="article-content markdown-body" v-html="renderedContent"></div>
       </div>
     </section>
 
+    <!-- ===== 贡献者标题 ===== -->
+    <section class="contributors-section" :class="{ entered: slidIn }">
+      <div class="contributors-header">
+        <h2 class="contributors-title">了解你的贡献者</h2>
+        <p class="contributors-subtitle">MEET THE TEAM / 2026</p>
+      </div>
+    </section>
+
     <!-- ===== 画廊：5 人矩形 ===== -->
-    <section class="gallery-section" ref="galleryRef">
+    <section class="gallery-section" :class="{ entered: slidIn }" ref="galleryRef">
       <div
         v-for="(person, idx) in team"
         :key="idx"
@@ -38,7 +46,11 @@
               <div class="person-info">
                 <h2 class="detail-name">{{ person.name }}</h2>
                 <p class="detail-role">{{ person.role }}</p>
-                <p class="detail-desc">{{ person.description }}</p>
+                <div class="detail-desc markdown-body" v-html="renderMarkdown(person.description)"></div>
+                <div v-if="person.quote" class="detail-quote">
+                  <span class="quote-label">💬 个人语录</span>
+                  <div class="quote-text markdown-body" v-html="renderMarkdown(person.quote)"></div>
+                </div>
               </div>
             </div>
           </Transition>
@@ -49,25 +61,54 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { renderMarkdown } from '@/utils'
 
 // ===== 状态 =====
 const expandedIndex = ref(-1)
 const galleryRef = ref(null)
+const slidIn = ref(false)
+
+onMounted(() => {
+  requestAnimationFrame(() => { slidIn.value = true })
+})
 
 // ===== 页面文章 =====
 const pageTitle = '关于维特博客'
 const pageContent = `
-维特博客 是一个专注于技术分享与个人表达的知识平台。
+# 维特博客
+
+维特博客是一个专注于技术分享与个人表达的知识平台。
 
 我们相信代码不仅是工具，更是表达思想的方式。通过写作和分享，我们希望帮助更多开发者少走弯路，同时也督促自己不断学习和进步。
 
-## 我们的理念
+## 了解源代码
 
-- **冷色调机能风** — 设计语言融合明日方舟美学与 GitHub 暗色层次
-- **零圆角硬边** — 毛玻璃与硬边结合的独特视觉风格
-- **极致性能** — 基于 Vite + Vue 3 构建，追求极致加载体验
+- ***源代码：https://github.com/xxjyu114514/ViteeBlog***
+
+## 未来的计划
+
+我们正在计划以下功能：
+
+- **更好的样式**：优化 UI 设计，提供更清晰的操作指引
+- **优化入场退场动画**
+- **前端性能优化**：减轻性能压力，引入限流机制
+- **后端重构**：优化石山（提升系统稳健性）
+
+## 一些感慨
+
+做这个其实只是想做一个个人博客交作业而已，奈何想法太多，想到什么加什么。  
+我觉得做代码、做网页，还是得做得有意思、有趣、丰富多样，而不是纯应付——虽然最后也没做完 😅
+
+做了 2 个月，和组员交流（撕逼）也收获了很多代码开发的经验，磨练了心性，也磨练了技术，挺好的。虽然说挺累的。
+
+在这里还是要感谢所有这个项目的贡献者们，非常感谢你们！
+
+—— xxjyu
+
+## 特别感谢
+
+- **vue-anime-website** 项目组成员，他们对本项目提供大量技术支持以及灵感启发，了解他们的开源项目！ ***https://github.com/Jackychan-200811/vue-anime-website***
 `
 const renderedContent = computed(() => renderMarkdown(pageContent))
 
@@ -76,35 +117,40 @@ const team = [
   {
     name: '78区子羽先生',
     role: '创始人 & 全栈工程师',
-    description: '擅长 Vue 3、FastAPI、Mysql 专注于构建高性能 Web 应用。热爱开源，持续探索前沿技术。请支持异世界情绪谢谢',
+    description: '擅长 **Vue 3**、**FastAPI**、**MySQL**，专注于构建高性能 Web 应用。热爱开源，持续探索前沿技术。',
+    quote: '请支持异世界情绪谢谢 🙏',
     image: new URL('@/assets/team/photo-1.jpg', import.meta.url).href,
     gradient: 'linear-gradient(to top, #0f0c29 0%, #0f0c29 80%, transparent 100%)',
   },
   {
     name: '13区智烨',
     role: 'UI/UX 设计师',
-    description: '冷色调设计语言的缔造者。专注毛玻璃与机能风格的融合，追求极致的视觉体验与交互细节。Tell Me Tell Me 鏡よ鏡一番 好きな私になるの',
+    description: '冷色调设计语言的缔造者。专注毛玻璃与机能风格的融合，追求极致的视觉体验与交互细节。',
+    quote: 'Tell Me Tell Me 鏡よ鏡一番 好きな私になるの',
     image: new URL('@/assets/team/photo-2.jpg', import.meta.url).href,
     gradient: 'linear-gradient(to top, #1a1a2e 0%, #1a1a2e 80%, transparent 100%)',
   },
   {
     name: '陈伟权先生',
     role: '后端架构师',
-    description: 'Python 全栈开发者，精通 FastAPI 与数据库设计。对 API 性能优化与系统架构有深入理解。你写不过我你信吗！',
+    description: '**Python** 全栈开发者，精通 **FastAPI** 与数据库设计。对 API 性能优化与系统架构有深入理解。',
+    quote: '你写不过我你信吗！',
     image: new URL('@/assets/team/photo-3.jpg', import.meta.url).href,
     gradient: 'linear-gradient(to top, #0d1117 0%, #0d1117 80%, transparent 100%)',
   },
   {
     name: '91丘溢聪先生',
     role: '数据库工程师',
-    description: '追求mysql工程化。追求代码的可维护性和优雅性，致力于打造流畅的用户体验。劳资头像帅否',
+    description: '追求 **MySQL** 工程化。追求代码的可维护性和优雅性，致力于打造流畅的用户体验。',
+    quote: '劳资头像帅否 🤔',
     image: new URL('@/assets/team/photo-4.jpg', import.meta.url).href,
     gradient: 'linear-gradient(to top, #1b1b2f 0%, #1b1b2f 80%, transparent 100%)',
   },
   {
     name: '周子俊孔龙',
     role: '产品经理 & 内容运营',
-    description: '负责博客的内容规划与社区运营。关注开发者成长，致力于打造有温度的技术交流平台。哈哈哈哈哈哈哈哈哈',
+    description: '负责博客的内容规划与社区运营。关注开发者成长，致力于打造有温度的技术交流平台。',
+    quote: '哈哈哈哈哈哈哈哈哈 😂',
     image: new URL('@/assets/team/photo-5.jpg', import.meta.url).href,
     gradient: 'linear-gradient(to top, #0a0a23 0%, #0a0a23 80%, transparent 100%)',
   },
@@ -117,11 +163,9 @@ const toggleExpand = (idx) => {
 
 // ===== 每项样式 =====
 const getItemStyle = (idx) => {
-  const base = {
-    width: expandedIndex.value === -1 ? '20vw' : expandedIndex.value === idx ? '100vw' : '0',
-    height: '70vh',
+  return {
+    height: expandedIndex.value === idx ? 'calc(100vh - 90px)' : '70vh',
   }
-  return base
 }
 </script>
 
@@ -132,6 +176,33 @@ const getItemStyle = (idx) => {
 .about-detail-page {
   background: $bg-base;
   color: $text-primary;
+}
+
+/* ===== 入场动画 ===== */
+.article-section,
+.contributors-section,
+.gallery-section {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.article-section.entered {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0s;
+}
+
+.contributors-section.entered {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0.15s;
+}
+
+.gallery-section.entered {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0.3s;
 }
 
 /* ===== 顶部文章 ===== */
@@ -183,6 +254,34 @@ const getItemStyle = (idx) => {
   }
 }
 
+/* ===== 贡献者标题 ===== */
+.contributors-section {
+  padding: 80px 24px 40px;
+  display: flex;
+  justify-content: center;
+}
+
+.contributors-header {
+  text-align: center;
+  max-width: 600px;
+}
+
+.contributors-title {
+  font-family: $font-mono;
+  font-size: 5rem;
+  font-weight: 800;
+  color: $text-primary;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.contributors-subtitle {
+  font-size: 0.85rem;
+  color: $text-tertiary;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
 /* ===== 画廊 ===== */
 .gallery-section {
   display: flex;
@@ -191,48 +290,46 @@ const getItemStyle = (idx) => {
 }
 
 .gallery-item-wrap {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  transition: width 0.6s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.4s ease 0.15s;
+  transition: flex 0.6s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.4s ease 0.15s;
 
   &.is-hidden {
-    width: 0 !important;
+    flex: 0 0 0;
     opacity: 0;
+    overflow: hidden;
     pointer-events: none;
-    transition: width 0.5s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.2s ease;
+    transition: flex 0.5s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.2s ease;
   }
 }
 
 .gallery-item {
   position: relative;
-  flex-shrink: 0;
+  width: 100%;
   cursor: pointer;
   overflow: hidden;
   display: flex;
   align-items: center;
+  transition: height 0.6s cubic-bezier(0.65, 0, 0.35, 1);
 }
 
 .person-img {
   position: absolute;
-  inset: 0;
-  width: 100%;
+  top: 0;
+  left: 0;
+  width: auto;
   height: 100%;
   z-index: 1;
-  object-fit: cover;
   filter: brightness(0.7);
-  transition: filter 0.4s, width 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+  transition: filter 0.4s;
 }
 
 .person-bg {
   position: absolute;
   inset: 0;
   z-index: 0;
-}
-
-/* 展开时：图片缩到左边40%，渐变背景自然露出来 */
-.gallery-item.expanded .person-img {
-  width: 40%;
 }
 
 .gallery-item:hover .person-img {
@@ -296,6 +393,29 @@ const getItemStyle = (idx) => {
   font-size: 0.95rem;
   line-height: 1.7;
   color: rgba(255, 255, 255, 0.8);
+}
+
+.detail-quote {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.quote-label {
+  font-family: $font-mono;
+  font-size: 0.7rem;
+  color: $color-primary;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.quote-text {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.55);
+  font-style: italic;
 }
 
 /* ===== 名字淡入淡出 ===== */
