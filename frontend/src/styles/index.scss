@@ -20,6 +20,11 @@
   box-sizing: border-box;
 }
 
+// ========== 全局 UI 缩放开关（改这一个值，Navbar + 沉浸页统一缩放，1 = 原效果）==========
+:root {
+  --ui-scale: 1;
+}
+
 body {
   font-family: $font-sans;
   color: $text-primary;

@@ -1,5 +1,5 @@
 import HomeView from '@/views/misc/HomeView.vue'
-import PostPage from '@/views/article/PostPage.vue'
+import PostPageRouter from '@/views/article/PostPageRouter.vue'
 import AboutImmersiveView from '@/views/about/AboutImmersiveView.vue'
 import MessagePage from '@/views/message/MessagePage.vue'
 
@@ -13,13 +13,13 @@ export default [
   {
     path: '/posts-immersive',
     name: 'posts-immersive',
-    component: PostPage,
+    component: PostPageRouter,
     meta: { index: 1, title: '文章列表' }
   },
   {
     path: '/posts',
     name: 'posts',
-    component: PostPage,
+    component: PostPageRouter,
     meta: { index: 10, title: '文章列表' }
   },
   {

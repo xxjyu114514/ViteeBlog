@@ -1,8 +1,8 @@
 <template>
   <Navbar />
 
-  <!-- 装饰线系统（1:1 复制 Arknights ._60828c90） -->
-  <div class="deco-lines show" :class="'deco-panel-' + decoPanel">
+  <!-- 装饰线系统（仅新样式启用） -->
+  <div v-if="useNavV2" class="deco-lines show" :class="'deco-panel-' + decoPanel">
     <div class="deco-dot deco-vline"></div>
     <div class="deco-dot deco-hline-top"></div>
     <div class="deco-dot deco-hline-bot"></div>
@@ -24,6 +24,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Navbar from './components/Navbar.vue'
 import { usePageTransition } from './composables/usePageTransition'
+import { useNavV2 } from '@/composables/useStyleSwitch'
 
 const route = useRoute()
 const router = useRouter()
@@ -123,13 +124,13 @@ const onTransitionLeave = (el, done) => {
   height: 1px;
 }
 
-/* panel 0：默认 — 三线在画面边缘 */
+/* panel 0：默认 — 三线在画面边缘（底部线显式可见） */
 .deco-panel-0 .deco-vline { right: 14.75rem; }
 .deco-panel-0 .deco-hline-top { top: 0; }
-.deco-panel-0 .deco-hline-bot { bottom: 0; }
+.deco-panel-0 .deco-hline-bot { bottom: 0.625rem; }
 
-/* panel 1：文章沉浸页 — 顶横线滑入 9.5rem（对标 Arknights deco-panel-1） */
+/* panel 1：文章沉浸页 — 顶横线滑入 9.5rem，底横线同上微抬 */
 .deco-panel-1 .deco-vline { right: 14.75rem; }
 .deco-panel-1 .deco-hline-top { top: 9.5rem; }
-.deco-panel-1 .deco-hline-bot { bottom: -.25rem; }
+.deco-panel-1 .deco-hline-bot { bottom: 0.625rem; }
 </style>

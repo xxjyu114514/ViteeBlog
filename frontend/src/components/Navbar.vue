@@ -1,5 +1,5 @@
 <template>
-  <nav class="navbar-fixed is-immersive">
+  <nav class="navbar-fixed is-immersive" :class="{ 'navV2': useNavV2 }">
     <div class="dynamic-blur-layer"></div>
     
     <div class="nav-container container flex-between">
@@ -51,6 +51,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useNavV2 } from '@/composables/useStyleSwitch'
 
 const route = useRoute()
 const router = useRouter()
@@ -71,7 +72,9 @@ const menuItems = [
 <style lang="scss" scoped>
 @use '@/assets/styles/variables' as *;
 
-/* ===== 导航栏容器：透明底，让毛玻璃层显现 ===== */
+/* ============================================================
+   基础：老样式（原始 px / rem，无 --ui-scale）
+   ============================================================ */
 .navbar-fixed {
   position: fixed;
   top: 0; left: 0;
@@ -101,7 +104,6 @@ const menuItems = [
   &:active { filter: brightness(0.7); }
 }
 
-/* ===== 毛玻璃层（保留原创设计） ===== */
 .dynamic-blur-layer {
   position: absolute;
   top: 0; left: 0;
@@ -111,11 +113,7 @@ const menuItems = [
   z-index: -1;
   backdrop-filter: blur(30px) saturate(180%) brightness(0.85);
   -webkit-backdrop-filter: blur(30px) saturate(180%) brightness(0.85);
-  background: linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0.1) 0%,
-    rgba(255, 255, 255, 0) 100%
-  );
+  background: linear-gradient(to bottom, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
   mask-image: linear-gradient(to bottom, black 0%, black 50%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, black 0%, black 50%, transparent 100%);
 }
@@ -147,18 +145,14 @@ const menuItems = [
   color: $text-primary;
 }
 
-.nav-item:hover {
-  opacity: 0.7;
-}
+.nav-item:hover { opacity: 0.7; }
 
 .nav-item.router-link-active::after {
   content: '';
   position: absolute;
-  bottom: -5px; 
-  left: 50%;
+  bottom: -5px; left: 50%;
   transform: translateX(-50%);
-  width: 6px;
-  height: 6px;
+  width: 6px; height: 6px;
   background: $text-primary;
   border-radius: 50%;
 }
@@ -172,8 +166,7 @@ const menuItems = [
   &:hover { opacity: 1; }
 }
 
-.login-btn,
-.personal-btn {
+.login-btn, .personal-btn {
   text-decoration: none;
   font-weight: 800;
   font-size: 0.85rem;
@@ -182,18 +175,40 @@ const menuItems = [
 }
 
 /* ===== 标题 ↔ 返回按钮切换动画 ===== */
-.logo-swap-enter-active {
-  transition: opacity 0.25s ease, transform 0.25s ease;
+.logo-swap-enter-active { transition: opacity 0.25s ease, transform 0.25s ease; }
+.logo-swap-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }
+.logo-swap-enter-from { opacity: 0; transform: translateX(-12px); }
+.logo-swap-leave-to   { opacity: 0; transform: translateX(12px); }
+
+/* ============================================================
+   .navV2：新样式覆盖（--ui-scale 缩放 + 字体特殊化）
+   改 useNavV2 ref 即可切换
+   ============================================================ */
+.navV2.navbar-fixed       { height: calc(5.625rem * var(--ui-scale)); }
+.navV2 .dynamic-blur-layer { height: calc(8.75rem * var(--ui-scale)); }
+.navV2 .nav-container      { padding: 0 calc(3.125rem * var(--ui-scale)); }
+.navV2 .menu-links         { gap: calc(3.125rem * var(--ui-scale)); }
+.navV2 .logo-text          { letter-spacing: calc(0.1875rem * var(--ui-scale)); font-size: calc(1.25rem * var(--ui-scale)); }
+.navV2 .btn-back           { min-width: calc(6.25rem * var(--ui-scale)); font-size: calc(1.1rem * var(--ui-scale)); padding: calc(0.375rem * var(--ui-scale)) calc(1rem * var(--ui-scale)); }
+.navV2 .search-icon        { font-size: calc(1.1rem * var(--ui-scale)); margin-right: calc(1rem * var(--ui-scale)); }
+.navV2 .login-btn,
+.navV2 .personal-btn       { font-size: calc(0.85rem * var(--ui-scale)); letter-spacing: calc(0.125rem * var(--ui-scale)); }
+
+.navV2 .nav-item {
+  font-size: calc(2rem * var(--ui-scale));
+  font-weight: 900;
+  font-family: 'Oswald', 'Arial Black', 'Impact', sans-serif;
+  letter-spacing: calc(0.25rem * var(--ui-scale));
+  text-transform: uppercase;
+  padding: calc(0.625rem * var(--ui-scale)) 0;
 }
-.logo-swap-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
+
+.navV2 .nav-item.router-link-active::after {
+  bottom: calc(-0.3125rem * var(--ui-scale));
+  width: calc(0.375rem * var(--ui-scale));
+  height: calc(0.375rem * var(--ui-scale));
 }
-.logo-swap-enter-from {
-  opacity: 0;
-  transform: translateX(-12px);
-}
-.logo-swap-leave-to {
-  opacity: 0;
-  transform: translateX(12px);
-}
+
+.navV2 .logo-swap-enter-from { transform: translateX(calc(-0.75rem * var(--ui-scale))); }
+.navV2 .logo-swap-leave-to   { transform: translateX(calc(0.75rem * var(--ui-scale))); }
 </style>
