@@ -42,8 +42,22 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
 
 
 async def allow_admin_only(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != UserRole.ADMIN:
+    """
+    管理员权限校验：允许 ADMIN 和 SUPER_ADMIN
+    用于日常管理操作（审核文章、管理分类、处理举报等）
+    """
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
         raise HTTPException(status_code=403, detail="权限不足，仅限管理员操作")
+    return current_user
+
+
+async def allow_super_admin_only(current_user: User = Depends(get_current_user)) -> User:
+    """
+    超级管理员权限校验：仅允许 SUPER_ADMIN
+    仅用于最高敏感操作（修改用户角色、降级管理员等）
+    """
+    if current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="权限不足，仅限超级管理员操作")
     return current_user
 
 

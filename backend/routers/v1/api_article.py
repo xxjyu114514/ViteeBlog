@@ -82,7 +82,7 @@ async def autosave(article_in: ArticleCreate, user: User = Depends(get_current_u
         res = await db.execute(select(Article).where(Article.id == article_in.id).options(selectinload(Article.tags)))
         article = res.scalars().first()
 
-        if not article or (article.user_id != user.id and user.role != UserRole.ADMIN):
+        if not article or (article.user_id != user.id and user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]):
             raise HTTPException(status_code=403, detail="无权修改此文章")
 
         if article_in.version is not None and article_in.version != article.version:
@@ -126,7 +126,7 @@ async def publish_article(article_id: int, user: User = Depends(get_current_user
     res = await db.execute(select(Article).where(Article.id == article_id))
     article = res.scalars().first()
 
-    if not article or (article.user_id != user.id and user.role != UserRole.ADMIN):
+    if not article or (article.user_id != user.id and user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]):
         raise HTTPException(status_code=403, detail="无权操作")
 
     if not article.title or not article.title.strip():
@@ -134,7 +134,7 @@ async def publish_article(article_id: int, user: User = Depends(get_current_user
     if not article.content or not article.content.strip():
         raise HTTPException(status_code=400, detail="发布失败：文章内容不能为空")
 
-    if user.role == UserRole.ADMIN:
+    if user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
         article.status = ArticleStatus.PUBLISHED
         article.published_at = datetime.now()
     else:
@@ -144,7 +144,7 @@ async def publish_article(article_id: int, user: User = Depends(get_current_user
 
     article.updated_at = datetime.now()
     await db.commit()
-    return {"message": "发布成功" if user.role == UserRole.ADMIN else "已提交审核"}
+    return {"message": "发布成功" if user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN] else "已提交审核"}
 
 
 # --- 接口 5：GET /{article_id} (获取详情) ---
@@ -161,7 +161,7 @@ async def get_article_detail(article_id: int, user: Optional[User] = Depends(get
         raise HTTPException(status_code=404, detail="文章不存在")
 
     is_author = user and article.user_id == user.id
-    is_admin = user and user.role == UserRole.ADMIN
+    is_admin = user and user.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]
 
     if article.deleted_at and not (is_author or is_admin):
         raise HTTPException(status_code=404, detail="文章已删除")
@@ -210,7 +210,7 @@ async def get_article_detail(article_id: int, user: Optional[User] = Depends(get
 async def withdraw_article(article_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     res = await db.execute(select(Article).where(Article.id == article_id))
     article = res.scalars().first()
-    if not article or (article.user_id != user.id and user.role != UserRole.ADMIN):
+    if not article or (article.user_id != user.id and user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]):
         raise HTTPException(status_code=403)
 
     if article.status != ArticleStatus.PENDING:
@@ -285,7 +285,7 @@ async def soft_delete(article_id: int, user: User = Depends(get_current_user), d
         raise HTTPException(status_code=404, detail="文章不存在")
     if article.deleted_at:
         raise HTTPException(status_code=400, detail="文章已在回收站中")
-    if user.role != UserRole.ADMIN and article.user_id != user.id:
+    if user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN] and article.user_id != user.id:
         raise HTTPException(status_code=403, detail="无权删除此文章")
 
     article.deleted_at = datetime.now()
@@ -299,7 +299,7 @@ async def hard_delete_article(article_id: int, user: User = Depends(get_current_
                               db: AsyncSession = Depends(get_db)):
     res = await db.execute(select(Article).where(Article.id == article_id))
     article = res.scalars().first()
-    if not article or (article.user_id != user.id and user.role != UserRole.ADMIN):
+    if not article or (article.user_id != user.id and user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]):
         raise HTTPException(status_code=403, detail="无权删除此文章")
 
     await db.delete(article)
@@ -311,7 +311,7 @@ async def hard_delete_article(article_id: int, user: User = Depends(get_current_
 @router.post("/{article_id}/restore", summary="恢复文章")
 async def restore_article(article_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     stmt = update(Article).where(Article.id == article_id)
-    if user.role != UserRole.ADMIN: stmt = stmt.where(Article.user_id == user.id)
+    if user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]: stmt = stmt.where(Article.user_id == user.id)
     await db.execute(stmt.values(deleted_at=None))
     await db.commit()
     return {"message": "已恢复"}
