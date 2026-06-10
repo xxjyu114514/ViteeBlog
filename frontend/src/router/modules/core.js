@@ -1,7 +1,7 @@
 import HomeView from '@/views/misc/HomeView.vue'
 import PostPageRouter from '@/views/article/PostPageRouter.vue'
 import AboutImmersiveView from '@/views/about/AboutImmersiveView.vue'
-import MessagePage from '@/views/message/MessagePage.vue'
+import MessageImmersiveView from '@/views/message/MessageImmersiveView.vue'
 
 export default [
   {
@@ -23,15 +23,15 @@ export default [
     meta: { index: 10, title: '文章列表' }
   },
   {
+    path: '/message-immersive',
+    name: 'message-immersive',
+    component: MessageImmersiveView,
+    meta: { index: 2, title: '留言板' }
+  },
+  {
     path: '/about-immersive',
     name: 'about-immersive',
     component: AboutImmersiveView,
-    meta: { index: 2, title: '关于我' }
-  },
-  {
-    path: '/message-immersive',
-    name: 'message-immersive',
-    component: MessagePage,
-    meta: { index: 3, title: '留言板' }
+    meta: { index: 3, title: '关于我' }
   },
 ]

@@ -96,6 +96,23 @@ class UserProfileOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserAdminOut(BaseModel):
+    """管理员视角的用户信息（含更多字段）"""
+    id: int
+    username: str
+    email: str
+    role: UserRole
+    avatar: Optional[str] = None
+    bio: Optional[str] = None
+    is_active: bool = True
+    login_attempts: int = 0
+    following_count: int = 0
+    followers_count: int = 0
+    created_at: datetime
+    deleted_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ArticleSimpleOut(BaseModel):
     id: int
     title: str

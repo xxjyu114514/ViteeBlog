@@ -20,7 +20,13 @@ export const useUserStore = defineStore('user', () => {
     }
   })
   
-  const isAdmin = computed(() => userInfo.value?.role === 'admin')
+  const isAdmin = computed(() => userInfo.value?.role === 'admin' || userInfo.value?.role === 'super_admin')
+  const isSuperAdmin = computed(() => userInfo.value?.role === 'super_admin')
+  const roleLabel = computed(() => {
+    if (!userInfo.value) return '未登录'
+    const map = { super_admin: '超级管理员', admin: '管理员', common: '普通用户' }
+    return map[userInfo.value.role] || userInfo.value.role
+  })
 
   // Actions: 设置认证信息
   function setAuth(accessToken, user) {
@@ -52,7 +58,9 @@ export const useUserStore = defineStore('user', () => {
     userInfo, 
     isAuthenticated, 
     isTokenValid,
-    isAdmin, 
+    isAdmin,
+    isSuperAdmin,
+    roleLabel,
     setAuth, 
     logout,
     checkTokenExpiry

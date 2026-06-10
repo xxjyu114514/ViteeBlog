@@ -1,5 +1,5 @@
 <template>
-  <div class="pc-page">
+  <div class="pc-page" :style="{ '--pc-bg': `url(${personalBg})` }">
     <div class="pc-layout" :class="{ 'is-leaving': isLeaving }">
       <!-- 左侧：个人信息卡片 -->
       <div class="glass-hero-card profile-card tilt-target">
@@ -11,8 +11,9 @@
             </span>
           </div>
           <div class="profile-name">{{ userStore.userInfo?.username || '未登录' }}</div>
-          <div class="profile-role">
-            {{ userStore.userInfo?.role === 'admin' ? '管理员' : '普通用户' }}
+          <div class="profile-role" :class="{ 'role-super': userStore.isSuperAdmin }">
+            {{ userStore.roleLabel }}
+            <span v-if="userStore.isSuperAdmin" class="role-badge-super">★</span>
           </div>
           <div class="profile-stats">
             <div class="stat-item"><span class="stat-num">{{ profileStats.totalArticles }}</span><span class="stat-label">文章</span></div>
@@ -63,13 +64,14 @@
               </div>
             </div>
           </div>
+
           <div class="hero-row row-double row-bottom">
-            <div class="hero-button hero-btn-half btn-manage" data-path="/manage-articles">
+            <div class="hero-button hero-btn-half btn-manage" data-path="/user-dashboard">
               <div class="hero-button__inner">
                 <span class="hero-button__icon">📂</span>
                 <div class="hero-button__text">
-                  <span class="hero-button__label">{{ userStore.isAdmin ? '管理中心' : '我的文章' }}</span>
-                  <span class="hero-button__sub">ADMIN</span>
+                  <span class="hero-button__label">{{ userStore.isSuperAdmin ? '超级管理' : '管理中心' }}</span>
+                  <span class="hero-button__sub">{{ userStore.isSuperAdmin ? 'SUPER' : 'MANAGE' }}</span>
                 </div>
               </div>
             </div>
@@ -152,6 +154,7 @@ import { useUserStore } from '@/stores/user'
 import * as authService from '@/services/authService'
 import { getUserProfile } from '@/services/userService'
 import { uploadAvatar, updateProfile } from '@/services/authService'
+import personalBg from '@/assets/personl.webp'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
 const BACKEND_BASE = API_BASE.replace('/api/v1', '')
@@ -669,11 +672,9 @@ $btn-manage: (
   h:      17vh,
   dir:    to right,
   icon:   '📂',
-  label:  '管理中心',             // 管理员显示此文字
-  label2: '我的文章',             // 普通用户显示此文字（模板中用 v-if）
-  sub:    'ADMIN',
-  path:   '/admin-dashboard',
-  path2:  '/manage-articles',
+  label:  '管理中心',             // 所有用户统一显示此文字
+  sub:    'MANAGE',
+  path:   '/user-dashboard',
 );
 
 $btn-account: (
@@ -688,7 +689,7 @@ $btn-account: (
 // ============================================================
 
 .pc-page {
-  background: url(#{$img-personal-bg}) right top / cover fixed, $bg-base;
+  background: var(--pc-bg) right top / cover fixed, $bg-base;
   color: $text-primary;
   font-family: $font-sans;
   height: 100vh;
@@ -809,6 +810,23 @@ $btn-account: (
   color: $color-primary;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  &.role-super {
+    color: #ffd700;
+    font-weight: 700;
+  }
+}
+
+.role-badge-super {
+  font-size: 1rem;
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% { text-shadow: 0 0 4px rgba(255, 215, 0, 0.5); }
+  50% { text-shadow: 0 0 12px rgba(255, 215, 0, 0.9); }
 }
 
 .profile-stats {
@@ -1022,4 +1040,5 @@ $btn-account: (
     ),
     rgba($bg-elevated, 0.82);
 }
+
 </style>

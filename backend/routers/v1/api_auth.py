@@ -1,3 +1,4 @@
+from typing import List
 import traceback
 import uuid
 import os
@@ -10,7 +11,7 @@ from dependencies import get_db, allow_admin_only, get_current_user, allow_super
 from schemas.user_schema import (
     UserCreate, UserLogin, UserOut, Token, EmailCodeRequest,
     VerifyCodeRequest, PasswordChange, ForgotPasswordRequest, ResetPasswordRequest,
-    ProfileUpdate
+    ProfileUpdate, UserAdminOut
 )
 from repository.auth_repo import AuthRepository
 from core.security import generate_verification_code
@@ -89,6 +90,18 @@ async def send_register_code(payload: EmailCodeRequest, db: AsyncSession = Depen
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="邮件推送系统异常，请稍后再试")
 
     return {"message": "验证码已成功发送至您的邮箱，请查收"}
+
+
+@router.get("/admin/users", response_model=List[UserAdminOut], summary="【管理员】获取用户列表")
+async def list_users(
+    skip: int = 0,
+    limit: int = 100,
+    admin: User = Depends(allow_admin_only),
+    db: AsyncSession = Depends(get_db)
+):
+    """获取用户列表（管理员专用）"""
+    users = await AuthRepository.get_all_users(db, skip=skip, limit=limit)
+    return users
 
 
 @router.put("/admin/users/{user_id}/role", summary="【管理员】修改用户角色")

@@ -617,10 +617,10 @@ def parse_docx_file(file_path: str, filename: str) -> tuple:
 
 
 # --- 接口 19：POST /admin/import/single (单篇导入文章) ---
-@router.post("/admin/import/single", summary="【管理员】单篇导入文章")
+@router.post("/admin/import/single", summary="单篇导入文章")
 async def import_single_article(
     file: UploadFile = File(...),
-    admin: User = Depends(allow_admin_only),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     # 文件大小限制10MB
@@ -656,7 +656,7 @@ async def import_single_article(
             title=title,
             content=content,
             summary=summary,
-            user_id=admin.id,
+            user_id=user.id,
             status=ArticleStatus.DRAFT,
             category_id=None,
             version=1
@@ -678,83 +678,68 @@ async def import_single_article(
 
 
 # --- 接口 20：POST /admin/import/batch (批量导入文章) ---
-@router.post("/admin/import/batch", summary="【管理员】批量导入文章")
+@router.post("/admin/import/batch", summary="批量导入文章")
 async def import_batch_articles(
     files: List[UploadFile] = File(...),
-    admin: User = Depends(allow_admin_only),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    # 总大小限制50MB
-    # 先读取所有文件大小（不消耗文件流）
+    # 一次性读取所有文件内容并缓存（文件流只能读一次）
+    file_contents = []
     total_size = 0
     for f in files:
         content = await f.read()
         total_size += len(content)
-    
+        file_contents.append({"filename": f.filename, "content": content})
+
     if total_size > 50 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="总文件大小不能超过50MB")
-    
+
     success_count = 0
     failed_list = []
     articles_list = []
-    
-    for file in files:
+
+    for fc in file_contents:
         try:
-            # 读取文件内容
-            file_content = await file.read()
-            ext = os.path.splitext(file.filename)[1].lower()
-            
-            # 复用单篇导入的文件解析逻辑
+            file_content = fc["content"]
+            filename = fc["filename"]
+            ext = os.path.splitext(filename)[1].lower()
+
             if ext == '.txt':
-                title, content = parse_txt_file(file_content, file.filename)
+                title, content = parse_txt_file(file_content, filename)
             elif ext == '.md':
-                title, content = parse_md_file(file_content, file.filename)
+                title, content = parse_md_file(file_content, filename)
             elif ext == '.docx':
                 with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp:
                     tmp.write(file_content)
                     tmp_path = tmp.name
                 try:
-                    title, content = parse_docx_file(tmp_path, file.filename)
+                    title, content = parse_docx_file(tmp_path, filename)
                 finally:
                     os.unlink(tmp_path)
             else:
-                failed_list.append({
-                    "filename": file.filename,
-                    "reason": "不支持的文件格式"
-                })
+                failed_list.append({"filename": filename, "reason": "不支持的文件格式"})
                 continue
-            
-            # 生成摘要
+
             summary = extract_summary(content, 200)
-            
-            # 创建Article对象（独立事务）
+
             article = Article(
-                title=title,
-                content=content,
-                summary=summary,
-                user_id=admin.id,
-                status=ArticleStatus.DRAFT,
-                category_id=None,
-                version=1
+                title=title, content=content, summary=summary,
+                user_id=user.id, status=ArticleStatus.DRAFT,
+                category_id=None, version=1
             )
             db.add(article)
             await db.commit()
             await db.refresh(article)
-            
-            articles_list.append({
-                "article_id": article.id,
-                "title": article.title
-            })
+
+            articles_list.append({"article_id": article.id, "title": article.title})
             success_count += 1
-            
+
         except Exception as e:
             await db.rollback()
-            failed_list.append({
-                "filename": file.filename,
-                "reason": str(e)
-            })
+            failed_list.append({"filename": fc["filename"], "reason": str(e)})
             continue
-    
+
     return {
         "total": len(files),
         "success": success_count,
@@ -764,10 +749,10 @@ async def import_batch_articles(
 
 
 # --- 接口 21：POST /admin/upload-images/batch (批量上传图片) ---
-@router.post("/admin/upload-images/batch", summary="【管理员】批量上传图片")
+@router.post("/admin/upload-images/batch", summary="批量上传图片")
 async def batch_upload_images(
     file: UploadFile = File(...),
-    admin: User = Depends(allow_admin_only)
+    user: User = Depends(get_current_user)
 ):
     # 校验文件扩展名
     ext = os.path.splitext(file.filename)[1].lower()

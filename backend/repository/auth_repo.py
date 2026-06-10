@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError  # 新增：用于精细捕获 SQL 异常
 from fastapi import HTTPException, status
 from models.blog_models import User, VerificationCode, UserRole
+from typing import List, Optional
 
 from core.security import verify_password, get_password_hash, create_access_token
 
@@ -271,4 +272,26 @@ class AuthRepository:
             raise HTTPException(
                 status_code=500,
                 detail=f"验证码系统异常，暂时无法发送"
+            )
+
+    @staticmethod
+    async def get_all_users(
+        db: AsyncSession,
+        skip: int = 0,
+        limit: int = 100,
+        include_deleted: bool = False
+    ) -> List[User]:
+        """获取用户列表（管理员专用）"""
+        try:
+            query = select(User).offset(skip).limit(limit).order_by(User.created_at.desc())
+            if not include_deleted:
+                query = query.where(User.deleted_at.is_(None))
+            result = await db.execute(query)
+            return list(result.scalars().all())
+        except Exception as e:
+            print(f"❌ [AuthRepo] 获取用户列表失败: {str(e)}")
+            traceback.print_exc()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="获取用户列表失败"
             )

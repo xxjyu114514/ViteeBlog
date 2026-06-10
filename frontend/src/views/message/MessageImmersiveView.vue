@@ -1,6 +1,7 @@
 <template>
   <div
     class="message-immersive-page"
+    :style="{ '--msg-bg': `url(${heroBg})` }"
     @wheel="onWheel"
   >
     <!-- ===== A: 背景图区域 30vh ===== -->
@@ -71,6 +72,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePrimaryPageWheel } from '@/composables/usePrimaryPageWheel'
 import { getChannels } from '@/services/channelService'
+import heroBg from '@/assets/hero-bg.webp'
 
 const router = useRouter()
 const { handleWheel } = usePrimaryPageWheel('message-immersive')
@@ -126,7 +128,7 @@ onMounted(() => { loadData() })
   overflow: hidden;
   display: flex;
   align-items: center;
-  background: $bg-dark url(#{$img-message-bg}) center / cover no-repeat;
+  background: $bg-dark var(--msg-bg) center / cover no-repeat;
   background-position-y: 30%;
   z-index: 1;
 

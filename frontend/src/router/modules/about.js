@@ -12,6 +12,6 @@ export default [
     path: '/about-detail',
     name: 'about-detail',
     component: AboutDetailView,
-    meta: { index: 21, title: '关于观测笔记' }
+    meta: { index: 21, title: '关于维特博客' }
   },
 ]

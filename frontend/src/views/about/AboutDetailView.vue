@@ -57,9 +57,9 @@ const expandedIndex = ref(-1)
 const galleryRef = ref(null)
 
 // ===== 页面文章 =====
-const pageTitle = '关于观测笔记'
+const pageTitle = '关于维特博客'
 const pageContent = `
-观测笔记 是一个专注于技术分享与个人表达的知识平台。
+维特博客 是一个专注于技术分享与个人表达的知识平台。
 
 我们相信代码不仅是工具，更是表达思想的方式。通过写作和分享，我们希望帮助更多开发者少走弯路，同时也督促自己不断学习和进步。
 

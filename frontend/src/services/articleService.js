@@ -2,7 +2,7 @@
  * 文章服务 — /api/v1/article/*
  * 所有函数返回 ApiResponse 格式
  */
-import { get, post, put, del, uploadFile } from '@/api/client'
+import { get, post, put, del, uploadFile, toCamelCase } from '@/api/client'
 
 /** GET /article/public/list */
 export const getPublicArticles = (params = {}) =>
@@ -107,7 +107,7 @@ export const importBatchArticles = async (files) => {
     if (!response.ok) {
       return { success: false, message: json?.detail || '批量导入失败', data: null, status: response.status }
     }
-    return { success: true, data: json, message: null, status: response.status }
+    return { success: true, data: toCamelCase(json), message: null, status: response.status }
   } catch {
     return { success: false, message: '网络连接失败', data: null, status: 0 }
   }

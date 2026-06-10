@@ -5,7 +5,7 @@
     <div class="nav-container container flex-between">
       <div class="logo-section">
         <Transition name="logo-swap" mode="out-in">
-          <span v-if="!showBackBtn" key="logo" class="logo-text">OBSERVATION</span>
+          <span v-if="!showBackBtn" key="logo" class="logo-text">ViteeBlog</span>
           <button v-else key="back" class="btn-back" @click="router.back()"><</button>
         </Transition>
       </div>
@@ -64,8 +64,8 @@ const showBackBtn = computed(() => !mainPages.includes(route.path))
 const menuItems = [
   { name: '首页', path: '/' },
   { name: '文章', path: '/posts-immersive' },
-  { name: '关于', path: '/about-immersive' },
-  { name: '留言', path: '/message-immersive' }
+  { name: '留言', path: '/message-immersive' },
+  { name: '关于', path: '/about-immersive' }
 ]
 </script>
 
@@ -127,7 +127,7 @@ const menuItems = [
   font-weight: 900;
   letter-spacing: 3px;
   font-size: 1.25rem;
-  color: $text-primary;
+  color: #f0f4fa;
 }
 
 .menu-links {
@@ -142,7 +142,7 @@ const menuItems = [
   position: relative;
   padding: 10px 0;
   transition: opacity 0.3s;
-  color: $text-primary;
+  color: #f0f4fa;
 }
 
 .nav-item:hover { opacity: 0.7; }
@@ -153,7 +153,7 @@ const menuItems = [
   bottom: -5px; left: 50%;
   transform: translateX(-50%);
   width: 6px; height: 6px;
-  background: $text-primary;
+  background: #f0f4fa;
   border-radius: 50%;
 }
 
@@ -171,7 +171,7 @@ const menuItems = [
   font-weight: 800;
   font-size: 0.85rem;
   letter-spacing: 2px;
-  color: $text-primary;
+  color: #f0f4fa;
 }
 
 /* ===== 标题 ↔ 返回按钮切换动画 ===== */
@@ -188,11 +188,11 @@ const menuItems = [
 .navV2 .dynamic-blur-layer { height: calc(8.75rem * var(--ui-scale)); }
 .navV2 .nav-container      { padding: 0 calc(3.125rem * var(--ui-scale)); }
 .navV2 .menu-links         { gap: calc(3.125rem * var(--ui-scale)); }
-.navV2 .logo-text          { letter-spacing: calc(0.1875rem * var(--ui-scale)); font-size: calc(1.25rem * var(--ui-scale)); }
+.navV2 .logo-text          { letter-spacing: calc(0.1875rem * var(--ui-scale)); font-size: calc(1.25rem * var(--ui-scale)); color: #f0f4fa; }
 .navV2 .btn-back           { min-width: calc(6.25rem * var(--ui-scale)); font-size: calc(1.1rem * var(--ui-scale)); padding: calc(0.375rem * var(--ui-scale)) calc(1rem * var(--ui-scale)); }
 .navV2 .search-icon        { font-size: calc(1.1rem * var(--ui-scale)); margin-right: calc(1rem * var(--ui-scale)); }
 .navV2 .login-btn,
-.navV2 .personal-btn       { font-size: calc(0.85rem * var(--ui-scale)); letter-spacing: calc(0.125rem * var(--ui-scale)); }
+.navV2 .personal-btn       { font-size: calc(0.85rem * var(--ui-scale)); letter-spacing: calc(0.125rem * var(--ui-scale)); color: #f0f4fa; }
 
 .navV2 .nav-item {
   font-size: calc(2rem * var(--ui-scale));
@@ -201,6 +201,7 @@ const menuItems = [
   letter-spacing: calc(0.25rem * var(--ui-scale));
   text-transform: uppercase;
   padding: calc(0.625rem * var(--ui-scale)) 0;
+  color: #f0f4fa;
 }
 
 .navV2 .nav-item.router-link-active::after {

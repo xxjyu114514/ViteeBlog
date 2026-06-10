@@ -3,8 +3,9 @@
     <!-- 始终显示沉浸式封面，不受登录状态影响 -->
     <section class="hero-static">
       <div class="hero-content">
-        <h1 class="glass-text">观测笔记</h1>
-        <p class="intro-text">Observational Notes / 2026</p>
+        <h1 class="glass-text">维特博客</h1>
+        <p class="intro-text">ViteeBlog / 2026</p>
+        <p class="site-desc">记录技术思考，分享知识沉淀。<br>用文字连接每一个热爱编码的灵魂。</p>
       </div>
     </section>
   </div>

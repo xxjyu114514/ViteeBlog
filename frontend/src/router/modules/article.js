@@ -5,8 +5,15 @@ const ArticleImportView = () => import('@/views/article/ArticleImportView.vue')
 const ArchiveView = () => import('@/views/article/ArchiveView.vue')
 const SearchView = () => import('@/views/article/SearchView.vue')
 const PostListView = () => import('@/views/article/PostListView.vue')
+const UserDashboardView = () => import('@/views/user/UserDashboardView.vue')
 
 export default [
+  {
+    path: '/user-dashboard',
+    name: 'user-dashboard',
+    component: UserDashboardView,
+    meta: { index: 44, title: '管理中心', requiresAuth: true }
+  },
   {
     path: '/article/:id',
     name: 'article-detail',
@@ -33,7 +40,7 @@ export default [
   {
     path: '/article-import',
     component: ArticleImportView,
-    meta: { requiresAuth: true, requiresAdmin: true, noCardTransition: true }
+    meta: { requiresAuth: true, noCardTransition: true }
   },
   {
     path: '/archive',

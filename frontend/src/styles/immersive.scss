@@ -49,18 +49,19 @@
     background: $bg-dark url(#{$img-home-bg}) center/cover no-repeat; color: $text-primary;
   }
   .hero-content {
-    position: absolute; left: 60px; bottom: 80px; text-align: left; z-index: 10; padding: 20px 30px;
+    position: absolute; left: 10vh; top: 50%; transform: translateY(-50%); text-align: left; z-index: 10; padding: 20px 0;
     font-family: 'PingFangHeavy', "PingFang SC", sans-serif;
     .glass-text {
-      font-size: 2.4rem; font-weight: 900; letter-spacing: -0.5px; margin: 0; line-height: 1.1;
-      background: linear-gradient(160deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.3) 100%);
+      font-size: 4rem; font-weight: 900; letter-spacing: -1px; margin: 0; line-height: 1.15;
+      background: linear-gradient(160deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.3) 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       filter: drop-shadow(0 4px 15px rgba(0, 0, 0, 0.3)) blur(0.4px); position: relative;
     }
-    .intro-text { font-size: 0.9rem; font-weight: 600; color: rgba(255, 255, 255, 0.6); margin-top: 8px; letter-spacing: 1.5px; text-transform: uppercase; }
+    .intro-text { font-size: 1rem; font-weight: 600; color: rgba(255, 255, 255, 0.5); margin-top: 12px; letter-spacing: 3px; text-transform: uppercase; }
+    .site-desc { font-size: 0.95rem; color: rgba(255, 255, 255, 0.9); margin-top: 16px; letter-spacing: 1px; line-height: 1.6; max-width: 500px; }
   }
 }
-@media (max-width: 768px) { .home-view-wrapper .hero-content { left: 30px; bottom: 50px; .glass-text { font-size: 1.8rem; } } }
+@media (max-width: 768px) { .home-view-wrapper .hero-content { left: 5vh; top: 50%; transform: translateY(-50%); padding: 20px 0; .glass-text { font-size: 2.4rem; } .site-desc { font-size: 0.85rem; } } }
 
 /* ========================================
    Posts 沉浸式文章列表页

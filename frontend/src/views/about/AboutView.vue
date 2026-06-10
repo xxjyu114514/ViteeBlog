@@ -15,7 +15,7 @@
             {{ getInitials() }}
           </div>
           <div class="user-info">
-            <h2>观测笔记作者</h2>
+            <h2>维特博客作者</h2>
             <p class="role">全栈开发者 & 技术博主</p>
             <div class="social-links">
               <a href="#" class="social-link">GitHub</a>

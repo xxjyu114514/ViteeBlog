@@ -7,7 +7,7 @@ export function usePrimaryPageWheel(currentRouteName) {
   const router = useRouter()
   const { isAnimating } = usePageTransition()
 
-  const pageOrder = ['home', 'posts-immersive', 'about-immersive', 'message-immersive']
+  const pageOrder = ['home', 'posts-immersive', 'message-immersive', 'about-immersive']
   const currentIndex = pageOrder.indexOf(currentRouteName)
 
   const handleWheel = (e) => {

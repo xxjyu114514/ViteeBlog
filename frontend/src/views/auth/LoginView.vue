@@ -8,9 +8,9 @@
       <div class="visual-content">
         <transition name="text-move" mode="out-in">
           <div class="brand-info" :key="mode">
-            <h1>{{ mode === 'login' ? '观测笔记' : mode === 'register' ? '加入观测' : '找回密码' }}</h1>
+            <h1>{{ mode === 'login' ? '维特博客' : mode === 'register' ? '加入维特' : '找回密码' }}</h1>
             <div class="animated-bar"></div>
-            <p>DESIGN FOR OBSERVATION / 2026</p>
+            <p>ViteeBlog / 2026</p>
           </div>
         </transition>
       </div>

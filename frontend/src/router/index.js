@@ -47,7 +47,7 @@ router.beforeEach((to, from, next) => {
 })
 
 router.afterEach((to) => {
-  const baseTitle = '观测笔记'
+  const baseTitle = '维特博客'
   document.title = to.meta.title ? `${to.meta.title} - ${baseTitle}` : baseTitle
 })
 

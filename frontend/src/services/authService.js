@@ -40,6 +40,10 @@ export const updateUserRole = (userId, newRole) =>
 export const restoreUser = (userId) =>
   put(`/auth/admin/users/${userId}/restore`)
 
+/** GET /auth/admin/users 获取用户列表（管理员专用） */
+export const getAllUsers = (params = {}) =>
+  get('/auth/admin/users', params)
+
 /** POST /auth/upload-avatar */
 export const uploadAvatar = (file) =>
   uploadFile('/auth/upload-avatar', file, 'file')

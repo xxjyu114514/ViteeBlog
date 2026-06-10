@@ -72,13 +72,14 @@
               </div>
             </div>
 
-            <!-- 用户管理（待定扩展） -->
-            <div class="admin-card admin-card-disabled">
+            <!-- 用户管理 -->
+            <div class="admin-card" :class="{ 'admin-card-super': userStore.isSuperAdmin }" @click="handleNav('/admin-users')">
               <div class="admin-card-icon">👥</div>
               <div class="admin-card-info">
                 <span class="admin-card-title">用户管理</span>
-                <span class="admin-card-desc">用户角色管理（开发中）</span>
+                <span class="admin-card-desc">用户角色管理、账号恢复</span>
               </div>
+              <span v-if="userStore.isSuperAdmin" class="super-badge">SUPER</span>
             </div>
           </div>
         </div>
@@ -90,9 +91,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 import { getMyPendingCount } from '@/services/articleService'
 
 const router = useRouter()
+const userStore = useUserStore()
 const slidIn = ref(false)
 const pendingCount = ref(0)
 
@@ -169,4 +172,26 @@ onMounted(async () => {
 .admin-card-title { font-size: 0.95rem; font-weight: 600; color: $text-primary; }
 
 .admin-card-desc { font-size: 0.78rem; color: $text-tertiary; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 超管专属：用户管理卡片金色边框 */
+.admin-card-super {
+  border-color: rgba(255, 215, 0, 0.3);
+  position: relative;
+  &:hover { border-color: #ffd700 !important; box-shadow: 0 0 16px rgba(255, 215, 0, 0.15); }
+}
+
+.super-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 8px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: rgba(255, 215, 0, 0.15);
+  color: #ffd700;
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  border-radius: 8px;
+  font-family: $font-mono;
+}
 </style>
