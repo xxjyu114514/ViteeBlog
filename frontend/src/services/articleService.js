@@ -3,6 +3,7 @@
  * 所有函数返回 ApiResponse 格式
  */
 import { get, post, put, del, uploadFile, toCamelCase } from '@/api/client'
+import { API_BASE_URL } from '@/api/config'
 
 /** GET /article/public/list */
 export const getPublicArticles = (params = {}) =>
@@ -90,7 +91,6 @@ export const importSingleArticle = (file) =>
 
 /** POST /article/admin/import/batch 批量导入文章（多文件） */
 export const importBatchArticles = async (files) => {
-  const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
   const { useUserStore } = await import('@/stores/user')
   const token = useUserStore().token
   const formData = new FormData()
@@ -98,7 +98,7 @@ export const importBatchArticles = async (files) => {
     formData.append('files', file)
   }
   try {
-    const response = await fetch(`${BASE_URL}/article/admin/import/batch`, {
+    const response = await fetch(`${API_BASE_URL}/article/admin/import/batch`, {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,

@@ -155,15 +155,14 @@ import * as authService from '@/services/authService'
 import { getUserProfile } from '@/services/userService'
 import { uploadAvatar, updateProfile } from '@/services/authService'
 import personalBg from '@/assets/personl.webp'
+import { BACKEND_BASE_URL } from '@/api/config'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
-const BACKEND_BASE = API_BASE.replace('/api/v1', '')
 const router = useRouter()
 const userStore = useUserStore()
 
 const avatarUrl = ref(
   userStore.userInfo?.avatar
-    ? BACKEND_BASE + userStore.userInfo.avatar
+    ? BACKEND_BASE_URL + userStore.userInfo.avatar
     : null
 )
 
@@ -316,7 +315,7 @@ const handleAvatarUpload = async (e) => {
   avatarMsg.value = ''; avatarErr.value = false
   const r = await uploadAvatar(file)
   if (r.success && r.data) {
-    avatarUrl.value = BACKEND_BASE + r.data.url
+    avatarUrl.value = BACKEND_BASE_URL + r.data.url
     avatarMsg.value = '头像上传成功！'
     avatarErr.value = false
     // 更新store中的头像
@@ -576,7 +575,7 @@ const loadProfileStats = async () => {
     }
     // 如果store中没有头像，从后端数据补全
     if (!avatarUrl.value && r.data.avatar) {
-      avatarUrl.value = BACKEND_BASE + r.data.avatar
+      avatarUrl.value = BACKEND_BASE_URL + r.data.avatar
     }
   }
 }

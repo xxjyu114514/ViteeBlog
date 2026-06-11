@@ -3,6 +3,7 @@
  */
 import MarkdownIt from 'markdown-it'
 import DOMPurify from 'dompurify'
+import { API_BASE_URL, BACKEND_BASE_URL } from '@/api/config'
 
 // ============================================================
 // XSS 防护：所有 Markdown 渲染输出都经过 DOMPurify 过滤
@@ -94,9 +95,7 @@ export const debounce = (fn, delay = 300) => {
 
 export const getBackendFileUrl = (contentPath) => {
   if (!contentPath) return null
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
-  const backendBase = baseUrl.replace('/api/v1', '')
   let normalized = contentPath.replace(/\\/g, '/')
   if (!normalized.startsWith('/')) normalized = '/' + normalized
-  return `${backendBase}${normalized}`
+  return `${BACKEND_BASE_URL}${normalized}`
 }

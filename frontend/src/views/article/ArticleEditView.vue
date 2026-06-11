@@ -84,9 +84,8 @@ import { useUserStore } from '@/stores/user'
 import { getArticleDetail, autoSaveArticle, publishArticle, withdrawArticle } from '@/services/articleService'
 import { getCategories, getTags } from '@/services/metaService'
 import { buildUrl } from '@/utils/apiUtils'
+import { API_BASE_URL, BACKEND_BASE_URL } from '@/api/config'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
-const BACKEND_BASE = API_BASE_URL.replace('/api/v1', '')
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
@@ -148,7 +147,7 @@ const initVditor = (initialContent) => {
       fieldName: 'file', max: 10 * 1024 * 1024,
       setHeaders: () => { const s = useUserStore(); return { Authorization: `Bearer ${s.token}` } },
       format: (files, responseText) => {
-        try { const r = JSON.parse(responseText); return JSON.stringify({ code: 0, msg: '', data: { errFiles: [], succMap: { [r.filename || files[0].name]: `${BACKEND_BASE}${r.url}` } } }) }
+        try { const r = JSON.parse(responseText); return JSON.stringify({ code: 0, msg: '', data: { errFiles: [], succMap: { [r.filename || files[0].name]: `${BACKEND_BASE_URL}${r.url}` } } }) }
         catch { return JSON.stringify({ code: 1, msg: '解析失败', data: { errFiles: [files[0].name] } }) }
       },
       error: (msg) => showStatus('图片上传失败: ' + msg, true),

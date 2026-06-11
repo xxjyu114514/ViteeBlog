@@ -3,8 +3,9 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy import event
 from core.config import settings
 
-# 1. 识别启动参数：检查是否包含 -lite
-IS_LITE = "-lite" in sys.argv
+# 1. 识别启动参数：检查是否包含 -lite 或 -demo
+IS_DEMO = "-demo" in sys.argv
+IS_LITE = "-lite" in sys.argv or IS_DEMO
 
 # 2. 根据模式创建异步引擎
 if IS_LITE:

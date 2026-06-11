@@ -33,8 +33,8 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { getFollowing, getFollowers } from '@/services/socialService'
 import StateWrapper from '@/components/StateWrapper.vue'
+import { BACKEND_BASE_URL } from '@/api/config'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
 const router = useRouter()
 const userStore = useUserStore()
 
@@ -45,7 +45,7 @@ const followingTotal = ref(0)
 const followersTotal = ref(0)
 const slidIn = ref(false)
 
-const getAvatarUrl = (path) => path ? API_BASE.replace('/api/v1', '') + path : ''
+const getAvatarUrl = (path) => path ? BACKEND_BASE_URL + path : ''
 
 const fetchList = async () => {
   const userId = userStore.userInfo?.id

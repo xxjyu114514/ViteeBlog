@@ -3,7 +3,7 @@ import sys
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings
-from core.database import init_db, IS_LITE
+from core.database import init_db, IS_LITE, IS_DEMO
 from routers.v1 import api_auth, api_article,api_meta,api_comment,api_favorite,api_channel,api_social,api_user
 from fastapi.staticfiles import StaticFiles
 from middleware.log_middleware import LogMiddleware
@@ -58,9 +58,16 @@ app = create_app()
 
 if __name__ == "__main__":
     # 支持命令行参数启动
+    # -lite : SQLite 快速开发模式 (127.0.0.1)
+    # -demo : SQLite 演示模式 + 绑定 0.0.0.0 (公网可访问)
+    host = "0.0.0.0" if IS_DEMO else "127.0.0.1"
+    port = 8000
+    mode_label = "Demo (公网演示)" if IS_DEMO else "Lite (本地开发)" if IS_LITE else "Production (MySQL)"
+
     uvicorn.run(
         "main:app",
-        host="127.0.0.1",
-        port=8000,
-        reload=True if not IS_LITE else False  ## Lite 模式通常用于临时测试，可根据需要调整 reload
+        host=host,
+        port=port,
+        reload=False  ## 演示/Lite 模式下关闭 reload 避免异常退出
     )
+    print(f">>> ViteeBlog 已停止 | 模式: {mode_label}")

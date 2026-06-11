@@ -85,9 +85,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { getUserProfile, getUserArticles } from '@/services/userService'
 import { followUser, unfollowUser } from '@/services/socialService'
+import { BACKEND_BASE_URL } from '@/api/config'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
-const BACKEND_BASE = API_BASE.replace('/api/v1', '')
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
@@ -111,7 +110,7 @@ const canFollow = computed(() =>
   profile.value.id !== userStore.userInfo?.id
 )
 
-const getFileUrl = (path) => path ? BACKEND_BASE + path : ''
+const getFileUrl = (path) => path ? BACKEND_BASE_URL + path : ''
 
 const loadProfile = async () => {
   const userId = route.params.id

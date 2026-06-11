@@ -10,13 +10,14 @@
  */
 
 import { useUserStore } from '@/stores/user'
+import { API_BASE_URL, API_TIMEOUT } from './config'
 
 // ============================================================
 // 配置
 // ============================================================
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
-const TIMEOUT_MS = 10000
+const BASE_URL = API_BASE_URL
+const TIMEOUT_MS = API_TIMEOUT
 
 // ============================================================
 // 请求缓存（仅对 GET 生效）
