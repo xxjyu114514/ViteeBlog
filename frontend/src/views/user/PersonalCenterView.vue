@@ -319,7 +319,11 @@ const handleAvatarUpload = async (e) => {
     avatarMsg.value = '头像上传成功！'
     avatarErr.value = false
     // 更新store中的头像
-    if (userStore.userInfo) userStore.userInfo.avatar = r.data.url
+    if (userStore.userInfo) {
+      userStore.userInfo.avatar = r.data.url
+      // 同步持久化到 localStorage，防止刷新后丢失
+      localStorage.setItem('vitee_user', JSON.stringify(userStore.userInfo))
+    }
   } else {
     avatarMsg.value = r.message || '上传失败'
     avatarErr.value = true
@@ -573,8 +577,8 @@ const loadProfileStats = async () => {
       totalComments: r.data.totalComments ?? 0,
       followingCount: r.data.followingCount ?? 0,
     }
-    // 如果store中没有头像，从后端数据补全
-    if (!avatarUrl.value && r.data.avatar) {
+    // 后端数据覆盖本地头像（后端是权威数据源）
+    if (r.data.avatar) {
       avatarUrl.value = BACKEND_BASE_URL + r.data.avatar
     }
   }
