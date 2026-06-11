@@ -1,5 +1,6 @@
 import uvicorn
 import sys
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings
@@ -8,11 +9,23 @@ from routers.v1 import api_auth, api_article,api_meta,api_comment,api_favorite,a
 from fastapi.staticfiles import StaticFiles
 from middleware.log_middleware import LogMiddleware
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期：启动时初始化数据库"""
+    await init_db()
+    mode = "Demo (公网演示)" if IS_DEMO else "Lite (本地开发)" if IS_LITE else "Production (MySQL)"
+    print(f">>> ViteeBlog 启动成功 | 当前模式: {mode}")
+    yield
+    # 关闭时的清理逻辑可放在 yield 之后
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="ViteeBlog API",
         description="基于 FastAPI 的个人博客后端系统",
-        version="1.0.0"
+        version="1.0.0",
+        lifespan=lifespan
     )
 
     # 1. 添加日志中间件（最先执行）
@@ -27,14 +40,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # 3. 生命周期事件：启动时初始化数据库
-    @app.on_event("startup")
-    async def startup_event():
-        await init_db()
-        mode = "SQLite (Lite)" if IS_LITE else "MySQL (Production)"
-        print(f">>> ViteeBlog 启动成功 | 当前模式: {mode}")
-
-    # 4. 注册路由
+    # 3. 注册路由
     app.include_router(api_auth.router, prefix="/api/v1/auth", tags=["认证管理"])
     app.include_router(api_article.router, prefix="/api/v1/article", tags=["文章业务"])
     app.include_router(api_meta.router, prefix="/api/v1/meta", tags=["分类与标签管理"])
@@ -44,7 +50,7 @@ def create_app() -> FastAPI:
     app.include_router(api_social.router, prefix="/api/v1/social", tags=["社交关注"])
     app.include_router(api_user.router, prefix="/api/v1/users", tags=["用户主页"])
 
-    # 5. 挂载静态文件目录
+    # 4. 挂载静态文件目录
     app.mount("/storage", StaticFiles(directory="storage"), name="storage")
 
     @app.get("/", tags=["Root"])
