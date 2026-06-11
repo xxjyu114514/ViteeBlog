@@ -3,7 +3,8 @@
     <!-- 作者信息 -->
     <div class="author-info">
       <div class="avatar">
-        {{ getInitials(authorInfo.username) }}
+        <img v-if="authorInfo.avatar" :src="authorAvatarUrl" class="avatar-img" />
+        <span v-else class="avatar-letter">{{ getInitials(authorInfo.username) }}</span>
       </div>
       <span class="username">{{ authorInfo.username }}</span>
       <span class="time">{{ formatRelativeTime(comment.createdAt) }}</span>
@@ -110,6 +111,7 @@ import { useUserStore } from '@/stores/user'
 import { useRouter } from 'vue-router'
 import { createComment as createCommentApi, likeComment, deleteComment as deleteCommentApi } from '@/services/commentService'
 import { renderInline } from '@/utils'
+import { BACKEND_BASE_URL } from '@/api/config'
 
 import CommentReportButton from './CommentReportButton.vue'
 import CommentReportModal from './CommentReportModal.vue'
@@ -138,6 +140,11 @@ const authorInfo = computed(() => {
     username: author?.username || '匿名用户',
     avatar: author?.avatar || null
   }
+})
+
+// 构造完整的头像 URL
+const authorAvatarUrl = computed(() => {
+  return authorInfo.value.avatar ? BACKEND_BASE_URL + authorInfo.value.avatar : null
 })
 
 const showReplyForm = ref(false)
