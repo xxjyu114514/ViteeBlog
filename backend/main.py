@@ -14,7 +14,7 @@ from middleware.log_middleware import LogMiddleware
 async def lifespan(app: FastAPI):
     """应用生命周期：启动时初始化数据库"""
     await init_db()
-    mode = "Demo (公网演示)" if IS_DEMO else "Lite (本地开发)" if IS_LITE else "Production (MySQL)"
+    mode = "Demo (公网演示 · MySQL)" if IS_DEMO else "Lite (本地开发 · SQLite)" if IS_LITE else "Production (MySQL)"
     print(f">>> ViteeBlog 启动成功 | 当前模式: {mode}")
     yield
     # 关闭时的清理逻辑可放在 yield 之后
@@ -65,7 +65,7 @@ app = create_app()
 if __name__ == "__main__":
     # 支持命令行参数启动
     # -lite : SQLite 快速开发模式 (127.0.0.1)
-    # -demo : SQLite 演示模式 + 绑定 0.0.0.0 (公网可访问)
+    # -demo : 生产数据 + 绑定 0.0.0.0 (公网可访问，使用 MySQL 已有数据)
     host = "0.0.0.0" if IS_DEMO else "127.0.0.1"
     port = 8000
     mode_label = "Demo (公网演示)" if IS_DEMO else "Lite (本地开发)" if IS_LITE else "Production (MySQL)"
