@@ -21,7 +21,7 @@
         @click="handleLike"
         :disabled="likeLoading"
       >
-        <i class="icon-like"></i>
+        <span class="like-icon">{{ localIsLiked ? '❤️' : '🤍' }}</span>
         {{ localLikeCount }}
       </button>
       <CommentReportButton 

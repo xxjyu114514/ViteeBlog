@@ -61,7 +61,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { getArticleDetail as fetchArticleDetail, softDeleteArticle, toggleArticleLike } from '@/services/articleService'
 import { toggleFavorite, checkFavoriteStatus } from '@/services/favoriteService'
-import { followUser, unfollowUser } from '@/services/socialService'
+import { followUser, unfollowUser, getFollowing } from '@/services/socialService'
 import CommentForm from '@/components/CommentForm.vue'
 import CommentList from '@/components/CommentList.vue'
 import { formatDateTime, renderMarkdown, renderInline } from '@/utils'
@@ -117,6 +117,13 @@ const loadArticle = async () => {
     if (result.data.isLiked !== undefined) isLiked.value = result.data.isLiked
     if (result.data.likeCount !== undefined) likeCount.value = result.data.likeCount
     authorId.value = result.data.author?.id || result.data.userId
+    // 检查当前用户是否已关注作者
+    if (userStore.isAuthenticated && authorId.value) {
+      const followResult = await getFollowing(userStore.userInfo.id)
+      if (followResult.success && Array.isArray(followResult.data)) {
+        isFollowing.value = followResult.data.some(u => u.id === authorId.value)
+      }
+    }
   } else { error.value = result.message }
   loading.value = false
 }

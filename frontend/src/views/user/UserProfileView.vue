@@ -25,7 +25,7 @@
               </div>
               <div class="profile-detail">
                 <h2 class="profile-username">{{ profile.username }}</h2>
-                <span class="profile-role">{{ profile.role === 'admin' ? '管理员' : '普通用户' }}</span>
+                <span class="profile-role">{{ profile.role === 'super_admin' ? '超级管理员' : profile.role === 'admin' ? '管理员' : '普通用户' }}</span>
                 <p v-if="profile.bio" class="profile-bio">{{ profile.bio }}</p>
                 <button
                   v-if="canFollow"
